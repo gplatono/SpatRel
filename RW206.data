@@ -1,0 +1,30 @@
+bed1:near:West Wall:North Wall
+bed2:near:East Wall:North Wall
+Sofa:near:North Wall
+Sofa:between:bed1:bed2
+TV:near:East Wall
+TV:on:Desk 2
+TV:in front of:Laptop 2
+Laptop 2:in front of:TV
+Laptop 1:on:Desk 1
+Laptop 2:on:Desk 2
+Banana 2:on:Desk 2
+Banana 1:in:Bowl
+Bowl:on:Desk 1
+table:between:brown chair1: brown chair2
+Trash Can:between:Desk 2:Bookshelf 1
+Note 1:in front of:Laptop 1
+Note 2:in front of:Blue Chair 2
+Note 3:in:Trash Can
+Red Chair:beside:Desk 2
+Blue Chair 2:beside:Desk 1
+Blue Chair 1:beside:Bookshelf 1
+Pencil 2:between:Note 1:Note 2
+Pencil Holder:on:Desk 1
+Pencil Holder:near:West Wall
+Pencil 1:on:Desk 1
+Pencil 2:on:Desk 1
+Red Book 1:on:Desk 1
+Yellow Book 2:on:Desk 1
+Red Book 1:beside:Yellow Book 2
+Yellow Book 2:next to:Red book 1

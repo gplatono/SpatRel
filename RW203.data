@@ -1,0 +1,30 @@
+Picture 2:on:Floor
+Picture 2:near:Coffee Table
+Picture 1:on:North Wall
+Picture 1:between:Bookshelf 1:Bookshelf 2
+Cardbox 1:on:Blue Chair 1
+Cardbox 1:below:Ceiling
+Cardbox 2:on:Sofa 1
+Blue Chair 1:on:Table
+Table:on:Floor
+Table:near:North Wall
+Yellow Book 1:on:Blue Chair 2
+Green Book 2:on:Red Book 2
+Red Book 2:on:Bookshelf 2
+Yellow Book 1:below:Table
+Yellow Book 2:below:Table
+Red Book 1:on:Bookshelf 1
+Green Book 1:on:Bookshelf 1
+Glass:near:Bookshelf 2
+Glass:near:North Wall
+Coffee Table:between:Sofa 1:Sofa 2
+Coffee Table:on:floor
+Coffee Table:below:Ceiling
+Coffee Table:below:Ceiling Fan
+Laptop:on:Cardbox 2
+Sofa 1:near:West Wall
+Sofa 2:near:East Wall
+Sofa 1:in front of:Bookshelf 1
+Sofa 2:in front of:Bookshelf 2
+Ceiling Fan:right of:Ceiling Light 1
+Ceiling Fan:left of:Ceiling Light 2

@@ -1,0 +1,71 @@
+Desk 1:near:West Wall
+Desk 2:near:East Wall
+TV 2:on:Desk 2
+Desk 2:in front of:Bookshelf 1
+Blue Chair 1:in front of:Bookshelf 1
+Blue Chair 1:in front of:Desk 2
+Red Chair 2:in front of:Desk 2
+Blue Chair 2:in front of:Desk 1
+Red Chair 1:in front of:Desk 1
+Blue Chair 1:next to:Desk 2
+Red Chair 2:next to:Desk 2
+Blue Chair 2:next to:Desk 1
+Red Chair 1:next to:Desk 1
+Blue Chair 1:near:Desk 2
+Red Chair 2:near:Desk 2
+Blue Chair 2:near:Desk 1
+Red Chair 1:near:Desk 1
+Blue Chair 2:to the right of:Desk 1
+Red Chair 1:to the right of:Desk 1
+Bookshelf 3:to the right of:Bookshelf 2
+Bookshelf 1:to the right of:Bookshelf 3
+Blue Chair 1:to the left of:Desk 2
+Red Chair 2:to the left of:Desk 2
+Bookshelf 3:between:Bookshelf 1:Bookshelf 2
+Trash Can:between:Bookshelf 1:Bookself 3
+Ceiling Fan:between:Ceiling Light 1:Ceiling Light 2
+Green Book 1:between:Red Book 1:Red Book 3
+Laptop 2:on:Bookshelf 3
+Note 2:on:Bookshelf 3
+Bookshelf 3:next to:North Wall
+Pencil 2:in:Pencil Holder
+Banana 1:in:Bowl
+Note 3:in:Trash Can
+Laptop 1:next to:Note 1
+Laptop 1:on:Desk 1
+Bowl:on:Desk 1
+Laptop 2:above:Yellow Book 1
+Red Book 1:on:Desk 1
+Green Book 1:on:Red Book 1
+Green Book 1:on:Desk 1
+Red Book 3:on:Green Book 1
+Red Book 3:on:Red Book 1
+Red Book 3:on:Desk 1
+Yellow Book 2:next to:Red Book 1
+Yellow Book 2:next to:Red Book 3
+Yellow Book 2:next to:Green Book 1
+Green Book 1:above:Red Book 1
+Red Book 3:above:Red Book 1
+Red Book 3:above:Green Book 1
+Ceiling Light 1:above:Desk 1
+Ceiling Light 1:above:Blue Chair 2
+Ceiling Light 1:above:Red Chair 1
+Ceiling Light 2:above:Desk 2
+Ceiling Light 2:above:Blue Chair 1
+Ceiling Light 2:above:Red Chair 2
+Red Book 2:on:Bookshelf 1
+Red Book 2:above:Green Book 2
+Red Chair 1:on:Floor
+Blue Chair 1:on:Floor
+Red Chair 2:on:Floor
+Blue Chair 2:on:Floor
+Ceiling Fan:to the right of:Ceiling Light 1
+Ceiling Fan:to the left of:Ceiling Light 2
+Pencil Holder:next to:Yellow Book 2
+Pencil Holder:next to:Bowl
+Bowl:next to:Pencil Holder
+Pencil 1:next to:Bowl
+Pencil 1:near:Bowl
+Yellow Book 1:near:Laptop 2
+Red Book 2:near:Green Book 2
+Banana 2:next to:TV 2

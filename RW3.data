@@ -1,0 +1,23 @@
+Cardbox 1:on:Table
+Cardbox 2:on:Bookshelf 1
+Blue Chair 1:near:Table
+Blue Chair 2:near:Table
+Laptop:on:Table
+Blue Chair 2:near:East Wall
+Green Book 2:on:Red Book 2
+Ceiling Light 2:above:Blue Chair 2
+Table:between:Blue Chair 1:Blue Chair 2
+Cardbox 1:next to:Laptop
+Cardbox 2:on:Bookshelf 1
+Blue Chair 1:on:Floor
+Blue Chair 2:on:Floor
+Bookshelf 1:on:Floor
+Bookshelf 2:on:Floor
+Ceiling Fan:between:Ceiling Light 1:Ceiling Light 2
+Red Book 1:to the right of:Cardbox 1
+Laptop:next to:Blue Chair 1
+Bookshelf 2:near:North Wall
+Green Book 2:between:Floor:Ceiling
+Ceiling Fan:above:Blue Chair 1
+Green Book 1:on:Bookshelf 1
+Green Book 1:above:Cardbox 2

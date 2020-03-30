@@ -1,0 +1,44 @@
+Ceiling Fan:between:Ceiling Light 1:Ceiling Light 2
+Desk 1:above:TV2
+TV2:on:Floor
+Banana 2:on:Desk 2
+Note 1:on:Desk 2
+Note 2:on:Desk 2
+Laptop 2:on:Desk 2
+Red Chair 1:on:Bookshelf 3
+Banana 1:between:Bowl:Red Book 1
+Banana 1:above:Green Book 1
+Red Book 2:near:Green Book 2
+Laptop 1:on:Bookshelf 2
+Desk 1:between:Bookshelf 1:Bookshelf 2
+Desk 2:between:Bookshelf 1:Trash Can
+Blue Chair 2:between:Bookshelf 2:Bookshelf 3
+Red Chair:to the right of:TV2
+Desk 2:in front of:Bookshelf 1
+Pencil 1:on:Desk 1
+Pencil 2:on:Desk 2
+Pencil 1:near:Pencil 2
+Ceiling Light 2:above:Desk 2
+Red Chair 1:on:Floor
+Blue Chair 1:on:Floor
+Bookshelf 1:next to:North Wall
+Bookshelf 2:next to:North Wall
+Bookshelf 3:on:West Wall
+Yellow Book 2:above:Yellow Book 1
+Laptop 1:near:Blue Chair 1
+Laptop 2:in front of:Blue Chair 2
+Blue Chair 2:in front of:Desk 2
+Banana 2:near:Trash Can
+Note 1:near:Note 2
+Desk 2:in front of:East Wall
+Bookshelf 3:between:Red Chair 1:Blue Chair 1
+Bookshelf 3:near:Ceiling Light 1
+Red Chair 2:in front of:Desk 1
+Red Book 2:on:Bookshelf 1
+Pencil Holder:above:Banana 1
+Pencil Holder:on:Bookshelf 3
+Red Chair 1:next to:West Wall
+Blue Chair 1:next to:West Wall
+Green Book 2:to the right of:Desk 1
+Trash Can:next to:East Wall
+Note 3:near:Desk 2
