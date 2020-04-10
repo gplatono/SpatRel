@@ -274,7 +274,7 @@ class RightOf(Node):
             return max(connections[0].compute(tr, lm), connections[1].compute(tr, lm),
                        connections[2].compute(tr, lm))
         elif lm is None:
-            ret_val = np.avg([self.compute(tr, entity) for entity in world.active_context])
+            ret_val = np.average([self.compute(tr, entity) for entity in world.active_context])
         return ret_val
 
 
@@ -315,7 +315,7 @@ class LeftOf(Node):
             return max(connections[0].compute(tr, lm), connections[1].compute(tr, lm),
                        connections[2].compute(tr, lm))
         elif lm is None:
-            ret_val = np.avg([self.compute(tr, entity) for entity in world.active_context])
+            ret_val = np.average([self.compute(tr, entity) for entity in world.active_context])
         return ret_val
 
 
@@ -381,7 +381,7 @@ class InFrontOf(Node):
             return max(connections[0].compute(tr, lm), connections[1].compute(tr, lm),
                        connections[2].compute(tr, lm))
         elif lm is None:
-            ret_val = np.avg([self.compute(tr, entity) for entity in world.active_context])
+            ret_val = np.average([self.compute(tr, entity) for entity in world.active_context])
         return ret_val
 
 
@@ -423,7 +423,7 @@ class Behind(Node):
             return max(connections[0].compute(tr, lm), connections[1].compute(tr, lm),
                        connections[2].compute(tr, lm))
         elif lm is None:
-            ret_val = np.avg([self.compute(tr, entity) for entity in world.active_context])
+            ret_val = np.average([self.compute(tr, entity) for entity in world.active_context])
         return ret_val
 
 # =======================================================================================================

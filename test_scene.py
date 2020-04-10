@@ -6,6 +6,7 @@ import numpy as np
 filepath = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, filepath)
 
+from world import World
 import spatial2
 from entity import Entity
 
@@ -20,6 +21,9 @@ sp_map = {
 	'to the left of' : left,
 	'to the right of': right
 }
+
+world = World(scene, simulation_mode=True)
+spatial2.world = world
 
 
 def get_observer():
