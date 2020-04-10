@@ -108,7 +108,7 @@ class Entity(object):
 		if len(self.front) == len(self.up):
 			self.right = np.cross(self.front, self.up)
 		else:
-			self.right = np.array([0, -1, 0])
+			self.right = None #np.array([0, -1, 0])
 
 		#print (self.name, self.front)
 
@@ -298,22 +298,31 @@ class Entity(object):
 	def set_frontal(self, frontal):
 		self.frontal = frontal
 
-	def generate_frontal(self):
-		#print ("FACES: ", self.faces)
-		normals = [get_normal(face[0], face[1], face[2]) for face in self.faces]
-		normals = [item for item in normals if math.fabs(item[2]) < 0.5 * (math.fabs(item[0]) + math.fabs(item[1]))]
-		if len(normals) > 0:
-			normals = np.average(np.array(normals), axis = 0)
+	def generate_frontal(self):	
+		#print (self.name, self.type_structure)	
+		types_fr = ['sofa', 'bookshelf', 'desk', 'tv', 'poster', 'picture',	'fridge', 'wall']
+		types_nf = ['chair','table', 'bed', 'book', 'laptop', 'pencil', 'pencil holder', 'note', 'rose', 'vase', 'cardbox', 'box', 'ceiling light', \
+			'lamp',	'apple','banana', 'plate', 'bowl', 'trash bin', 'trash can', 'ceiling fan', 'block', 'floor', 'ceiling']
+		if self.name == 'Observer':
+			return np.array([1, 0, 0])
+		elif self.type_structure[-1] in types_nf:
+			return None
+		elif self.type_structure[-1] in types_fr:
+			if self.span[1] - span[0] >= span[3] - span[2]:
+				extend = np.array([1, 0, 0])
+				frontal = np.array([0, 1, 0])
+			else:
+				extend = np.array([0, 1, 0])
+				frontal = np.array([0, 1, 0])
 		else:
-			normals = np.array([0, -1, 0])
-		#print ("NORMAL: ", self.name, normals)
-		#for face in self.faces:
-		#    normal = get_normal(face[0], face[1], face[2])
-			#
-		#    if math.fabs(normal[2]) < 0.3:
-		#        return normal
-		
-		return normals
+			normals = [get_normal(face[0], face[1], face[2]) for face in self.faces]
+			normals = [item for item in normals if math.fabs(item[2]) < 0.5 * (math.fabs(item[0]) + math.fabs(item[1]))]
+			if len(normals) > 0:
+				frontal = np.average(np.array(normals), axis = 0)
+			else:
+				frontal = np.array([0, -1, 0])
+
+		return frontal
 
 	#Checks if the entity has a given property
 	def get(self, property):
