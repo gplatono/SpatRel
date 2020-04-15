@@ -16,10 +16,12 @@ observer = None
 
 right = spatial2.RightOf()
 left = spatial2.LeftOf()
+in_front_of = spatial2.InFrontOf()
 
 sp_map = {
 	'to the left of' : left,
-	'to the right of': right
+	'to the right of': right,
+	'in front of': in_front_of
 }
 
 world = World(scene, simulation_mode=True)
