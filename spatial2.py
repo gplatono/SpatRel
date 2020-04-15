@@ -426,6 +426,100 @@ class Behind(Node):
             ret_val = np.average([self.compute(tr, entity) for entity in world.active_context])
         return ret_val
 
+class Near_Raw(Node):
+    def compute(self, tr, lm):
+        bbox_tr = tr.bbox
+        bbox_lm = lm.bbox
+        dist = dist_obj(tr, lm)
+        max_dim_a = max(bbox_tr[7][0] - bbox_tr[0][0],
+                        bbox_tr[7][1] - bbox_tr[0][1],
+                        bbox_tr[7][2] - bbox_tr[0][2])
+        max_dim_b = max(bbox_lm[7][0] - bbox_lm[0][0],
+                        bbox_lm[7][1] - bbox_lm[0][1],
+                        bbox_lm[7][2] - bbox_lm[0][2])
+        if tr.get('planar') is not None:
+            # print ("TEST", a.name, b.name)
+            dist = min(dist, get_planar_distance_scaled(tr, lm))
+        elif lm.get('planar') is not None:
+            dist = min(dist, get_planar_distance_scaled(tr, lm))
+        elif tr.get('vertical_rod') is not None or tr.get('horizontal_rod') is not None or tr.get('rod') is not None:
+            dist = min(dist, get_line_distance_scaled(tr, lm))
+        elif lm.get('vertical_rod') is not None or lm.get('horizontal_rod') is not None or lm.get('rod') is not None:
+            dist = min(dist, get_line_distance_scaled(lm, tr))
+        elif tr.get('concave') is not None or lm.get('concave') is not None:
+            dist = min(dist, closest_mesh_distance_scaled(tr, lm))
+
+        fr_size = FrameSize().compute()
+        raw_metric = math.e ** (- 0.1 * dist)
+        '''0.5 * (1 - min(1, dist / avg_dist + 0.01) +'''
+        print("RAW NEAR: ", tr, lm, raw_metric * (1 - raw_metric / fr_size))
+        return raw_metric * (1 - raw_metric / fr_size)
+
+
+class Near(Node):
+    def __init__(self):
+        raw_measure = Near_Raw()
+        self.set_connections([raw_measure])
+
+    def compute(self, tr, lm=None):
+        # entities = get_entities()
+        # print (entities)
+        if tr == lm:
+            return 0
+        raw_near_tr = []
+        raw_near_lm = []
+        connections = self.get_connections()
+        raw_near_measure = connections[0].compute(tr, lm)
+        for entity in entities:
+            if entity != tr and entity != lm:
+                near_tr_entity = connections[0].compute(tr, entity)
+                near_lm_entity = connections[0].compute(lm, entity)
+                # print (entity.name, near_tr_entity, near_lm_entity)
+                # if dist_a_to_entity < raw_dist:
+                raw_near_tr += [near_tr_entity]
+                # if dist_b_to_entity < raw_dist:
+                raw_near_lm += [near_lm_entity]
+        # print ("RAW_NEAR_A: ", raw_near_tr, entities)
+        # print ("RAW:", a.name, b.name, raw_near_measure)
+        average_near_tr = sum(raw_near_tr) / len(raw_near_tr)
+        average_near_lm = sum(raw_near_lm) / len(raw_near_lm)
+        avg_near = 0.5 * (average_near_tr + average_near_lm)
+        max_near_tr = max(raw_near_tr)
+        max_near_lm = max(raw_near_lm)
+        max_near = max(raw_near_measure, max_near_tr, max_near_lm)
+        # print ("AVER: ", average_near_tr, average_near_lm)
+        ratio = raw_near_measure / max_near
+        if (raw_near_measure < avg_near):
+            near_measure_final = 0.5 * raw_near_measure
+        else:
+            near_measure_final = raw_near_measure * ratio
+        near_measure = raw_near_measure + (raw_near_measure - avg_near) * min(raw_near_measure, 1 - raw_near_measure)
+        # print ("RAW: {}; NEAR: {}; FINAL: {}; AVER: {};".format(raw_near_measure, near_measure, near_measure_final, (average_near_tr + average_near_lm) / 2))
+        if tr.compute_size() > lm.compute_size():
+            near_measure -= 0.1  # TODO
+        elif tr.compute_size() < lm.compute_size():
+            near_measure += 0.1
+        return near_measure
+
+
+class Between(Node):
+    def compute(self, a, b, c):
+        print("ENTERING THE BETWEEN...", a, b, c)
+        center_a = a.bbox_centroid
+        center_b = b.bbox_centroid
+        center_c = c.bbox_centroid
+
+        vec1 = np.array(center_b) - np.array(center_a)
+        vec2 = np.array(center_c) - np.array(center_a)
+
+        cos = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2) + 0.001)
+
+        scaled_dist = np.linalg.norm(b.bbox_centroid - c.bbox_centroid) / (2 * a.size)
+        dist_coeff = math.exp(-0.05 * scaled_dist)
+
+        print("BETWEEN DIST FACT: ", dist_coeff)
+        ret_val = math.exp(- math.fabs(-1 - cos)) * dist_coeff
+        return ret_val
 # =======================================================================================================
 # ====================================OLD CODE STARTS HERE===============================================
 # =======================================================================================================
@@ -636,9 +730,6 @@ def near(a, b):
 # Return value: real number from [0, 1]
 def between(a, b, c):
     print("ENTERING THE BETWEEN...", a, b, c)
-    bbox_a = a.bbox
-    bbox_b = a.bbox
-    bbox_c = c.bbox
     center_a = a.bbox_centroid
     center_b = b.bbox_centroid
     center_c = c.bbox_centroid
