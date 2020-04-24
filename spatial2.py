@@ -10,6 +10,7 @@ from mathutils import Vector
 from functools import reduce
 import itertools
 
+world = None
 observer = None
 
 class Spatial:
@@ -199,6 +200,9 @@ class ProjectionIntersection(Node):
 
         # Normalize the intersection area to [0, 1]
         return math.e ** (area - min((axmax - axmin) * (aymax - aymin), (bxmax - bxmin) * (bymax - bymin)))
+    
+    def str(self):
+        return 'projection_intersection.n'
 
 class WithinConeRegion(Node):
     """
@@ -215,6 +219,9 @@ class WithinConeRegion(Node):
         angle = math.acos(cos)
         final_score = 1 / (1 + math.e ** (self.parameters['exponent_multiplier'] * (width - angle)))
         return final_score
+   
+    def str(self):
+        return 'within_cone_region.p'
 
 class FrameSize(Node):
     """
@@ -231,7 +238,7 @@ class FrameSize(Node):
         min_z = 100
 
         # Computes the scene bounding box
-        for entity in entities:
+        for entity in world.entities:
             max_x = max(max_x, entity.span[1])
             min_x = min(min_x, entity.span[0])
             max_y = max(max_y, entity.span[3])
@@ -239,6 +246,9 @@ class FrameSize(Node):
             max_z = max(max_z, entity.span[5])
             min_z = min(min_z, entity.span[4])
         return max(max_x - min_x, max_y - min_y, max_z - min_z)
+    
+    def str(self):
+        return 'frame_size.n'
 
 class RawDistance(Node):
 
@@ -256,6 +266,9 @@ class RawDistance(Node):
             dist = min(dist, closest_mesh_distance_scaled(tr, lm))        
         
         return dist
+    
+    def str(self):
+        return 'raw_distance.n'
 
 class LargerThan(Node):
     """
@@ -269,6 +282,8 @@ class LargerThan(Node):
         bbox_dim_diff = (bbox_lm[7][0] - bbox_lm[0][0] + bbox_lm[7][1] - bbox_lm[0][1] + bbox_lm[7][2] - bbox_lm[0][2]) \
             - (bbox_tr[7][0] - bbox_tr[0][0] + bbox_tr[7][1] - bbox_tr[0][1] + bbox_tr[7][2] - bbox_tr[0][2])
         return 1 / (1 + math.e ** bbox_dim_diff)
+    def str(self):
+        return 'larger_than.p'
 
 class CloserThan(Node):
     """
@@ -454,19 +469,30 @@ class RightOf(Node):
             ret_val = np.average([self.compute(tr, entity) for entity in world.active_context])
         return ret_val
 
+    def str(self):
+        return 'to_the_right_of.p'
+
 
 class LeftOf_Deictic(Node):
     def compute(self, tr, lm):
         return self.get_connections()['to_the_right_of_deictic'].compute(tr=lm, lm=tr)
 
+    def str(self):
+        return 'to_the_left_of_deictic.p'
+
 
 class LeftOf_Extrinsic(Node):
     def compute(self, tr, lm):
         return self.get_connections()['to_the_right_of_extrinsic'].compute(tr=lm, lm=tr)
+    def str(self):
+        return 'to_the_left_of_extrinsic.p'
 
 class LeftOf_Intrinsic(Node):
     def compute(self, tr, lm):
         return self.get_connections()['to_the_right_of_intrinsic'].compute(tr=lm, lm=tr)
+
+    def str(self):
+        return 'to_the_left_of_intrinsic.p'
 
 class LeftOf(Node):
     def compute(self, tr, lm=None):
@@ -478,6 +504,9 @@ class LeftOf(Node):
         elif lm is None:
             ret_val = np.average([self.compute(tr, entity) for entity in world.active_context])
         return ret_val
+
+    def str(self):
+        return 'to_the_left_of.p'
 
 class InFrontOf_Deictic(Node):
     def compute(self, tr, lm):
@@ -497,6 +526,9 @@ class InFrontOf_Deictic(Node):
         b_dist = np.linalg.norm(lm.location - world.observer.location)
         
         return 0.5 * (sigmoid(b_dist - a_dist, 1, 0.5) + math.e ** (-0.5 * scaled_proj_dist))
+
+    def str(self):
+        return 'in_front_of_deictic.p'
         
 class InFrontOf_Extrinsic(Node):
     def compute(self, tr, lm):
@@ -504,11 +536,17 @@ class InFrontOf_Extrinsic(Node):
         # proj_dist_scaled = proj_dist / max(a.size, b.size)
         # print ("PROJ_DISTANCE", proj_dist_scaled)
         return math.e ** (- 0.01 * get_centroid_distance_scaled(tr, lm)) * within_cone(lm.centroid - tr.centroid,
-                                                                                 -world.front_axis, 0.7)
+                                                                                     -world.front_axis, 0.7)
+    def str(self):
+        return 'in_front_of_extrinsic.p'
+
 class InFrontOf_Intrinsic(Node):
     def compute(self, tr, lm):
         return math.e ** (- 0.01 * get_centroid_distance_scaled(tr, lm)) * within_cone(lm.centroid - tr.centroid,
                                                                                        -lm.front, 0.7)
+    def str(self):
+        return 'in_front_of_intrinsic.p'
+
 class InFrontOf(Node):
     def compute(self, tr, lm=None):
         ret_val = 0
@@ -520,17 +558,29 @@ class InFrontOf(Node):
             ret_val = np.average([self.compute(tr, entity) for entity in world.active_context])
         return ret_val
 
+    def str(self):
+        return 'in_front_of.p'
+
 class Behind_Deictic(Node):
     def compute(self, tr, lm):
         return self.get_connections()['in_front_of_deictic'].compute(tr=lm, lm=tr)
+
+    def str(self):
+        return 'behind_deictic.p'
 
 class Behind_Extrinsic(Node):
     def compute(self, tr, lm):
         return self.get_connections()['in_front_of_extrinsic'].compute(tr=lm, lm=tr)
 
+    def str(self):
+        return 'behind_extrinsic.p'
+
 class Behind_Intrinsic(Node):
     def compute(self, tr, lm):
         return self.get_connections()['in_front_of_intrinsic'].compute(tr=lm, lm=tr)
+
+    def str(self):
+        return 'behind_intrinsic.p'
 
 class Behind(Node):
     def compute(self, tr, lm=None):
@@ -542,6 +592,9 @@ class Behind(Node):
         elif lm is None:
             ret_val = np.average([self.compute(tr, entity) for entity in world.active_context])
         return ret_val
+
+    def str(self):
+        return 'behind.p'
 
 class Above(Node):
 
@@ -568,6 +621,9 @@ class Above(Node):
         return self.connections['within_cone_region'].compute(tr.centroid - lm.centroid, np.array([0, 0, 1.0]), 0.1) \
                 * sigmoid(vertical_dist_scaled, 1, 3)  # math.e ** (- 0.01 * get_centroid_distance_scaled(a, b))
 
+    def str(self):
+        return 'above.p'
+
 class Below(Node):
 
     def compute(self, tr, lm):
@@ -580,6 +636,9 @@ class Below(Node):
         float value from [0, 1]
         """
         return self.connections['above'].compute(lm, tr)
+
+    def str(self):
+        return 'below.p'
 
 class Near_Raw(Node):
     def compute(self, tr, lm):        
@@ -609,6 +668,9 @@ class Near_Raw(Node):
         '''0.5 * (1 - min(1, dist / avg_dist + 0.01) +'''
         #print("RAW NEAR: ", tr, lm, raw_metric * (1 - raw_metric / fr_size))
         return raw_metric * (1 - raw_metric / fr_size)
+
+    def str(self):
+        return 'near_raw.p'
 
 class Near(Node):
     def compute(self, tr, lm=None):
@@ -647,6 +709,9 @@ class Near(Node):
             near_measure += 0.1
         return near_measure
 
+    def str(self):
+        return 'near.p'
+
 class Between(Node):
 
     def __init__(self, connections=None):
@@ -672,6 +737,9 @@ class Between(Node):
         #print("BETWEEN DIST FACT: ", dist_coeff)
         ret_val = math.exp(- math.fabs(-1 - cos)) * dist_coeff
         return ret_val
+    
+    def str(self):
+        return 'between.p'
 
 
 #Computes the "on" relation
@@ -712,6 +780,9 @@ class On(Node):
             ret_val = max(ret_val, math.exp(- 0.5 * get_planar_distance_scaled(tr, lm)))
         return ret_val
 
+    def str(self):
+        return 'on.p'
+
 class Over(Node):
 
     def compute(self, tr, lm):
@@ -721,6 +792,9 @@ class Over(Node):
             + 0.2 * self.connections['projection_intersection'].compute(tr, lm) \
             + 0.3 * self.connections['near'].compute(tr, lm)
 
+    def str(self):
+        return 'over.p'
+
 class Under(Node):
     """
     Computes the "under" relation, which is taken to be symmetric to "over". 
@@ -728,6 +802,9 @@ class Under(Node):
     """
     def compute(self, tr, lm):
         return self.connections['on'].compute(lm, tr)
+    
+    def str(self):
+        return 'under.p'
 
 class At(Node):
     """
@@ -740,6 +817,9 @@ class At(Node):
         at_same_height = self.connections['at_same_height'].compute(tr, lm)
         return at_same_height * touching if touching > 0.9 else at_same_height * self.connections['near'].compute(tr, lm)
 
+    def str(self):
+        return 'next_to.p'
+
 class Inside(Node):
     def compute(self, tr, lm):
         # a_bbox = a.bbox
@@ -748,11 +828,12 @@ class Inside(Node):
         proportion = shared_volume / lm.volume
         return sigmoid(proportion, 1.0, 1.0)
 
+    def str(self):
+        return 'inside.p'
+
 # =======================================================================================================
 # ====================================OLD CODE STARTS HERE===============================================
 # =======================================================================================================
-entities = []
-world = None
 
 
 def dist_obj(a, b):

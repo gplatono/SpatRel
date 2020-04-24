@@ -19,8 +19,8 @@ def run_testcase(testcase):
 	components = testcase.split(':')
 	print (components)
 	relation = components[1].strip()
-	trs = [world.find_entity_by_name(components[0]).strip()]
-	lms = [world.find_entity_by_name(item).strip() for item in components[2:]]	
+	trs = [world.find_entity_by_name(components[0].strip())]
+	lms = [world.find_entity_by_name(item.strip()) for item in components[2:]]	
 	if relation != 'on' and relation != 'next to' and relation != 'touching':
 		return spatial_module.compute(relation, trs, lms)
 
