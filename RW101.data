@@ -22,7 +22,7 @@ Bookshelf 1:to the right of:Bookshelf 3
 Blue Chair 1:to the left of:Desk 2
 Red Chair 2:to the left of:Desk 2
 Bookshelf 3:between:Bookshelf 1:Bookshelf 2
-Trash Can:between:Bookshelf 1:Bookself 3
+Trash Can:between:Bookshelf 1:Bookshelf 3
 Ceiling Fan:between:Ceiling Light 1:Ceiling Light 2
 Green Book 1:between:Red Book 1:Red Book 3
 Laptop 2:on:Bookshelf 3

@@ -248,8 +248,8 @@ class Entity(object):
 						 self.bbox[0][2] + (self.bbox[7][2] - self.bbox[0][2]) / 2])
    
 	def compute_centroid(self):
-		"""Compute and return the centroid the vertex set."""        
-		return sum(self.vertex_set) / len(self.vertex_set)
+		"""Compute and return the centroid the vertex set."""
+		return np.average(self.vertex_set, axis=0)
 		"""centroid = Vector((0, 0, 0))
 		vertex_count = 0
 		

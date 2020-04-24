@@ -3,6 +3,8 @@ import time
 import json
 import requests
 import numpy as np
+import os
+import datetime
 
 import bpy
 import bmesh
@@ -10,6 +12,8 @@ from mathutils import Vector
 from mathutils import Quaternion
 from entity import Entity
 from geometry_utils import *
+
+#import spatial
 
 class World(object):
 	"""
@@ -39,13 +43,17 @@ class World(object):
 		#List of  possible color modifiers
 		self.color_mods = ['black', 'red', 'blue', 'brown', 'green', 'yellow']		
 
-		self.scene_setup()
+		#self.scene_setup()
 
 		self.verbose = False
 		self.verbose_rotation = False		
 		
+		bpy.utils.register_class(self.ProcessInputOp)
 		bpy.utils.register_class(self.ModalTimerOp)
+		self.ProcessInputOp.world = self
 		self.ModalTimerOp.world = self
+
+		bpy.ops.view3d.process_input()
 
 		self.moved_blocks = []
 		
@@ -74,7 +82,15 @@ class World(object):
 				self.blocks[idx].location = location
 				self.blocks[idx].rotation_euler = rotation
 
-			bpy.ops.wm.modal_timer_operator()		
+			bpy.ops.wm.modal_timer_operator()	
+		else:
+			# self.history.append(self.State(self.entities))
+			self.record_history()
+			if len(self.history) == 1:
+				self.make_checkpoint()
+
+		self.init_event_log()	
+		self.start_time = time.time()	
 
 	def get_block_data(self):
 		url = "http://127.0.0.1:1236/world-api/block-state.json"
@@ -240,6 +256,18 @@ class World(object):
 					RightBlocked = True
 		return LeftBlocked and RightBlocked
 
+	def init_event_log(self):
+		if not os.path.exists("logs"):
+			os.makedirs("logs")
+		with open("logs" + os.sep + "event_log", 'a+') as log:
+			log.write("\nSESSION: " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\n")
+			log.write("================================================================================\n")	
+
+	def log_event(self, event, content):
+		with open("logs" + os.sep + "event_log", 'a+') as log:
+			elapsed =  time.strftime('%H:%M:%S', time.gmtime(time.time() - self.start_time))
+			log.write('(' + elapsed + ') ' + event + ': ' + content + '\n')
+
 	def update(self, block_data):
 		moved_blocks = []
 		updated_blocks = {}
@@ -339,13 +367,32 @@ class World(object):
 		bpy.context.evaluated_depsgraph_get().update()
 
 		if len(moved_blocks) > 0:
-			self.history.append(self.State(self.entities))
+			# self.history.append(self.State(self.entities))
+			self.record_history()
 			if len(self.history) == 1:
 				self.make_checkpoint()
 
 	def make_checkpoint(self):
 		#self.checkpoint = self.history[-1]
 		self.checkpoint = len(self.history)-1
+
+	def move_to_ulf(self, name, loc1, loc2):
+		def loc_to_str(loc):
+			return ' '.join([str(coord) for coord in loc])
+		
+		return '(|' + name + '| ((past move.v) (from.p-arg ($ loc ' + loc_to_str(loc1) + ')) (to.p-arg ($ loc ' +\
+							loc_to_str(loc2) + '))))'
+
+	def record_history(self):
+		self.history.append(self.State(self.entities))
+		if len(self.history) > 1:
+			moves = self.history[-1].state_diff(self.history[-2])
+			for move in moves:
+				self.log_event('BLOCK MOVE', self.move_to_ulf(move[0], move[1], move[2]))
+			print (self.history[-1].state_diff(self.history[-2]))
+
+	def get_last_move(self):
+		return moves[-1]
 
 	def get_moves_after_checkpoint(self):
 		result = []
@@ -419,8 +466,59 @@ class World(object):
 			context.window_manager.event_timer_remove(self._timer)
 			return {"CANCELLED"}
 
-	class State:
+	class ProcessInputOp(bpy.types.Operator):
+		"""Process input while Control key is pressed."""
+		#bl_idname = 'view3d.process_input'
+		bl_idname = 'view3d.process_input'
+		bl_label = 'ProcessInput'
+		bl_options = {'REGISTER'}
+		world = None
+		move_mode = False
+		actual_move = False
 
+		def modal(self, context, event):			
+			# if event.type == 'ESC':			
+			# 	return {'FINISHED'}						
+			if event.ctrl and event.shift and event.type == 'M':
+				def ShowMessageBox(message = "", title = "Message Box", icon = 'INFO'):
+					def draw(self, context):
+						self.layout.label(text=message)
+
+					bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
+
+				if self.move_mode == False:
+					self.move_mode = True
+					ShowMessageBox('Move begins...')
+				elif self.actual_move:
+					for ent in self.world.entities:
+						ent.update()
+					self.world.record_history()					
+					ShowMessageBox('Move complete...')
+					self.actual_move = False
+					self.move_mode = False					
+			elif event.type == 'G' and self.move_mode:
+				self.actual_move = True
+
+			# elif event.type == 'G':
+			# 	print("G pressed...")
+			# elif event.type == 'LEFTMOUSE':
+			# 	for ent in self.world.entities:
+			# 		ent.update()
+			# 	self.world.history.append(self.world.State(self.world.entities))
+			# 	if len(self.world.history) > 1:
+			# 		print (self.world.history[-1].state_diff(self.world.history[-2]))						
+			return {'PASS_THROUGH'}
+
+		def execute(self, context):
+			context.window_manager.modal_handler_add(self)
+			return {'RUNNING_MODAL'}
+
+		# def invoke(self, context, event):
+		# 	print ("MODAL2")
+		# 	context.window_manager.modal_handler_add(self)
+		# 	return {'RUNNING_MODAL'}
+
+	class State:
 		def __init__(self, entities):
 			self.locations = {}
 			for ent in entities:

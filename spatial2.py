@@ -14,132 +14,142 @@ observer = None
 
 class Spatial:
     def __init__(self):
-        self.pred_to_str = {
-            spatial.on: 'on',
-            spatial.to_the_left_of_deic: 'to the left of',
-            spatial.to_the_right_of_deic: 'to the right of',
-            spatial.near: 'near',
-            spatial.above: 'above',
-            spatial.below: 'below',
-            spatial.over: 'over',
-            spatial.inside: 'in',
-            spatial.touching: 'touching',
-            spatial.at: 'next to',
-            spatial.higher_than: 'high',
-            spatial.lower_than: 'low',
-            spatial.in_front_of_deic: 'in front of',
-            spatial.behind: 'behind',
-            spatial.clear: 'clear',
-            spatial.where: 'where',
-            exist: 'exist',
-            spatial.facing: 'facing',
-            color_pred: 'color',
-            blue: 'blue',
-            red: 'red',
-            green: 'green', }
+        self.projection_intersection = ProjectionIntersection()
+        self.within_cone_region = WithinConeRegion()
+        self.frame_size = FrameSize()
+        self.raw_distance = RawDistance()
+        self.larger_than = LargerThan()
+        self.closer_than = CloserThan()
+        self.higher_than_centroidwise = HigherThan_Centroidwise()
+        self.higher_than = HigherThan(connections = {'higher_than_centroidwise': self.higher_than_centroidwise})
+        self.lower_than = LowerThan(connections = {'higher_than': self.higher_than})
+        self.taller_than = TallerThan()
+        self.at_same_height = AtSameHeight()
+        self.supported = Supported()
+        self.touching = Touching()
+        self.to_the_right_of_deictic = RightOf_Deictic()
+        self.to_the_right_of_extrinsic = RightOf_Extrinsic()
+        self.to_the_right_of_intrinsic = RightOf_Intrinsic()
+        self.to_the_right_of = RightOf(connections = {'to_the_right_of_deictic': self.to_the_right_of_deictic,
+            'to_the_right_of_intrinsic': self.to_the_right_of_intrinsic, 'to_the_right_of_extrinsic': self.to_the_right_of_extrinsic})
+        self.to_the_left_of_deictic = LeftOf_Deictic(connections = {'to_the_right_of_deictic': self.to_the_right_of_deictic})
+        self.to_the_left_of_extrinsic = LeftOf_Extrinsic(connections = {'to_the_right_of_extrinsic': self.to_the_right_of_extrinsic})
+        self.to_the_left_of_intrinsic = LeftOf_Intrinsic(connections = {'to_the_right_of_intrinsic': self.to_the_right_of_intrinsic})
+        self.to_the_left_of = LeftOf(connections = {'to_the_left_of_deictic': self.to_the_left_of_deictic,
+            'to_the_left_of_intrinsic': self.to_the_left_of_intrinsic, 'to_the_left_of_extrinsic': self.to_the_left_of_extrinsic})
+        self.in_front_of_deictic = InFrontOf_Deictic()
+        self.in_front_of_extrinsic = InFrontOf_Extrinsic()
+        self.in_front_of_intrinsic = InFrontOf_Intrinsic()
+        self.in_front_of = InFrontOf(connections = {'in_front_of_deictic': self.in_front_of_deictic,
+            'in_front_of_intrinsic': self.in_front_of_intrinsic, 'in_front_of_extrinsic': self.in_front_of_intrinsic})
+        self.behind_deictic = Behind_Deictic(connections = {'in_front_of_deictic': self.in_front_of_deictic})        
+        self.behind_extrinsic = Behind_Extrinsic(connections = {'in_front_of_extrinsic': self.in_front_of_extrinsic})
+        self.behind_intrinsic = Behind_Intrinsic(connections = {'in_front_of_intrinsic': self.in_front_of_intrinsic})
+        self.behind = Behind(connections = {'behind_deictic': self.behind_deictic,
+            'behind_intrinsic': self.behind_intrinsic, 'behind_extrinsic': self.behind_extrinsic})
+        self.above = Above(connections = {'within_cone_region': self.within_cone_region})
+        self.below = Below(connections = {'above': self.above})
+        self.near_raw = Near_Raw()
+        self.near = Near(connections = {'near_raw': self.near_raw})
+        self.over = Over(connections = {'above': self.above, 'projection_intersection': self.projection_intersection, 'near': self.near})
+        self.on = On(connections = {'above': self.above, 'touching': self.touching, 'projection_intersection': self.projection_intersection, 
+            'larger_than': self.larger_than})
+        self.under = Under(connections = {'on': self.on})
+        self.between = Between()
+        self.inside = Inside()
+        self.at = At(connections = {'at_same_height': self.at_same_height, 'touching': self.touching, 'near': self.near})
+
         self.str_to_pred = {
-            'on.p': spatial.on,
-            'on': spatial.on,
+            'on.p': self.on,
+            'on': self.on,
 
-            'to_the_left_of.p': spatial.to_the_left_of_deic,
-            'left.a': spatial.to_the_left_of_deic,
-            'leftmost.a': spatial.to_the_left_of_deic,
-            'to_the_right_of.p': spatial.to_the_right_of_deic,
-            'right.a': spatial.to_the_right_of_deic,
-            'rightmost.a': spatial.to_the_right_of_deic,
-            'right.p': spatial.to_the_right_of_deic,
-            'left.p': spatial.to_the_left_of_deic,
+            'to_the_left_of.p': self.to_the_left_of,
+            'to the left of': self.to_the_left_of,
+            'left.a': self.to_the_left_of,
+            'leftmost.a': self.to_the_left_of,
+            'to_the_right_of.p': self.to_the_right_of,
+            'to the right of': self.to_the_right_of,
+            'right.a': self.to_the_right_of,
+            'rightmost.a': self.to_the_right_of,
+            'right.p': self.to_the_right_of,
+            'left.p': self.to_the_left_of,
 
-            'near.p': spatial.near,
-            'near_to.p': spatial.near,
-            'close_to.p': spatial.near,
-            'close.a': spatial.near,
-            'on.p': spatial.on,
-            'on_top_of.p': spatial.on,
-            'above.p': spatial.above,
-            'below.p': spatial.below,
-            'over.p': spatial.over,
-            'under.p': spatial.below,
-            'underneath.p': spatial.below,
-            'supporting.p': spatial.under,
+            'near.p': self.near,
+            'near': self.near,
+            'near_to.p': self.near,
+            'close_to.p': self.near,
+            'close.a': self.near,
+            'on.p': self.on,
+            'on_top_of.p': self.on,
+            'above.p': self.above,
+            'below.p': self.below,
+            'over.p': self.over,
+            'under.p': self.below,
+            'underneath.p': self.below,
+            'supporting.p': self.under,
 
-            'in.p': spatial.inside,
-            'in': spatial.inside,
-            'inside.p': spatial.inside,
+            'in.p': self.inside,
+            'in': self.inside,
+            'inside.p': self.inside,
 
-            'touching.p': spatial.touching,
-            'touch.v': spatial.touching,
-            'adjacent_to.p': spatial.touching,
+            'touching.p': self.touching,
+            'touch.v': self.touching,
+            'adjacent_to.p': self.touching,
 
-            'at.p': spatial.at,
-            'next_to.p': spatial.at,
+            'at.p': self.at,
+            'next_to.p': self.at,
+            'next to': self.at,
 
-            'high.a': spatial.higher_than,
-            'upper.a': spatial.higher_than,
-            'highest.a': spatial.higher_than,
-            'topmost.a': spatial.higher_than,
-            'top.a': spatial.higher_than,
-            'low.a': spatial.lower_than,
-            'lowest.a': spatial.lower_than,
+            'high.a': self.higher_than,
+            'upper.a': self.higher_than,
+            'highest.a': self.higher_than,
+            'topmost.a': self.higher_than,
+            'top.a': self.higher_than,
+            'low.a': self.lower_than,
+            'lowest.a': self.lower_than,
 
-            'in_front_of.p': spatial.in_front_of,
-            'front.a': spatial.in_front_of,
-            'frontmost.a': spatial.in_front_of,
+            'in_front_of.p': self.in_front_of,
+            'front.a': self.in_front_of,
+            'frontmost.a': self.in_front_of,
 
-            'behind.p': spatial.behind,
-            'backmost.a': spatial.behind,
-            'back.a': spatial.behind,
-            'farthest.a': spatial.behind,
-            'far.a': spatial.behind,
-            'between.p': spatial.between,
-            'clear.a': spatial.clear,
-            'where.a': spatial.where,
-            'exist.pred': exist,
+            'behind.p': self.behind,
+            'backmost.a': self.behind,
+            'back.a': self.behind,
+            'farthest.a': self.behind,
+            'far.a': self.behind,
+            'between.p': self.between,
+            'between': self.between,
+            # 'clear.a': self.clear,
+            # 'where.a': spatial.where,
+            # 'exist.pred': exist,
 
-            'face.v': spatial.facing,
-            'facing.p': spatial.facing,
+            # 'face.v': spatial.facing,
+            # 'facing.p': spatial.facing,
 
-            'color.pred': color_pred,
+            # 'color.pred': color_pred,
 
-            'blue.a': blue,
-            'red.a': red,
-            'green.a': green,
+            # 'blue.a': blue,
+            # 'red.a': red,
+            # 'green.a': green,
 
-            'blue': blue,
-            'red': red,
-            'green': green, }
-        self.arity = {
-            spatial.on: 2,
-            spatial.to_the_left_of_deic: 2,
-            spatial.to_the_right_of_deic: 2,
-            spatial.near: 2,
-            spatial.above: 2,
-            spatial.below: 2,
-            spatial.over: 2,
-            spatial.under: 2,
-            spatial.inside: 2,
-            spatial.touching: 2,
-            spatial.at: 2,
-            spatial.in_front_of: 2,
-            spatial.behind: 2,
-            spatial.between: 3,
-            spatial.clear: 1,
-            spatial.higher_than: 2,
-            spatial.lower_than: 2,
-            spatial.where: 1,
-            spatial.facing: 2,
-            ident: 2,
-            exist: 1,
-            color_pred: 1,
+            # 'blue': blue,
+            # 'red': red,
+            # 'green': green,
+            }
 
-            blue: 1,
-            red: 1,
-            green: 1, }
+    def compute(self, relation, trs, lms):
+        if relation not in self.str_to_pred:
+            return -1        
+        if len(lms) == 1:
+            return self.str_to_pred[relation].compute(trs[0], lms[0])
+        else:
+            return self.str_to_pred[relation].compute(trs[0], lms[0], lms[1])
 
 class Node:
-    def __init__(self):
+    def __init__(self, connections = None):
         self.arity = 2
-        self.connections = []
+        self.set_connections(connections)        
+        self.parameters = []
 
     def set_connections(self, connections):
         self.connections = connections
@@ -147,24 +157,64 @@ class Node:
     def get_connections(self):
         return self.connections
 
-class ConeArea(Node):
+    def get_parameters(self):
+        return self.parameters
+
+class ProjectionIntersection(Node):
+    """
+    Computes the normalized area of the intersection of projection of two entities onto the XY-plane.
+    Returns a real number from [0, 1].
+    """
+    def compute(self, tr, lm):
+        # bbox_tr = tr.bbox
+        # bbox_lm = lm.bbox
+        axmin = tr.span[0]
+        axmax = tr.span[1]
+        aymin = tr.span[2]
+        aymax = tr.span[3]
+        bxmin = lm.span[0]
+        bxmax = lm.span[1]
+        bymin = lm.span[2]
+        bymax = lm.span[3]
+        xdim = 0
+        ydim = 0
+        if axmin >= bxmin and axmax <= bxmax:
+            xdim = axmax - axmin
+        elif bxmin >= axmin and bxmax <= axmax:
+            xdim = bxmax - bxmin
+        elif axmin <= bxmin and axmax <= bxmax and axmax >= bxmin:
+            xdim = axmax - bxmin
+        elif axmin >= bxmin and axmin <= bxmax and axmax >= bxmax:
+            xdim = bxmax - axmin
+
+        if aymin >= bymin and aymax <= bymax:
+            ydim = aymax - aymin
+        elif bymin >= aymin and bymax <= aymax:
+            ydim = bymax - bymin
+        elif aymin <= bymin and aymax <= bymax and aymax >= bymin:
+            ydim = aymax - bymin
+        elif aymin >= bymin and aymin <= bymax and aymax >= bymax:
+            ydim = bymax - aymin
+        area = xdim * ydim
+
+        # Normalize the intersection area to [0, 1]
+        return math.e ** (area - min((axmax - axmin) * (aymax - aymin), (bxmax - bxmin) * (bymax - bymin)))
+
+class WithinConeRegion(Node):
     """
 	Factor determining containment in an infinite cone-shaped beam
 	with the given width, emanating from the origin object/point into a given
 	direction.
 	"""
 
-    def __init__(self, origin, direction, width):
-        self.direction = direction
-        self.width = width
+    def __init__(self, ):        
+        self.parameters = {'exponent_multiplier': 2}
 
-    def compute(self, vect):
-        cos = self.direction.dot(vect) / (np.linalg.norm(self.direction) * \
-                                          np.linalg.norm(vect))
+    def compute(self, vect, direction, width):
+        cos = direction.dot(vect) / (np.linalg.norm(direction) * np.linalg.norm(vect))
         angle = math.acos(cos)
-        final_score = 1 / (1 + math.e ** (2 * (self.width - angle)))
+        final_score = 1 / (1 + math.e ** (self.parameters['exponent_multiplier'] * (width - angle)))
         return final_score
-
 
 class FrameSize(Node):
     """
@@ -190,13 +240,11 @@ class FrameSize(Node):
             min_z = min(min_z, entity.span[4])
         return max(max_x - min_x, max_y - min_y, max_z - min_z)
 
-
 class RawDistance(Node):
 
     def compute(self, tr, lm):
         dist = dist_obj(tr, lm)
         if tr.get('planar') is not None:
-            # print ("TEST", a.name, b.name)
             dist = min(dist, get_planar_distance_scaled(tr, lm))
         elif lm.get('planar') is not None:
             dist = min(dist, get_planar_distance_scaled(lm, tr))
@@ -205,11 +253,137 @@ class RawDistance(Node):
         elif lm.get('vertical_rod') is not None or lm.get('horizontal_rod') is not None or lm.get('rod') is not None:
             dist = min(dist, get_line_distance_scaled(lm, tr))
         elif tr.get('concave') is not None or lm.get('concave') is not None:
-            dist = min(dist, closest_mesh_distance_scaled(tr, lm))
+            dist = min(dist, closest_mesh_distance_scaled(tr, lm))        
+        
+        return dist
 
-        final_score = dist
-        return final_score
+class LargerThan(Node):
+    """
+    Computes whether the TR is larger than the LM.
+    The result is a real number from [0, 1].
+    """
 
+    def compute(self, tr, lm):       
+        bbox_tr = tr.bbox
+        bbox_lm = lm.bbox
+        bbox_dim_diff = (bbox_lm[7][0] - bbox_lm[0][0] + bbox_lm[7][1] - bbox_lm[0][1] + bbox_lm[7][2] - bbox_lm[0][2]) \
+            - (bbox_tr[7][0] - bbox_tr[0][0] + bbox_tr[7][1] - bbox_tr[0][1] + bbox_tr[7][2] - bbox_tr[0][2])
+        return 1 / (1 + math.e ** bbox_dim_diff)
+
+class CloserThan(Node):
+    """
+    Computes the "closer-than" relation. Returns a real number from [0, 1].
+    """
+
+    def compute(self, tr, lm, pivot):
+        return int(point_distance(tr.centroid, pivot.centroid) < point_distance(lm.centroid, pivot.centroid))
+
+    def str(self):
+        return 'closer_than.p'
+
+class HigherThan_Centroidwise(Node):
+    """Compute whether the centroid of a is higher than the centroid of b."""
+    def compute(self, tr, lm):
+        return sigmoid(tr.centroid[2] - lm.centroid[2], 1.0, 1.0)
+
+    def str(self):
+        return 'higher_than_centroidwise.p'
+
+class HigherThan(Node):
+    def compute(self, tr, lm):
+        return self.connections['higher_than_centroidwise'].compute(tr, lm)
+
+    def str(self):
+        return 'higher_than.p'
+
+class LowerThan(Node):
+    def compute(self, tr, lm):
+        return self.connections['higher_than'].compute(lm, tr)
+
+    def str(self):
+        return 'lower_than.p'
+
+class TallerThan(Node):
+    def compute(self, tr, lm):
+        return tr.dimensions[2] > lm.dimensions[2]
+
+    def str(self):
+        return 'taller_than.p'
+
+class AtSameHeight(Node):
+    def compute(self, tr, lm):
+        """
+        Check if two entities are at the same height
+        """
+        dist = np.linalg.norm(tr.centroid[2] - lm.centroid[2])
+        scaled_dist = dist / (tr.size + lm.size + 0.01)
+        return math.e ** (-scaled_dist)
+
+    def str(self):
+        return 'at_same_height.p'
+    
+class Supported(Node):
+    """
+    Computes whether the TR is physically supported by the LM.
+    The result is a real number from [0, 1].
+    """
+    def __init__(self):
+        self.parameters = {'rel_dist': 0.8}
+
+    def compute(self, tr, lm):           
+        direct_support = self.connections['touching'](tr, lm) * self.connections['above'](tr, lm)
+        indirect_support = 0
+        tr_h = tr.centroid[2]
+        lm_h = lm.centroid[2]
+        for entity in world.entities:
+            e_h = entity.centroid[2]
+            if (e_h - lm_h) / lm.size >= self.parameters['rel_dist'] and (tr_h - e_h) / tr.size >= self.parameters['rel_dist']:
+                indirect_support = max(indirect_support, min(self.compute(tr, entity), self.compute(entity, lm)))
+        #print ("SUPPORT: ", direct_support, indirect_support)
+        return max(direct_support, indirect_support)
+
+    def str(self):
+        return 'supported_by.p'
+
+class Touching(Node):
+    """
+    Computes the "touching" relation, where two entities are touching if they are "very close".
+    The result is a real number from [0, 1]
+    """
+    def compute(self, tr, lm):
+        if tr == lm:
+            return 0        
+        mesh_dist = 1e9
+        planar_dist = 1e9
+        shared_volume = shared_volume_scaled(tr, lm)        
+        if lm.get("planar") is not None:
+            planar_dist = get_planar_distance_scaled(lm, tr)
+        elif tr.get("planar") is not None:
+            planar_dist = get_planar_distance_scaled(tr, lm)        
+        if get_centroid_distance_scaled(tr, lm) <= 1.5:            
+            mesh_dist = closest_mesh_distance(tr, lm) / (min(tr.size, lm.size) + 0.01)
+        mesh_dist = min(mesh_dist, planar_dist)
+        touch_face = 0
+
+        print ('INIT...', len(lm.faces))
+        for face in lm.faces:
+            for v in tr.vertex_set:
+                touch_face = max(is_in_face(v, face), touch_face)
+        print ('COMPLETE...')
+        if shared_volume == 0:
+            if touch_face > 0.95:
+                ret_val = touch_face
+            elif mesh_dist < 0.1:
+                ret_val = math.exp(- mesh_dist)
+            else:
+                ret_val = math.exp(- 2 * mesh_dist)
+        else:
+            ret_val = 0.3 * math.exp(- 2 * mesh_dist) + 0.7 * (shared_volume > 0)
+        #print ("Touching " + a.name + ", " + b.name + ": " + str(ret_val))
+        return ret_val
+
+    def str(self):
+        return 'touching.p'
 
 class RightOf_Deictic(Node):
     """Deictic sense of the to-the-right-of relation."""
@@ -227,6 +401,8 @@ class RightOf_Deictic(Node):
         final_score = 0.9 * (0.4 * horizontal_component + 0.6 * vertical_component)
         return final_score
 
+    def str(self):
+        return 'to_the_right_of_deictic.p'
 
 class RightOf_Extrinsic(Node):
     """Extrinsic sense of the to-the-right-of relation."""
@@ -242,6 +418,8 @@ class RightOf_Extrinsic(Node):
         final_score = math.e ** (- 0.1 * (1 - cos)) * math.e ** (- 0.05 * dist / max(tr.size, lm.size))
         return final_score
 
+    def str(self):
+        return 'to_the_right_of_extrinsic.p'
 
 class RightOf_Intrinsic(Node):
     """Intrinsic sense of the to-the-right-of relation."""
@@ -257,67 +435,49 @@ class RightOf_Intrinsic(Node):
         final_score = math.e ** (- 0.1 * (1 - cos)) * math.e ** (- 0.05 * dist / max(tr.size, lm.size))
         return final_score
 
+    def str(self):
+        return 'to_the_right_of_intrinsic.p'
 
 class RightOf(Node):
     """Implementation of the general to-the-right-of relation."""
 
-    def __init__(self):
-        deictic_measure = RightOf_Deictic()
-        extrinsic_measure = RightOf_Extrinsic()
-        intrinsic_measure = RightOf_Intrinsic()
-        self.set_connections([deictic_measure, extrinsic_measure, intrinsic_measure])
+    def __init__(self, connections):
+        self.set_connections(connections)
     
     def compute(self, tr, lm=None):
         ret_val = 0
         if type(tr) == Entity and type(lm) == Entity:
             connections = self.get_connections()
-            return max(connections[0].compute(tr, lm), connections[1].compute(tr, lm),
-                       connections[2].compute(tr, lm))
+            return max(connections['to_the_right_of_deictic'].compute(tr, lm), connections['to_the_right_of_intrinsic'].compute(tr, lm),
+                       connections['to_the_right_of_extrinsic'].compute(tr, lm))
         elif lm is None:
             ret_val = np.average([self.compute(tr, entity) for entity in world.active_context])
         return ret_val
 
 
 class LeftOf_Deictic(Node):
-    def __init__(self):
-        self.set_connections([RightOf_Deictic()])
-
     def compute(self, tr, lm):
-        return self.get_connections()[0].compute(tr=lm, lm=tr)
+        return self.get_connections()['to_the_right_of_deictic'].compute(tr=lm, lm=tr)
 
 
 class LeftOf_Extrinsic(Node):
-    def __init__(self):
-        self.set_connections([RightOf_Extrinsic()])
-
     def compute(self, tr, lm):
-        return self.get_connections()[0].compute(tr=lm, lm=tr)
+        return self.get_connections()['to_the_right_of_extrinsic'].compute(tr=lm, lm=tr)
 
 class LeftOf_Intrinsic(Node):
-    def __init__(self):
-        self.set_connections([RightOf_Intrinsic()])
-
     def compute(self, tr, lm):
-        return self.get_connections()[0].compute(tr=lm, lm=tr)
-
+        return self.get_connections()['to_the_right_of_intrinsic'].compute(tr=lm, lm=tr)
 
 class LeftOf(Node):
-    def __init__(self):
-        deictic_measure = LeftOf_Deictic()
-        extrinsic_measure = LeftOf_Extrinsic()
-        intrinsic_measure = LeftOf_Intrinsic()
-        self.set_connections([deictic_measure, extrinsic_measure, intrinsic_measure])       
-
     def compute(self, tr, lm=None):
         ret_val = 0
         if type(tr) == Entity and type(lm) == Entity:
             connections = self.get_connections()
-            return max(connections[0].compute(tr, lm), connections[1].compute(tr, lm),
-                       connections[2].compute(tr, lm))
+            return max(connections['to_the_left_of_deictic'].compute(tr, lm), connections['to_the_left_of_intrinsic'].compute(tr, lm),
+                       connections['to_the_left_of_extrinsic'].compute(tr, lm))
         elif lm is None:
             ret_val = np.average([self.compute(tr, entity) for entity in world.active_context])
         return ret_val
-
 
 class InFrontOf_Deictic(Node):
     def compute(self, tr, lm):
@@ -327,31 +487,17 @@ class InFrontOf_Deictic(Node):
                         bbox_tr[7][1] - bbox_tr[0][1],
                         bbox_tr[7][2] - bbox_tr[0][2]) + 0.0001
         dist = get_distance_from_line(world.get_observer().centroid, lm.centroid, tr.centroid)
-        # print ("{}, {}, CLOSER: {}, WC_DEIC: {}, WC_EXTR: {}, DIST: {}".format(a.name, b.name, closer_than(a, b, observer), within_cone(b.centroid - observer.centroid, a.centroid - observer.centroid, 0.95), within_cone(b.centroid - a.centroid, Vector((0, -1, 0)) - a.centroid, 0.8), e ** (- 0.1 * get_centroid_distance_scaled(a, b))))
-        # print ("WITHIN CONE:")
         a_bbox = get_2d_bbox(vp_project(tr, world.get_observer()))
         b_bbox = get_2d_bbox(vp_project(lm, world.get_observer()))
         a_center = projection_bbox_center(a_bbox)
         b_center = projection_bbox_center(b_bbox)
         dist = np.linalg.norm(a_center - b_center)
         scaled_proj_dist = dist / (max(get_2d_size(a_bbox), get_2d_size(b_bbox)) + 0.001)
-        # scaled_proj_dist = gaussian(scaled_proj_dist, 0, 1)
-
-        # print ("BBOX :", a_bbox, b_bbox)
-        # print ("PROJ DIST:" ,scaled_proj_dist)
         a_dist = np.linalg.norm(tr.location - world.observer.location)
         b_dist = np.linalg.norm(lm.location - world.observer.location)
-        # print ("SIGM, OVERLAP :  ", sigmoid(b_dist - a_dist, 1, 0.5), math.e ** (-0.5 * scaled_proj_dist))
+        
         return 0.5 * (sigmoid(b_dist - a_dist, 1, 0.5) + math.e ** (-0.5 * scaled_proj_dist))
-        # return closer_than(a, b, world.observer) * math.e ** (-0.1 * scaled_dist)
-        # return math.e ** (- 0.01 * get_centroid_distance_scaled(a, b)) * within_cone(b.centroid - a.centroid, world.front_axis, 0.7)
-        # return math.e ** (- 0.01 * get_centroid_distance_scaled(a, b)) * within_cone(b.centroid - a.centroid, Vector((1, 0, 0)), 0.7)
-        '''0.3 * closer_than(a, b, observer) + \
-                      0.7 * (max(within_cone(b.centroid - observer.centroid, a.centroid - observer.centroid, 0.95),
-                      within_cone(b.centroid - a.centroid, Vector((1, 0, 0)), 0.7)) * \
-                      e ** (- 0.2 * get_centroid_distance_scaled(a, b)))#e ** (-dist / max_dim_a))'''
-
-
+        
 class InFrontOf_Extrinsic(Node):
     def compute(self, tr, lm):
         # proj_dist = math.fabs(world.front_axis.dot(a.location)) - math.fabs(world.front_axis.dot(b.location))
@@ -359,21 +505,11 @@ class InFrontOf_Extrinsic(Node):
         # print ("PROJ_DISTANCE", proj_dist_scaled)
         return math.e ** (- 0.01 * get_centroid_distance_scaled(tr, lm)) * within_cone(lm.centroid - tr.centroid,
                                                                                  -world.front_axis, 0.7)
-
-
 class InFrontOf_Intrinsic(Node):
     def compute(self, tr, lm):
         return math.e ** (- 0.01 * get_centroid_distance_scaled(tr, lm)) * within_cone(lm.centroid - tr.centroid,
                                                                                        -lm.front, 0.7)
-
-
 class InFrontOf(Node):
-    def __init__(self):
-        deictic_measure = InFrontOf_Deictic()
-        extrinsic_measure = InFrontOf_Extrinsic()
-        intrinsic_measure = InFrontOf_Intrinsic()
-        self.set_connections([deictic_measure, extrinsic_measure, intrinsic_measure])
-
     def compute(self, tr, lm=None):
         ret_val = 0
         if type(tr) == Entity and type(lm) == Entity:
@@ -383,51 +519,70 @@ class InFrontOf(Node):
         elif lm is None:
             ret_val = np.average([self.compute(tr, entity) for entity in world.active_context])
         return ret_val
-
 
 class Behind_Deictic(Node):
-    def __init__(self):
-        self.set_connections([InFrontOf_Deictic()])
-
     def compute(self, tr, lm):
-        return self.get_connections()[0].compute(tr=lm, lm=tr)
-
+        return self.get_connections()['in_front_of_deictic'].compute(tr=lm, lm=tr)
 
 class Behind_Extrinsic(Node):
-    def __init__(self):
-        self.set_connections([InFrontOf_Extrinsic()])
-
     def compute(self, tr, lm):
-        return self.get_connections()[0].compute(tr=lm, lm=tr)
-
+        return self.get_connections()['in_front_of_extrinsic'].compute(tr=lm, lm=tr)
 
 class Behind_Intrinsic(Node):
-    def __init__(self):
-        self.set_connections([InFrontOf_Intrinsic()])
-
     def compute(self, tr, lm):
-        return self.get_connections()[0].compute(tr=lm, lm=tr)
-
+        return self.get_connections()['in_front_of_intrinsic'].compute(tr=lm, lm=tr)
 
 class Behind(Node):
-    def __init__(self):
-        deictic_measure = Behind_Deictic()
-        extrinsic_measure = Behind_Extrinsic()
-        intrinsic_measure = Behind_Intrinsic()
-        self.set_connections([deictic_measure, extrinsic_measure, intrinsic_measure])
-
     def compute(self, tr, lm=None):
         ret_val = 0
         if type(tr) == Entity and type(lm) == Entity:
             connections = self.get_connections()
-            return max(connections[0].compute(tr, lm), connections[1].compute(tr, lm),
-                       connections[2].compute(tr, lm))
+            return max(connections['in_front_of_deictic'].compute(tr, lm), connections['in_front_of_intrinsic'].compute(tr, lm),
+                       connections['in_front_of_extrinsic'].compute(tr, lm))
         elif lm is None:
             ret_val = np.average([self.compute(tr, entity) for entity in world.active_context])
         return ret_val
 
-class Near_Raw(Node):
+class Above(Node):
+
     def compute(self, tr, lm):
+        """Computes the 'a above b' relation, returns the certainty value.
+
+        Parameters:
+        a, b - objects of type Entity
+
+        Return value:
+        float value from [0, 1]
+        """
+        # bbox_a = a.bbox
+        # bbox_b = b.bbox
+        # span_a = a.get_span()
+        # span_b = b.get_span()
+        # center_a = a.get_bbox_centroid()
+        # center_b = b.get_bbox_centroid()
+        # scaled_vertical_distance = (center_a[2] - center_b[2]) / ((span_a[5] - span_a[4]) + (span_b[5] - span_b[4]))
+        # print ("ABOVE:", sigmoid(a.centroid[2] - b.centroid[2], 1, 0.1))
+        # print ("CONE:",within_cone(a.centroid - b.centroid, Vector((0, 0, 1)), 0.05))
+        vertical_dist_scaled = (tr.centroid[2] - lm.centroid[2]) / (max(tr.dimensions[2], lm.dimensions[2]) + 0.01)
+        # print ("WITHIN CONE: ", a, within_cone(a.centroid - b.centroid, np.array([0, 0, 1.0]), 0.1), sigmoid(vertical_dist_scaled, 1, 3), vertical_dist_scaled)
+        return self.connections['within_cone_region'].compute(tr.centroid - lm.centroid, np.array([0, 0, 1.0]), 0.1) \
+                * sigmoid(vertical_dist_scaled, 1, 3)  # math.e ** (- 0.01 * get_centroid_distance_scaled(a, b))
+
+class Below(Node):
+
+    def compute(self, tr, lm):
+        """Computes the 'a below b' relation, returns the certainty value.
+
+        Parameters:
+        a, b - objects of type Entity
+
+        Return value:
+        float value from [0, 1]
+        """
+        return self.connections['above'].compute(lm, tr)
+
+class Near_Raw(Node):
+    def compute(self, tr, lm):        
         bbox_tr = tr.bbox
         bbox_lm = lm.bbox
         dist = dist_obj(tr, lm)
@@ -452,74 +607,147 @@ class Near_Raw(Node):
         fr_size = FrameSize().compute()
         raw_metric = math.e ** (- 0.1 * dist)
         '''0.5 * (1 - min(1, dist / avg_dist + 0.01) +'''
-        print("RAW NEAR: ", tr, lm, raw_metric * (1 - raw_metric / fr_size))
+        #print("RAW NEAR: ", tr, lm, raw_metric * (1 - raw_metric / fr_size))
         return raw_metric * (1 - raw_metric / fr_size)
 
-
 class Near(Node):
-    def __init__(self):
-        raw_measure = Near_Raw()
-        self.set_connections([raw_measure])
-
     def compute(self, tr, lm=None):
-        # entities = get_entities()
-        # print (entities)
+        
         if tr == lm:
             return 0
-        raw_near_tr = []
-        raw_near_lm = []
         connections = self.get_connections()
-        raw_near_measure = connections[0].compute(tr, lm)
-        for entity in entities:
-            if entity != tr and entity != lm:
-                near_tr_entity = connections[0].compute(tr, entity)
-                near_lm_entity = connections[0].compute(lm, entity)
-                # print (entity.name, near_tr_entity, near_lm_entity)
-                # if dist_a_to_entity < raw_dist:
-                raw_near_tr += [near_tr_entity]
-                # if dist_b_to_entity < raw_dist:
-                raw_near_lm += [near_lm_entity]
-        # print ("RAW_NEAR_A: ", raw_near_tr, entities)
-        # print ("RAW:", a.name, b.name, raw_near_measure)
-        average_near_tr = sum(raw_near_tr) / len(raw_near_tr)
-        average_near_lm = sum(raw_near_lm) / len(raw_near_lm)
-        avg_near = 0.5 * (average_near_tr + average_near_lm)
-        max_near_tr = max(raw_near_tr)
-        max_near_lm = max(raw_near_lm)
-        max_near = max(raw_near_measure, max_near_tr, max_near_lm)
-        # print ("AVER: ", average_near_tr, average_near_lm)
-        ratio = raw_near_measure / max_near
-        if (raw_near_measure < avg_near):
-            near_measure_final = 0.5 * raw_near_measure
-        else:
-            near_measure_final = raw_near_measure * ratio
+        raw_near_measure = connections['near_raw'].compute(tr, lm)
+        raw_near_tr = [connections['near_raw'].compute(tr, entity) for entity in world.entities if entity != tr]
+        raw_near_lm = [connections['near_raw'].compute(lm, entity) for entity in world.entities if entity != lm]                
+        avg_near = 0.5 * (np.average(raw_near_tr) + np.average(raw_near_lm))
+    #     max_near_tr = max(raw_near_tr)
+    #     max_near_lm = max(raw_near_lm)
+    #     max_near = max(raw_near_measure, max_near_tr, max_near_lm)
+    # # for entity in entities:
+        #     if entity != tr and entity != lm:
+        #         raw_near_tr = [connections['near_raw'].compute(tr, entity) for entity in entities if entity != tr and entity != lm]
+        #         raw_near_lm = [connections['near_raw'].compute(lm, entity) for entity in entities if entity != tr and entity != lm]
+        #         near_lm_entity = connections['near_raw'].compute(lm, entity)
+        #         # print (entity.name, near_tr_entity, near_lm_entity)
+        #         # if dist_a_to_entity < raw_dist:
+        #          += [near_tr_entity]
+        #         # if dist_b_to_entity < raw_dist:
+        #         raw_near_lm += [near_lm_entity]
+
+
+        # ratio = raw_near_measure / max_near
+        # if (raw_near_measure < avg_near):
+        #     near_measure_final = 0.5 * raw_near_measure
+        # else:
+        #     near_measure_final = raw_near_measure * ratio
         near_measure = raw_near_measure + (raw_near_measure - avg_near) * min(raw_near_measure, 1 - raw_near_measure)
-        # print ("RAW: {}; NEAR: {}; FINAL: {}; AVER: {};".format(raw_near_measure, near_measure, near_measure_final, (average_near_tr + average_near_lm) / 2))
         if tr.compute_size() > lm.compute_size():
             near_measure -= 0.1  # TODO
         elif tr.compute_size() < lm.compute_size():
             near_measure += 0.1
         return near_measure
 
-
 class Between(Node):
-    def compute(self, a, b, c):
-        print("ENTERING THE BETWEEN...", a, b, c)
-        center_a = a.bbox_centroid
-        center_b = b.bbox_centroid
-        center_c = c.bbox_centroid
 
-        vec1 = np.array(center_b) - np.array(center_a)
-        vec2 = np.array(center_c) - np.array(center_a)
+    def __init__(self, connections=None):
+        self.set_connections(connections)
+        self.parameters = {'distance_scaling': -0.05}
 
-        cos = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2) + 0.001)
+    def compute(self, tr, lm1, lm2):
+        #print("ENTERING THE BETWEEN...", a, b, c)
+        # center_a = a.bbox_centroid
+        # center_b = b.bbox_centroid
+        # center_c = c.bbox_centroid
+        #print (tr.name, lm1.name, lm2.name)
 
-        scaled_dist = np.linalg.norm(b.bbox_centroid - c.bbox_centroid) / (2 * a.size)
-        dist_coeff = math.exp(-0.05 * scaled_dist)
+        tr_to_lm1 = lm1.centroid - tr.centroid
+        tr_to_lm2 = lm2.centroid - tr.centroid
 
-        print("BETWEEN DIST FACT: ", dist_coeff)
+        cos = np.dot(tr_to_lm1, tr_to_lm2) / (np.linalg.norm(tr_to_lm1) * np.linalg.norm(tr_to_lm2) + 0.001)
+
+        scaled_dist = np.linalg.norm(lm1.centroid - lm2.centroid) / (2 * tr.size)
+
+        dist_coeff = math.exp(self.parameters['distance_scaling'] * scaled_dist)
+
+        #print("BETWEEN DIST FACT: ", dist_coeff)
         ret_val = math.exp(- math.fabs(-1 - cos)) * dist_coeff
         return ret_val
+
+
+#Computes the "on" relation
+#Inputs: a, b - entities
+#Return value: real number from [0, 1]
+class On(Node):
+    def compute(self, tr, lm):
+        if tr == lm:
+            return 0
+        proj_dist = np.linalg.norm(np.array([tr.location[0] - lm.location[0], tr.location[1] - lm.location[1]]))
+        proj_dist_scaled = proj_dist / (max(tr.size, lm.size) + 0.01)
+        #print ("LOCA: ", proj_dist_scaled)
+        hor_offset = math.e ** (-0.3 * proj_dist_scaled)
+        #print ("PROJ DIST: ", a, b, hor_offset)
+        #print ("ON METRICS: ", touching(a, b), above(a, b), hor_offset, touching(a, b) * above(a, b) * hor_offset)
+        ret_val =  self.connections['touching'].compute(tr, lm) * self.connections['above'].compute(tr, lm) \
+                            if hor_offset < 0.8 \
+                                    else self.connections['above'].compute(tr, lm) #* touching(a, b)
+        #print ("ON METRICS: ", touching(a, b), above(a, b), hor_offset, touching(a, b) * above(a, b) * hor_offset)
+        #ret_val = max(ret_val, supporting(b, a))
+
+        
+        #print ("CURRENT ON: ", a, b, ret_val, above(a, b), touching(a, b), hor_offset)
+    #    ret_val =  touching(a, b) * hor_offset if above(a, b) < 0.88 else above(a, b) * touching(a, b)        
+        #print ("CURRENT ON:", ret_val)
+        if lm.get('planar') is not None and larger_than(lm, tr) and tr.centroid[2] > 0.5 * tr.dimensions[2]:
+            ret_val = max(ret_val, touching(tr, lm))    
+        #ret_val = 0.5 * (v_offset(a, b) + get_proj_intersection(a, b))
+        #print ("ON {}, {}, {}".format(ret_val, get_proj_intersection(a, b), v_offset(a, b)))
+        #ret_val = max(ret_val, 0.5 * (above(a, b) + touching(a, b)))
+        #print ("ON {}".format(ret_val))
+        for ob in lm.components:
+            ob_ent = Entity(ob)
+            if ob.get('working_surface') is not None or ob.get('planar') is not None:
+                ret_val = max(ret_val, 0.5 * (v_offset(tr, ob_ent) + get_proj_intersection(tr, ob_ent)))
+                ret_val = max(ret_val, 0.5 * (int(near(tr, ob_ent) > 0.99) + larger_than(ob_ent, tr)))
+        if lm.get('planar') is not None and isVertical(lm):
+            ret_val = max(ret_val, math.exp(- 0.5 * get_planar_distance_scaled(tr, lm)))
+        return ret_val
+
+class Over(Node):
+
+    def compute(self, tr, lm):
+        bbox_a = a.bbox
+        bbox_b = b.bbox
+        return 0.5 * self.connections['above'].compute(tr, lm) \
+            + 0.2 * self.connections['projection_intersection'].compute(tr, lm) \
+            + 0.3 * self.connections['near'].compute(tr, lm)
+
+class Under(Node):
+    """
+    Computes the "under" relation, which is taken to be symmetric to "over". 
+    Returns a real number from [0, 1].
+    """
+    def compute(self, tr, lm):
+        return self.connections['on'].compute(lm, tr)
+
+class At(Node):
+    """
+    Computes the "at" relation. Returns a real number from [0, 1].
+    """
+    def compute(self, tr, lm):
+        if tr == lm:
+            return 0
+        touching = self.connections['touching'].compute(tr, lm)
+        at_same_height = self.connections['at_same_height'].compute(tr, lm)
+        return at_same_height * touching if touching > 0.9 else at_same_height * self.connections['near'].compute(tr, lm)
+
+class Inside(Node):
+    def compute(self, tr, lm):
+        # a_bbox = a.bbox
+        # b_bbox = b.bbox
+        shared_volume = get_bbox_intersection(tr, lm)
+        proportion = shared_volume / lm.volume
+        return sigmoid(proportion, 1.0, 1.0)
+
 # =======================================================================================================
 # ====================================OLD CODE STARTS HERE===============================================
 # =======================================================================================================
@@ -541,43 +769,6 @@ def dist_obj(a, b):
     return point_distance(center_a, center_b)
 
 
-# Computes the normalized area of the intersection of projection of two entities onto the XY-plane
-# Inputs: a, b - entities
-# Return value: real number
-def get_proj_intersection(a, b):
-    bbox_a = a.bbox
-    bbox_b = b.bbox
-    axmin = a.span[0]
-    axmax = a.span[1]
-    aymin = a.span[2]
-    aymax = a.span[3]
-    bxmin = b.span[0]
-    bxmax = b.span[1]
-    bymin = b.span[2]
-    bymax = b.span[3]
-    xdim = 0
-    ydim = 0
-    if axmin >= bxmin and axmax <= bxmax:
-        xdim = axmax - axmin
-    elif bxmin >= axmin and bxmax <= axmax:
-        xdim = bxmax - bxmin
-    elif axmin <= bxmin and axmax <= bxmax and axmax >= bxmin:
-        xdim = axmax - bxmin
-    elif axmin >= bxmin and axmin <= bxmax and axmax >= bxmax:
-        xdim = bxmax - axmin
-
-    if aymin >= bymin and aymax <= bymax:
-        ydim = aymax - aymin
-    elif bymin >= aymin and bymax <= aymax:
-        ydim = bymax - bymin
-    elif aymin <= bymin and aymax <= bymax and aymax >= bymin:
-        ydim = aymax - bymin
-    elif aymin >= bymin and aymin <= bymax and aymax >= bymax:
-        ydim = bymax - aymin
-    area = xdim * ydim
-
-    # Normalize the intersection area to [0, 1]
-    return math.e ** (area - min((axmax - axmin) * (aymax - aymin), (bxmax - bxmin) * (bymax - bymin)))
 
 
 # Returns the orientation of the entity relative to the coordinate axes
@@ -646,44 +837,6 @@ def vp_project(entity, observer):
                     in entity.vertex_set]
     return pixel_coords
 
-
-# ==========================================================================================
-# Raw metric for the nearness relation
-# Doesn't take into account the nearness statistics in the scene
-# Inputs: a, b - entities
-# Return value: real number from [0, 1], the raw nearness measure
-def near_raw(a, b):
-    bbox_a = a.bbox
-    bbox_b = b.bbox
-    dist = dist_obj(a, b)
-    max_dim_a = max(bbox_a[7][0] - bbox_a[0][0],
-                    bbox_a[7][1] - bbox_a[0][1],
-                    bbox_a[7][2] - bbox_a[0][2])
-    max_dim_b = max(bbox_b[7][0] - bbox_b[0][0],
-                    bbox_b[7][1] - bbox_b[0][1],
-                    bbox_b[7][2] - bbox_b[0][2])
-    if a.get('planar') is not None:
-        # print ("TEST", a.name, b.name)
-        dist = min(dist, get_planar_distance_scaled(a, b))
-    elif b.get('planar') is not None:
-        dist = min(dist, get_planar_distance_scaled(b, a))
-    elif a.get('vertical_rod') is not None or a.get('horizontal_rod') is not None or a.get('rod') is not None:
-        dist = min(dist, get_line_distance_scaled(a, b))
-    elif b.get('vertical_rod') is not None or b.get('horizontal_rod') is not None or b.get('rod') is not None:
-        dist = min(dist, get_line_distance_scaled(b, a))
-    elif a.get('concave') is not None or b.get('concave') is not None:
-        dist = min(dist, closest_mesh_distance_scaled(a, b))
-
-    fr_size = spatial.get_frame_size(entities)
-    raw_metric = math.e ** (- 0.1 * dist)
-    '''0.5 * (1 - min(1, dist / avg_dist + 0.01) +'''
-    print("RAW NEAR: ", a, b, raw_metric * (1 - raw_metric / fr_size))
-    return raw_metric * (1 - raw_metric / fr_size)
-
-
-entities = None
-
-
 # Computes the nearness measure for two entities
 # Takes into account the scene statistics:
 # The raw nearness score is updated depending on whether one object is the closest to another
@@ -748,20 +901,6 @@ def between(a, b, c):
     print("BETWEEN DIST FACT: ", dist_coeff)
     ret_val = math.exp(- math.fabs(-1 - cos)) * dist_coeff
     return ret_val
-
-
-# Computes the "larger-than" relation
-# Inputs: a, b - entities
-# Return value: real number from [0, 0.5]
-def larger_than(a, b):
-    bbox_a = a.bbox
-    bbox_b = b.bbox
-    return 1 / (1 + math.e ** (bbox_b[7][0] - bbox_b[0][0] \
-                               + bbox_b[7][1] - bbox_b[0][1] \
-                               + bbox_b[7][2] - bbox_b[0][2] \
-                               - (bbox_a[7][0] - bbox_a[0][0] \
-                                  + bbox_a[7][1] - bbox_a[0][1] \
-                                  + bbox_a[7][2] - bbox_a[0][2])))
 
 
 # Computes the "on" relation
@@ -891,22 +1030,6 @@ def behind(a, b):
     return in_front_of(b, a)
 
 
-# Computes the "at" relation
-# Inputs: a, b - entities
-# Return value: real number from [0, 1]
-def at(a, b):
-    if a == b:
-        return 0
-    return at_same_height(a, b) * touching(a, b) if touching(a, b) > 0.9 else at_same_height(a, b) * near(a, b)
-
-
-def inside(a, b):
-    a_bbox = a.bbox
-    b_bbox = b.bbox
-    shared_volume = get_bbox_intersection(a, b)
-    proportion = shared_volume / b.volume
-    return sigmoid(proportion, 1.0, 1.0)
-
 
 # Computes the "touching" relation
 # Two entities are touching each other if they
@@ -1001,40 +1124,6 @@ def to_the_left_of_deic(a, b):
     return RightOf.compute(b, a)
 
 
-def above(a, b):
-    """Computes the 'a above b' relation, returns the certainty value.
-
-	Parameters:
-	a, b - objects of type Entity
-
-	Return value:
-	float value from [0, 1]
-	"""
-    # bbox_a = a.bbox
-    # bbox_b = b.bbox
-    # span_a = a.get_span()
-    # span_b = b.get_span()
-    # center_a = a.get_bbox_centroid()
-    # center_b = b.get_bbox_centroid()
-    # scaled_vertical_distance = (center_a[2] - center_b[2]) / ((span_a[5] - span_a[4]) + (span_b[5] - span_b[4]))
-    # print ("ABOVE:", sigmoid(a.centroid[2] - b.centroid[2], 1, 0.1))
-    # print ("CONE:",within_cone(a.centroid - b.centroid, Vector((0, 0, 1)), 0.05))
-    vertical_dist_scaled = (a.centroid[2] - b.centroid[2]) / (max(a.dimensions[2], b.dimensions[2]) + 0.01)
-    # print ("WITHIN CONE: ", a, within_cone(a.centroid - b.centroid, np.array([0, 0, 1.0]), 0.1), sigmoid(vertical_dist_scaled, 1, 3), vertical_dist_scaled)
-    return within_cone(a.centroid - b.centroid, np.array([0, 0, 1.0]), 0.1) * sigmoid(vertical_dist_scaled, 1,
-                                                                                      3)  # math.e ** (- 0.01 * get_centroid_distance_scaled(a, b))
-
-
-def below(a, b):
-    """Computes the 'a below b' relation, returns the certainty value.
-
-	Parameters:
-	a, b - objects of type Entity
-
-	Return value:
-	float value from [0, 1]
-	"""
-    return above(b, a)
 
 
 # STUB
@@ -1077,41 +1166,6 @@ def clear(obj):
     return 1 - max(ent_on)
 
 
-def higher_than_centroidwise(a, b):
-    """Compute whether the centroid of a is higher than the centroid of b."""
-
-    a0 = a.centroid
-    b0 = b.centroid
-    return sigmoid(a0[2] - b0[2], 1.0, 1.0)  # 1 / (1 + math.exp(-(a0[2] - b0[2]))
-
-
-def higher_than(a, b):
-    return higher_than_centroidwise(a, b)
-
-
-def lower_than(a, b):
-    return higher_than(b, a)
-
-
-def taller_than(a, b):
-    return a.dimensions[2] > b.dimensions[2]
-
-
-def at_same_height(a, b):
-    """
-	Check if two entities are at the same height
-
-	"""
-
-    dist = np.linalg.norm(a.centroid[2] - b.centroid[2])
-    scaled_dist = dist / (a.size + b.size + 0.01)
-    return math.e ** (-scaled_dist)
-    """a_higher_b = higher_than(a, b)
-	b_higher_a = higher_than(b, a)
-	if a_higher_b > 0.8 or b_higher_a > 0.8:
-		return 0
-	else:
-		return 1 - a_higher_b * b_higher_a"""
 
 
 def where(entity):
