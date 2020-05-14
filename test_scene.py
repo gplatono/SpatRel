@@ -13,7 +13,7 @@ import spatial2
 world = World(bpy.context.scene, simulation_mode=True)
 spatial2.world = world
 spatial2.observer = world.get_observer()
-spatial_module = spatial2.Spatial()
+spatial_module = spatial2.Spatial(world)
 
 def run_testcase(testcase):
 	components = testcase.split(':')

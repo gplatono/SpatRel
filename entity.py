@@ -399,4 +399,43 @@ class Entity(object):
 		vectors = [item.location - centroid for item in self.components]
 		return vectors
 
-		
+	def is_in_canopy(self, point):
+		num_samples = 1000
+		total_hits = 0
+		for i in range(num_samples):
+			u = np.random.normal(0,1)
+			v = np.random.normal(0,1)
+			w = np.random.normal(0,1)
+			vec = np.array([u, v, w])
+			vec = vec / np.linalg.norm(vec)
+			is_hit = False
+			for comp in self.components:
+				hit, loc, norm, face = comp.ray_cast(point, vec)
+				is_hit = hit or is_hit
+			if is_hit:
+				total_hits += 1
+		return float(total_hits) / num_samples
+
+	def compute_canopy(self):
+		x_min = 1e10
+		x_max = -1e10
+		y_min = 1e10
+		y_max = -1e10
+		z_min = 1e10
+		z_max = -1e10
+		for i in range(1000):
+			x = np.random.uniform(self.span[0], self.span[1])
+			y = np.random.uniform(self.span[2], self.span[3])
+			z = np.random.uniform(self.span[4], self.span[5])
+			point = np.array([x, y, z])
+			if self.is_in_canopy(point) > 0.8:
+				x_min = min(x_min, point[0])
+				y_min = min(y_min, point[1])
+				x_min = min(z_min, point[2])
+				x_max = max(x_max, point[0])
+				y_max = max(y_max, point[1])
+				x_max = max(z_max, point[2])
+		if x_min < x_max and y_min < y_max and z_min < z_max:
+			return np.array([x_min, x_max, y_min, y_max, z_min, z_max])
+		else:
+			return None
