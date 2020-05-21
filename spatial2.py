@@ -800,7 +800,7 @@ class On(Node):
 		#print ("CURRENT ON: ", a, b, ret_val, above(a, b), touching(a, b), hor_offset)
 	#    ret_val =  touching(a, b) * hor_offset if above(a, b) < 0.88 else above(a, b) * touching(a, b)        
 		#print ("CURRENT ON:", ret_val)
-		if lm.get('planar') is not None and larger_than(lm, tr) and tr.centroid[2] > 0.5 * tr.dimensions[2]:
+		if lm.get('planar') is not None and self.connections['larger_than'].compute(lm, tr) and tr.centroid[2] > 0.5 * tr.dimensions[2]:
 			ret_val = max(ret_val, touching(tr, lm))    
 		#ret_val = 0.5 * (v_offset(a, b) + get_proj_intersection(a, b))
 		#print ("ON {}, {}, {}".format(ret_val, get_proj_intersection(a, b), v_offset(a, b)))
@@ -809,8 +809,8 @@ class On(Node):
 		for ob in lm.components:
 			ob_ent = Entity(ob)
 			if ob.get('working_surface') is not None or ob.get('planar') is not None:
-				ret_val = max(ret_val, 0.5 * (v_offset(tr, ob_ent) + get_proj_intersection(tr, ob_ent)))
-				ret_val = max(ret_val, 0.5 * (int(near(tr, ob_ent) > 0.99) + larger_than(ob_ent, tr)))
+				ret_val = max(ret_val, 0.5 * (v_offset(tr, ob_ent) + self.connections['projection_intersection'].compute(tr, ob_ent)))
+				ret_val = max(ret_val, 0.5 * (int(near(tr, ob_ent) > 0.99) + self.connections['larger_than'].compute(ob_ent, tr)))
 		if lm.get('planar') is not None and isVertical(lm):
 			ret_val = max(ret_val, math.exp(- 0.5 * get_planar_distance_scaled(tr, lm)))
 		return ret_val
