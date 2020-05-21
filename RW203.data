@@ -28,3 +28,11 @@ Sofa 1:in front of:Bookshelf 1
 Sofa 2:in front of:Bookshelf 2
 Ceiling Fan:right of:Ceiling Light 1
 Ceiling Fan:left of:Ceiling Light 2
+Ceiling Fan:to the right of:Ceiling Light 1
+Ceiling Fan:to the left of:Ceiling Light 2
+Cardbox 1:not on:Table
+Laptop:not on:Sofa 1
+Sofa 2:not near:West Wall
+Green Book 2:not on:Bookshelf 2
+Blue Chair 2:not in front of:Table
+Sofa 1:not in front of:Coffee Table
