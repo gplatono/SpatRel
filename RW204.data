@@ -28,3 +28,8 @@ glass:on:floor
 Trash Can:next to:Desk
 Trash Can:near:East Wall
 Note:in:Trash Can
+Fridge:not in front of:Bookshelf 2
+Banana:not in:Trash Can
+TV:not on:Red Chair 2
+Red Chair 2:not to the right of:Desk
+Note:not on:Trash Can
