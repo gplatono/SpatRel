@@ -29,3 +29,11 @@ Note 2:on:Desk 1
 Note 3:on:floor
 Bowl:on:Desk 1
 Pencil Holder:on:Desk 1
+TV 2:not under:Desk 2
+Desk 2:not near:West Wall
+Book shelf 2:not in front of:Book shelf 3
+Book shelf 3:not behind:Book shelf 2
+Trash Can:not on:Red Chair 2
+Trash Can:not above:Red Chair 2
+Red Book 3:not on:Desk 1
+Red Book 1:to the left of:Laptop 1
