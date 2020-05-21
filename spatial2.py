@@ -76,10 +76,12 @@ class Spatial:
 
 			'to_the_left_of.p': self.to_the_left_of,
 			'to the left of': self.to_the_left_of,
+			'left of': self.to_the_left_of,
 			'left.a': self.to_the_left_of,
 			'leftmost.a': self.to_the_left_of,
 			'to_the_right_of.p': self.to_the_right_of,
 			'to the right of': self.to_the_right_of,
+			'right of': self.to_the_right_of,
 			'right.a': self.to_the_right_of,
 			'rightmost.a': self.to_the_right_of,
 			'right.p': self.to_the_right_of,
@@ -92,19 +94,28 @@ class Spatial:
 			'close.a': self.near,
 			'on.p': self.on,
 			'on_top_of.p': self.on,
+			'on top of': self.on,
 			'above.p': self.above,
+			'above': self.above,
 			'below.p': self.below,
+			'below': self.below,
+
 			'over.p': self.over,
+			'over': self.over,
 			'under.p': self.below,
+			'under': self.below,
 			'underneath.p': self.below,
 			'supporting.p': self.under,
 
-			'in.p': self.inside,
-			'in': self.inside,
+			'in.p': self.inside,			
 			'inside.p': self.inside,
+			'in': self.inside,
+			'inside': self.inside,
 
 			'touching.p': self.touching,
+			'touching': self.touching,
 			'touch.v': self.touching,
+			'touch': self.touching,
 			'adjacent_to.p': self.touching,
 
 			'at.p': self.at,
@@ -120,10 +131,12 @@ class Spatial:
 			'lowest.a': self.lower_than,
 
 			'in_front_of.p': self.in_front_of,
+			'in front of': self.in_front_of,
 			'front.a': self.in_front_of,
 			'frontmost.a': self.in_front_of,
 
 			'behind.p': self.behind,
+			'behind': self.behind,
 			'backmost.a': self.behind,
 			'back.a': self.behind,
 			'farthest.a': self.behind,
@@ -587,8 +600,8 @@ class InFrontOf(Node):
 		ret_val = 0
 		if type(tr) == Entity and type(lm) == Entity:
 			connections = self.get_connections()
-			return max(connections[0].compute(tr, lm), connections[1].compute(tr, lm),
-					   connections[2].compute(tr, lm))
+			return max(connections['in_front_of_deictic'].compute(tr, lm), connections['in_front_of_intrinsic'].compute(tr, lm),
+					   connections['in_front_of_extrinsic'].compute(tr, lm))
 		elif lm is None:
 			ret_val = np.average([self.compute(tr, entity) for entity in world.active_context])
 		return ret_val
@@ -776,6 +789,19 @@ class Between(Node):
 	def str(self):
 		return 'between.p'
 
+
+class MetonymicOn(Node):
+	def compute(self, tr, lm):		
+		for ob in lm.components:
+			ob_ent = Entity(ob)
+			
+			# if ob.get('working_surface') is not None or ob.get('planar') is not None:
+			# 	ret_val = max(ret_val, 0.5 * (v_offset(tr, ob_ent) + get_proj_intersection(tr, ob_ent)))
+			# 	ret_val = max(ret_val, 0.5 * (int(near(tr, ob_ent) > 0.99) + larger_than(ob_ent, tr)))
+		return ret_val
+
+	def str(self):
+		return 'on.p'
 
 #Computes the "on" relation
 #Inputs: a, b - entities

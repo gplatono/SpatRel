@@ -10,18 +10,83 @@ sys.path.insert(0, filepath)
 from world import World
 import spatial2
 
+types_ids = {
+	'chair':  'props.item.furniture.chair',
+	'table':  'props.item.furniture.table',    
+	'bed':     'props.item.furniture.bed',
+	'sofa':  'props.item.furniture.sofa',
+	'bookshelf':  'props.item.furniture.bookshelf',
+	'desk':  'props.item.furniture.desk',
+	'book': 'props.item.portable.book',
+	'laptop': 'props.item.portable.laptop',
+	'pencil': 'props.item.portable.pencil',
+	'pencil holder': 'props.item.portable.pencil holder',
+	'note': 'props.item.portable.note',
+	'rose': 'props.item.portable.rose',
+	'vase': 'props.item.portable.vase',
+	'cardbox': 'props.item.portable.cardbox',
+	'box': 'props.item.portable.box',
+	'ceiling light': 'props.item.stationary.ceiling light',
+	'lamp': 'props.item.portable.lamp',
+	'apple': 'props.item.food.apple',
+	'banana': 'props.item.food.banana',
+	'plate': 'props.item.portable.plate',
+	'bowl': 'props.item.portable.bowl',
+	'trash bin': 'props.item.portable.trash can',
+	'trash can': 'props.item.portable.trash can',
+	'tv': 'props.item.appliances.tv',
+	'poster': 'props.item.stationary.poster',
+	'picture': 'props.item.stationary.picture',
+	'fridge' : 'props.item.appliances.fridge',
+	'ceiling fan': 'props.item.stationary.ceiling fan',
+	'block': 'props.item.block',
+	'floor': 'world.plane.floor',
+	'ceiling': 'world.plane.ceiling',
+	'wall': 'world.plane.wall',
+	'block 5': 'item.prop.block.Block 5',
+	'block 4': 'item.prop.block.Block 4',
+	'block 3': 'item.prop.block.Block 3',
+	'block 2': 'item.prop.block.Block 2',
+	'block 1': 'item.prop.block.Block 1'
+}
+
+color_mods = ['black', 'red', 'blue', 'brown', 'green', 'yellow']
+
+
+def fix_ids():
+	for ob in bpy.context.scene.objects:
+		if ob.get('main') is not None:
+			for key in types_ids.keys():
+				if key in ob.name.lower():
+					ob['id'] = types_ids[key] + "." + ob.name
+			if ob.get('color_mod') is None:
+				for color in color_mods:
+					if color in ob.name.lower():
+						ob['color_mod'] = color
+						break
+
+fix_ids()
+bpy.ops.wm.save_mainfile(filepath=bpy.data.filepath)
+
 world = World(bpy.context.scene, simulation_mode=True)
 spatial2.world = world
 spatial2.observer = world.get_observer()
 spatial_module = spatial2.Spatial(world)
+
+# print ('computing canopy...')
+# ent = world.find_entity_by_name('')
+# canopy = ent.compute_canopy()
+# print ('Span: ', ent.span)
+# print ('Canopy: ', canopy)
 
 def run_testcase(testcase):
 	components = testcase.split(':')
 	print (components)
 	relation = components[1].strip()
 	trs = [world.find_entity_by_name(components[0].strip())]
-	lms = [world.find_entity_by_name(item.strip()) for item in components[2:]]	
-	if relation != 'on' and relation != 'next to' and relation != 'touching':
+	lms = [world.find_entity_by_name(item.strip()) for item in components[2:]]
+	# if relation != 'on' and relation != 'next to' and relation != 'touching':
+	if relation != 'on' and None not in trs and None not in lms:
 		return spatial_module.compute(relation, trs, lms)
 
 test_file = sys.argv[-1]
@@ -32,3 +97,6 @@ with open(test_file) as f:
 	tests = [line.strip() for line in f.readlines()]
 	for test in tests:
 		print (run_testcase(test))
+
+input()
+bpy.ops.wm.quit_blender()

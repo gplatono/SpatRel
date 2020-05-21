@@ -4,27 +4,30 @@ Trash Can:between:Desk:bed1
 Trash Can:near:North Wall
 Sofa:near:East Wall
 Sofa:near:bed2
-bed1:near:North Wall:East Wall
-bed2:right of:West Wall
-bed2:near:Fridge
-bed2:left of:Blue Chair
+bed 1:near:North Wall
+bed 1:near:East Wall
+bed 2:right of:West Wall
+bed 2:near:Fridge
+bed 2:left of:Blue Chair
 Red Chair:beside:Desk
-Blue Chair:beside:bed2:Bookshelf
-Blue Chair:between:bed2:Bookshelf
+Blue Chair:beside:bed 2
+Blue Chair:beside:Bookshelf
+Blue Chair:between:bed 2:Bookshelf
 TV:on:Desk
 TV:near:North Wall
 Laptop:on:Desk
 Laptop:in front of:TV
 Banana:on:Desk
 Banana:right of:Laptop
-Desk:between:Bookshelf:bed1
-Bookshelf:near:West Wall:North Wall
+Desk:between:Bookshelf:bed 1
+Bookshelf:near:West Wall
+Bookshelf:near:North Wall
 Bookshelf:right of:Blue Chair
 Fridge:next to:West Wall
-Fridge:near:bed2
+Fridge:near:bed 2
 Ceiling Fan:between:Ceiling Light 1:Ceiling Light 2
 Table:below:Ceiling Fan
-Table:between:Sofa:bed2
+Table:between:Sofa:bed 2
 Table:in front of:Sofa
 Desk:in front of:Table
 Green Book:on:Bookshelf

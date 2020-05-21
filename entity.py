@@ -400,7 +400,7 @@ class Entity(object):
 		return vectors
 
 	def is_in_canopy(self, point):
-		num_samples = 1000
+		num_samples = 80
 		total_hits = 0
 		for i in range(num_samples):
 			u = np.random.normal(0,1)
@@ -423,18 +423,20 @@ class Entity(object):
 		y_max = -1e10
 		z_min = 1e10
 		z_max = -1e10
-		for i in range(1000):
+		for i in range(500):
 			x = np.random.uniform(self.span[0], self.span[1])
 			y = np.random.uniform(self.span[2], self.span[3])
 			z = np.random.uniform(self.span[4], self.span[5])
 			point = np.array([x, y, z])
 			if self.is_in_canopy(point) > 0.8:
+				print ("in canopy: ", point)
 				x_min = min(x_min, point[0])
 				y_min = min(y_min, point[1])
-				x_min = min(z_min, point[2])
+				z_min = min(z_min, point[2])
 				x_max = max(x_max, point[0])
 				y_max = max(y_max, point[1])
-				x_max = max(z_max, point[2])
+				z_max = max(z_max, point[2])
+		print (x_min, x_max, y_min, y_max, z_min, z_max)
 		if x_min < x_max and y_min < y_max and z_min < z_max:
 			return np.array([x_min, x_max, y_min, y_max, z_min, z_max])
 		else:
