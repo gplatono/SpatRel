@@ -1,0 +1,37 @@
+cardbox 1:below:blue book 6
+Red Book 1:next to:blue book 6
+blue book 3:on:blue book 2
+TV:on:North Wall
+apple:next to:laptop one
+glass 1:next to:banana
+glass 2:on:Bookshelf
+brown chair 2:next to:Bookshelf
+bed:near:TV
+blue book 1:on:bed
+bowl:next to:blue book 1
+brown chair 1:between:bed:red chair
+Trash Can:near:Bookshelf
+blue book 3:above:red chair
+blue book 4:below:glass 2
+Laptop:next to:blue book 1
+bed:near:west wall
+apple:on:table 2
+banana:near:west wall
+Trash Can:next to:Bookshelf
+glass 1:to the left of:laptop one
+brown chair 2:next to:east wall
+Trash Can:to the right of:Cardbox 1
+red chair:next to:table 2
+Trash Can:on:floor
+Bookshelf:between:brown chair 2:Trash Can
+table 2:next to:west wall
+table 1:above:Cardbox 1
+red chair:near:brown chair 1
+brown chair 1:near:bed
+blue book 4:near:Trash Can
+bowl:to the right of:Laptop
+apple:in front of:laptop one
+banana:near:Rose
+Red Book 1:to the right of:red chair
+bowl:next to:North Wall
+blue book 1:on:bed

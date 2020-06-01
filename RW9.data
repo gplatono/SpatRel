@@ -1,0 +1,45 @@
+trash can:next to:desk 2
+cardbox 2:below:table
+laptop:next to:red book
+note:on:table
+deep plate:next to:note
+cardbox 2:next to:brown chair
+bed 4:between:desk 1:bookshelf 2
+bowl:on:bed 2
+red chair:between:bed 2:bed 1
+bookshelf 1:between:bed 3:bed 1
+purple book:on:bookshelf 1
+picture:above:bed 3
+lamp:next to:cardbox 1
+cardbox 1:between:bed 3:bed 4
+banana:on:desk 2
+picture:near:ceiling
+red chair:next to:west wall
+cardbox 1:on:floor
+yellow book:between:bed 2:bed 4
+apple:near:yellow book
+green book:next to:yellow book
+laptop:near:brown chair
+table:next to:brown chair
+blue book:near:blue chair
+apple:next to:bed 4
+yellow book:near:bowl
+note:above:cardbox 2
+bookshelf 1:to the left of:picture
+cardbox 1:near:east wall
+brown chair:between:cardbox 2:desk 1
+apple:to the left of:cardbox 1
+yellow book:near:table
+trash can:next to:west wall
+picture:on:north wall
+table:to the right of:blue chair
+red book:near:bed 4
+red chair:next to:bed 2
+banana:near:trash can
+green book:near:picture
+bed 2:between:red chair:blue chair
+desk 2:next to:bed 2
+red book:next to:east wall
+cardbox 2:near:yellow book
+bookshelf 1:to the right of:bed 1
+apple:near:cardbox 1

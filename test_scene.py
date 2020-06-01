@@ -56,17 +56,20 @@ color_mods = ['black', 'red', 'blue', 'brown', 'green', 'yellow']
 def fix_ids():
 	for ob in bpy.context.scene.objects:
 		if ob.get('main') is not None:
+			cand = None
 			for key in types_ids.keys():
-				if key in ob.name.lower():
-					ob['id'] = types_ids[key] + "." + ob.name
+				if key in ob.name.lower() and (cand is None or cand in key):
+					cand = key
+
+			ob['id'] = types_ids[cand] + "." + ob.name
 			if ob.get('color_mod') is None:
 				for color in color_mods:
 					if color in ob.name.lower():
 						ob['color_mod'] = color
 						break
 
-fix_ids()
-bpy.ops.wm.save_mainfile(filepath=bpy.data.filepath)
+#fix_ids()
+#bpy.ops.wm.save_mainfile(filepath=bpy.data.filepath)
 
 world = World(bpy.context.scene, simulation_mode=True)
 spatial2.world = world
@@ -86,6 +89,7 @@ def run_testcase(testcase):
 	trs = [world.find_entity_by_name(components[0].strip())]
 	lms = [world.find_entity_by_name(item.strip()) for item in components[2:]]
 	# if relation != 'on' and relation != 'next to' and relation != 'touching':
+	# print (trs, lms)
 	if relation != 'on' and None not in trs and None not in lms:
 		return spatial_module.compute(relation, trs, lms)
 
@@ -98,5 +102,5 @@ with open(test_file) as f:
 	for test in tests:
 		print (run_testcase(test))
 
-input()
-bpy.ops.wm.quit_blender()
+# input()
+#bpy.ops.wm.quit_blender()

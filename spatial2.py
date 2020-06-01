@@ -52,7 +52,7 @@ class Spatial:
 		self.in_front_of_extrinsic = InFrontOf_Extrinsic()
 		self.in_front_of_intrinsic = InFrontOf_Intrinsic()
 		self.in_front_of = InFrontOf(connections = {'in_front_of_deictic': self.in_front_of_deictic,
-			'in_front_of_intrinsic': self.in_front_of_intrinsic, 'in_front_of_extrinsic': self.in_front_of_intrinsic})
+			'in_front_of_intrinsic': self.in_front_of_intrinsic, 'in_front_of_extrinsic': self.in_front_of_extrinsic})
 		self.behind_deictic = Behind_Deictic(connections = {'in_front_of_deictic': self.in_front_of_deictic})        
 		self.behind_extrinsic = Behind_Extrinsic(connections = {'in_front_of_extrinsic': self.in_front_of_extrinsic})
 		self.behind_intrinsic = Behind_Intrinsic(connections = {'in_front_of_intrinsic': self.in_front_of_intrinsic})
@@ -432,11 +432,11 @@ class Touching(Node):
 		mesh_dist = min(mesh_dist, planar_dist)
 		touch_face = 0
 
-		print ('INIT...', len(lm.faces))
+		# print ('INIT...', len(lm.faces))
 		for face in lm.faces:
 			for v in tr.vertex_set:
 				touch_face = max(is_in_face(v, face), touch_face)
-		print ('COMPLETE...')
+		# print ('COMPLETE...')
 		if shared_volume == 0:
 			if touch_face > 0.95:
 				ret_val = touch_face
@@ -511,8 +511,13 @@ class RightOf(Node):
 		ret_val = 0
 		if type(tr) == Entity and type(lm) == Entity:
 			connections = self.get_connections()
-			return max(connections['to_the_right_of_deictic'].compute(tr, lm), connections['to_the_right_of_intrinsic'].compute(tr, lm),
-					   connections['to_the_right_of_extrinsic'].compute(tr, lm))
+			deictic = connections['to_the_right_of_deictic'].compute(tr, lm)
+			extrinsic = connections['to_the_right_of_extrinsic'].compute(tr, lm)
+			if lm.right is not None:
+				intrinsic = connections['to_the_right_of_intrinsic'].compute(tr, lm)
+			else:
+				intrinsic = 0
+			return max(deictic, extrinsic, intrinsic)
 		elif lm is None:
 			ret_val = np.average([self.compute(tr, entity) for entity in world.active_context])
 		return ret_val
@@ -547,8 +552,14 @@ class LeftOf(Node):
 		ret_val = 0
 		if type(tr) == Entity and type(lm) == Entity:
 			connections = self.get_connections()
-			return max(connections['to_the_left_of_deictic'].compute(tr, lm), connections['to_the_left_of_intrinsic'].compute(tr, lm),
-					   connections['to_the_left_of_extrinsic'].compute(tr, lm))
+			deictic = connections['to_the_left_of_deictic'].compute(tr, lm)
+			extrinsic = connections['to_the_left_of_extrinsic'].compute(tr, lm)
+			if lm.right is not None:
+				intrinsic = connections['to_the_left_of_intrinsic'].compute(tr, lm)
+			else:
+				intrinsic = 0
+			return max(deictic, extrinsic, intrinsic)
+
 		elif lm is None:
 			ret_val = np.average([self.compute(tr, entity) for entity in world.active_context])
 		return ret_val
@@ -600,8 +611,14 @@ class InFrontOf(Node):
 		ret_val = 0
 		if type(tr) == Entity and type(lm) == Entity:
 			connections = self.get_connections()
-			return max(connections['in_front_of_deictic'].compute(tr, lm), connections['in_front_of_intrinsic'].compute(tr, lm),
-					   connections['in_front_of_extrinsic'].compute(tr, lm))
+			deictic = connections['in_front_of_deictic'].compute(tr, lm)
+			extrinsic = connections['in_front_of_extrinsic'].compute(tr, lm)
+			if lm.front is not None:
+				intrinsic = connections['in_front_of_intrinsic'].compute(tr, lm)
+			else:
+				intrinsic = 0
+
+			return max(deictic, extrinsic, intrinsic)
 		elif lm is None:
 			ret_val = np.average([self.compute(tr, entity) for entity in world.active_context])
 		return ret_val
@@ -791,9 +808,12 @@ class Between(Node):
 
 
 class MetonymicOn(Node):
-	def compute(self, tr, lm):		
+	def compute(self, tr, lm):
+		on_val = 0
+		on_cand = None
 		for ob in lm.components:
-			ob_ent = Entity(ob)
+			val = self.connections['on']
+			
 			
 			# if ob.get('working_surface') is not None or ob.get('planar') is not None:
 			# 	ret_val = max(ret_val, 0.5 * (v_offset(tr, ob_ent) + get_proj_intersection(tr, ob_ent)))

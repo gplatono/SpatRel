@@ -25,42 +25,47 @@ class Entity(object):
 		STRUCTURE = 1
 		REGION = 2
 
-	def __init__(self, components, name=None):
+	def __init__(self, components, name=None, explore_children=True):
 
-		#print (components, type(components))
+		if type(components) == bpy_types.Object:
+			components = [components]
 
 		self.components = components
-		self.name = name
-		
-		if type(components) == bpy_types.Object:
-			self.category = self.Category.PRIMITIVE
-			#Constituent objects
-			#First object in the list is the parent or head object
-			#Defining the entity
-			main_object = components
-			self.components = [main_object]            
-			#self.constituents = [main_object]
+		self.name = name if name is not None else components[0].name
 
+		if explore_children == True:
 			#Filling in the constituent objects starting with the parent
-			queue = [main_object]
+			queue = [item for item in self.components]
 			while len(queue) != 0:
 				parent = queue[0]
 				queue.pop(0)
 				for ob in Entity.scene.objects:                
 					if ob.parent == parent and ob.type == "MESH":
-						#self.constituents.append(ob)
 						self.components.append(ob)
 						queue.append(ob)
-			#Name of the entity
-			self.name = main_object.name
 
-		elif type(components) == list and components != [] and type(components[0]) == Entity:
+		if len(self.components) == 1 and type(self.components[0]) == bpy_types.Object:
+			self.category = self.Category.PRIMITIVE		
+
+		elif len(self.components) > 1 and type(self.components[0]) == Entity or type(self.components[0]) == bpy_types.Object: 
 			self.category = self.Category.STRUCTURE
-			self.components = [item for entity in components for item in entity.components]
+		
+			ent_components = []
+			for comp in self.components:
+				if type(comp) == Entity:
+					ent_components.append(comp)
+				else:
+					ent_components.append(Entity(comp, explore_children=False))
+			self.components = ent_components
+			#self.components = [item for entity in components for item in entity.components]
+			#self.components = [item for entity in components for item in entity.components]
 			self.name = 'struct=(' + '+'.join([item.name for item in self.components]) + ')'
-		elif type(components) == list or type(components) == np.ndarray:
+			comp_names = [ent.name for ent in self.components if ent.components[0].get('main') is not None]
+			if len(comp_names) == 1:
+				self.name = comp_names[0]
+
+		elif type(self.components[0]) == np.ndarray:
 			self.category = self.Category.REGION
-			self.components = [components]
 
 		#The type structure
 		#Each object belong to hierarchy of types, e.g.,
@@ -68,57 +73,8 @@ class Entity(object):
 		#This structure will be stored as a list
 		#['Props', 'Furniture', 'Chair']
 		self.type_structure = self.compute_type_structure()
-
-		#Compute mesh-related data
-		self.vertex_set = self.compute_vertex_set()
-		self.faces = self.compute_faces()
-
-		#The coordiante span of the entity. In other words,
-		#the minimum and maximum coordinates of entity's points
-		self.span = self.compute_span()
-
-		#Separate values for the span of the entity, for easier access
-		self.x_max = self.span[1]
-		self.x_min = self.span[0]
-		self.y_max = self.span[3]
-		self.y_min = self.span[2]
-		self.z_max = self.span[5]
-		self.z_min = self.span[4]
-
-		#The bounding box, stored as a list of triples of vertex coordinates
-		self.bbox = self.compute_bbox()
-
-		#Bounding box's centroid
-		self.bbox_centroid = self.compute_bbox_centroid()
-
-		#Dimensions of the entity in the format
-		#[xmax - xmin, ymax - ymin, zmax - zmin]
-		self.dimensions = self.compute_dimensions()
-
-		#Entity's mesh centroid
-		self.centroid = self.compute_centroid()
-
-		self.location = self.centroid
-	  
-		#The fundamental intrinsic vectors
-		self.up = np.array([0, 0, 1])
-		self.front = np.array(self.components[0].get('frontal')) \
-			if self.components[0].get('frontal') is not None else self.generate_frontal()
-		#print ("FRONT: ", self.components[0].get('frontal'), self.generate_frontal(), self.front)
-		if len(self.front) == len(self.up):
-			self.right = np.cross(self.front, self.up)
-		else:
-			self.right = None #np.array([0, -1, 0])
-
-		#print (self.name, self.front)
-
-		self.radius = self.compute_radius()
-		self.volume = self.compute_volume()
-		self.size = self.compute_size()
-	   
-		#The parent offset
-		self.parent_offset = self.compute_parent_offset()
-		self.ordering = self.induce_linear_order()
+		self.compute_geometry()
+		
 		#Color of the entity
 		self.color_mod = self.get_color_mod()
 
@@ -151,7 +107,6 @@ class Entity(object):
 
 		#Entity's mesh centroid
 		self.centroid = self.compute_centroid()
-
 		self.location = self.centroid
 	  
 		#The fundamental intrinsic vectors
@@ -159,20 +114,22 @@ class Entity(object):
 		self.front = np.array(self.components[0].get('frontal')) \
 			if self.components[0].get('frontal') is not None else self.generate_frontal()
 		#print ("FRONT: ", self.components[0].get('frontal'), self.generate_frontal(), self.front)
-		if len(self.front) == len(self.up):
+		if self.front is not None and len(self.front) == len(self.up):
 			self.right = np.cross(self.front, self.up)
 		else:
-			self.right = np.array([0, -1, 0])
+			self.right = None #np.array([0, -1, 0])
 
-		#print (self.name, self.front)
+		# if self.category == self.Category.STRUCTURE:
+		#  	print (self.name, self.type_structure, self.up, self.front, self.right)
+
+		#self.canopy = self.get_canopy()
 
 		self.radius = self.compute_radius()
 		self.volume = self.compute_volume()
 		self.size = self.compute_size()
 	   
-		#The parent offset
 		self.parent_offset = self.compute_parent_offset()
-		self.ordering = self.induce_linear_order()	
+		self.ordering = self.induce_linear_order()
 	   
 	def set_type_structure(self, type_structure):        
 		self.type_structure = type_structure
@@ -184,8 +141,12 @@ class Entity(object):
 				self.type_structure = self.components[0]['id'].split(".")
 			else:
 				self.type_structure = None
-		else:
-			self.type_structure = None
+		elif self.category == self.Category.STRUCTURE:
+			types = [comp.type_structure for comp in self.components if comp.type_structure is not None]
+			if len(types) == 1:
+				self.type_structure = types[0]
+			else:
+				self.type_structure = None
 		return self.type_structure
 
 	def compute_vertex_set(self):
@@ -196,8 +157,11 @@ class Entity(object):
 		"""
 		vertices = []
 		if self.category == self.Category.PRIMITIVE:
-			for obj in self.components:
-				vertices += [obj.matrix_world @ v.co for v in obj.data.vertices]
+			# 	vertices += [self.components[0].matrix_world @ v.co for v in self.components[0].data.vertices]
+			# for ent in self.components:
+			vertices = [self.components[0].matrix_world @ v.co for v in self.components[0].data.vertices]
+			# for obj in self.components:
+			# 	vertices += [obj.matrix_world @ v.co for v in obj.data.vertices]
 			vertices = [np.array([v[0],v[1],v[2]]) for v in vertices]
 		elif self.category == self.Category.STRUCTURE:
 			vertices = [v for e in self.components for v in e.vertex_set]
@@ -210,10 +174,11 @@ class Entity(object):
 		faces = []
 		#print ("CAT: ", self.category)
 		if self.category == self.Category.PRIMITIVE:
-			for ob in self.components:
-				for face in ob.data.polygons:
-					#print(ob.name, face)
-					faces.append([ob.matrix_world @ ob.data.vertices[i].co for i in face.vertices])
+			for face in self.components[0].data.polygons:
+			 	faces.append([self.components[0].matrix_world @ self.components[0].data.vertices[i].co for i in face.vertices])
+			# for ob in self.components:
+			# for face in self.components[0].data.polygons:
+			# 	faces.append([self.components[0].matrix_world @ self.components[0].data.vertices[i].co for i in face.vertices])
 		elif self.category == self.Category.STRUCTURE:
 			faces = [f for entity in self.components for f in entity.faces]        
 		return faces
@@ -250,15 +215,6 @@ class Entity(object):
 	def compute_centroid(self):
 		"""Compute and return the centroid the vertex set."""
 		return np.average(self.vertex_set, axis=0)
-		"""centroid = Vector((0, 0, 0))
-		vertex_count = 0
-		
-		for v in self.vertex_set():
-			centroid += v
-			vertex_count += 1
-			centroid /= vertex_count
-		self.centroid = centroid
-		return self.centroid"""
 
 	def compute_dimensions(self):
 		"""Gets the dimensions of the entity as a list of number."""
@@ -279,7 +235,7 @@ class Entity(object):
 	def compute_parent_offset(self):
 		"""Compute and return the offset of the entity relative to the location of its head object."""
 		if self.category == self.Category.PRIMITIVE or self.category == self.Category.STRUCTURE:
-			return self.components[0].location.x - self.span[0], self.components[0].location.y - self.span[2], self.components[0].location.z - self.span[4]
+			return self.components[0].location[0] - self.span[0], self.components[0].location[1] - self.span[2], self.components[0].location[2] - self.span[4]
 		else:
 			return None
 
@@ -303,12 +259,13 @@ class Entity(object):
 		types_fr = ['sofa', 'bookshelf', 'desk', 'tv', 'poster', 'picture',	'fridge', 'wall']
 		types_nf = ['chair','table', 'bed', 'book', 'laptop', 'pencil', 'pencil holder', 'note', 'rose', 'vase', 'cardbox', 'box', 'ceiling light', \
 			'lamp',	'apple','banana', 'plate', 'bowl', 'trash bin', 'trash can', 'ceiling fan', 'block', 'floor', 'ceiling']
+		#print (self.type_structure)
 		if self.name == 'Observer':
 			return np.array([1, 0, 0])
-		elif self.type_structure[-1] in types_nf:
+		elif self.type_structure is None or len(self.type_structure) == 0 or self.type_structure[-1] in types_nf or self.type_structure[-2] in types_nf:
 			return None
-		elif self.type_structure[-1] in types_fr:
-			if self.span[1] - span[0] >= span[3] - span[2]:
+		elif self.type_structure[-1] in types_fr or self.type_structure[-2] in types_fr:
+			if self.span[1] - self.span[0] >= self.span[3] - self.span[2]:
 				extend = np.array([1, 0, 0])
 				frontal = np.array([0, 1, 0])
 			else:
@@ -321,7 +278,7 @@ class Entity(object):
 				frontal = np.average(np.array(normals), axis = 0)
 			else:
 				frontal = np.array([0, -1, 0])
-
+		#print (self.name, self.category, frontal)
 		return frontal
 
 	#Checks if the entity has a given property
@@ -441,3 +398,13 @@ class Entity(object):
 			return np.array([x_min, x_max, y_min, y_max, z_min, z_max])
 		else:
 			return None
+
+	def get_canopy(self):
+		if self.components[0].get('canopy') is not None:
+			return self.components[0]['canopy']
+		else:
+			canopy = self.compute_canopy()
+			if canopy is not None:
+				self.components[0]['canopy'] = canopy
+				bpy.ops.wm.save_mainfile(filepath=bpy.data.filepath)
+			return canopy
