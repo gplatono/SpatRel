@@ -44,9 +44,9 @@ def build_data_loader(batch_size, num_workers, is_shuffle):
     return train_loader, test_loader
 
 
-class Net(nn.Module):
+class Net1(nn.Module):
     def __init__(self, n_in, n_out):
-        super(Net, self).__init__()
+        super(Net1, self).__init__()
         self.n_in = n_in
         self.n_out = n_out
         self.linear1 = nn.Linear(n_in, 2)
@@ -61,7 +61,27 @@ class Net(nn.Module):
         #z = self.sigmoid(z)
         return z
 
+    
+# generalized version
+class Net2(nn.Module):
+    def __init__(self, n_in, n_out, h_shapes=[]):
+        super(Net2, self).__init__()
+        self.n_in = n_in
+        self.n_out = n_out
+        self.input_layer = nn.Linear(n_in, h_shapes[0])
+        self.hidden_layers = nn.ModuleList()
+        for k in range(1, len(h_shapes) - 1):
+            self.hidden_layers.append(nn.Linear(h_shapes[k], h_shapes[k + 1]))
+        self.output_layer = nn.Linear(h_shapes[len(h_shapes)], n_out)
 
+    def forward(self, z):
+        z = self.input_layer(z)
+        for layer in self.hidden_layers:
+            z = layer(z)
+        z = nn.softmax(self.output_layer(z), dim=1)
+        return z
+
+    
 def train(train_loader, net, optimizer, criterion, epoch):
     epoch_loss = 0.0
     for epoch_i in range(epoch):
@@ -105,7 +125,7 @@ if __name__ == '__main__':
     # build dataloader
     train_loader, test_loader = build_data_loader(batch_size=2, num_workers=2, is_shuffle=True)
     # initialize model
-    net = Net(n_in = 66, n_out = num_classes)
+    net = Net1(n_in = 66, n_out = num_classes)
     # use crossentropy loss
     #criterion = nn.CrossEntropyLoss()
     criterion = nn.BCEWithLogitsLoss()
