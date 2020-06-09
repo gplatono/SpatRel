@@ -2,7 +2,7 @@ cardbox 1:below:blue book 6
 Red Book 1:next to:blue book 6
 blue book 3:on:blue book 2
 TV:on:North Wall
-apple:next to:laptop one
+apple:next to:laptop 1
 glass 1:next to:banana
 glass 2:on:Bookshelf
 brown chair 2:next to:Bookshelf
@@ -18,7 +18,7 @@ bed:near:west wall
 apple:on:table 2
 banana:near:west wall
 Trash Can:next to:Bookshelf
-glass 1:to the left of:laptop one
+glass 1:to the left of:laptop 1
 brown chair 2:next to:east wall
 Trash Can:to the right of:Cardbox 1
 red chair:next to:table 2
@@ -30,7 +30,7 @@ red chair:near:brown chair 1
 brown chair 1:near:bed
 blue book 4:near:Trash Can
 bowl:to the right of:Laptop
-apple:in front of:laptop one
+apple:in front of:laptop 1
 banana:near:Rose
 Red Book 1:to the right of:red chair
 bowl:next to:North Wall

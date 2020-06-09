@@ -1,9 +1,46 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.utils.data import DataLoader
+import json
 
+
+num_classes = 14
+
+class Dataset(torch.utils.data.Dataset):
+  def __init__(self, samples, labels):
+        print (labels)
+        print (samples)
+        self.labels = labels
+        self.samples = samples
+
+  def __len__(self):
+        return len(self.samples)
+
+  def __getitem__(self, index):
+    #print ('item: ', self.samples[index], self.labels[index])
+    return self.samples[index], self.labels[index]
+        
 def build_data_loader(batch_size, num_workers, is_shuffle):
-    # TODO
+    data = None
+    with open('dataset', 'r') as file:
+        data = file.readlines()
+    data = [json.loads(item) for item in data]
+    samples = []
+    labels = []
+    for item in data:
+        label = [0] * num_classes
+        label[item['label']-1] = 1
+        labels.append(torch.tensor(label, dtype=torch.float32))
+        sample = []
+        for arg in item['arg0']:
+            sample += arg
+        for arg in item['arg1']:
+            sample += arg
+        samples.append(torch.tensor(sample, dtype=torch.float32))
+    dataset = Dataset(samples, labels)
+    train_loader = DataLoader(dataset, batch_size = batch_size, shuffle = is_shuffle, num_workers = num_workers)
+    test_loader = train_loader
     return train_loader, test_loader
 
 
@@ -21,23 +58,32 @@ class Net(nn.Module):
         z = self.linear1(z)
         z = self.hidden_1(z)
         z = self.hidden_2(z)
-        z = self.sigmoid(z)
+        #z = self.sigmoid(z)
         return z
 
 
 def train(train_loader, net, optimizer, criterion, epoch):
     epoch_loss = 0.0
     for epoch_i in range(epoch):
-        for data in enumerate(train_loader):
+        # print ("INIT")
+        # iterator = iter(train_loader)
+        # x_b, y_b = iterator.next()
+        # print (x_b, y_b)
+        epoch_loss = 0
+
+        for step, data in enumerate(train_loader):            
             inputs, labels = data
             optimizer.zero_grad()
             outputs = net(inputs)
+            print ('outputs: ', outputs)
+            print ('labels: ', labels)
             loss = criterion(outputs, labels)
+            epoch_loss += loss.item()
+            #outputs.shape[0] * loss.item()
             loss.backward()
-            optimizer.step()
-            epoch_loss += outputs.shape[0] * loss.item()
+            optimizer.step()            
         # print loss
-        print('epoch %d loss: %.3f' % (epoch+1, epoch_loss / len(train_loader)))
+        print('epoch %d loss: %.3f' % (epoch_i+1, epoch_loss / len(train_loader)))
 
 
 def test(test_loader, net):
@@ -57,15 +103,16 @@ def test(test_loader, net):
 
 if __name__ == '__main__':
     # build dataloader
-    train_loader = build_data_loader(batch_size=4, num_workers=2, is_shuffle=True)
+    train_loader, test_loader = build_data_loader(batch_size=2, num_workers=2, is_shuffle=True)
     # initialize model
-    net = Net()
+    net = Net(n_in = 66, n_out = num_classes)
     # use crossentropy loss
-    criterion = nn.CrossEntropyLoss()
+    #criterion = nn.CrossEntropyLoss()
+    criterion = nn.BCEWithLogitsLoss()
     # use sgd optimizer
     optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
     # train
-    train(train_loader, net, optimizer, criterion, epoch=6)
+    train(train_loader, net, optimizer, criterion, epoch=1000)
     # save model
     savepath = 'classifier_param.pth'
     torch.save(net.state_dict(), savepath)

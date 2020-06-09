@@ -3,6 +3,7 @@ import sys
 import os
 import bmesh
 import numpy as np
+import json
 
 filepath = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, filepath)
@@ -88,6 +89,22 @@ def run_testcase(testcase):
 	relation = components[1].strip()
 	trs = [world.find_entity_by_name(components[0].strip())]
 	lms = [world.find_entity_by_name(item.strip()) for item in components[2:]]
+
+	print (trs, lms)
+	tr_data = [item.get_features() for item in trs]
+	lm_data = [item.get_features() for item in lms]
+	rel_to_label = {'on': 14, 'to the left of': 1, 'left of': 1, 'to the right of': 2, 'right of': 2, 'above': 3,
+			'below': 4, 'in front of': 5, 'behind': 6, 'over': 7, 'under': 8, 'underneath': 8, 'in': 9, 'inside': 9,
+			'touching': 10, 'touch': 10, 'at': 11, 'next to': 11, 'between': 12, 'near': 13, 'on top of': 14}
+	if 'not ' not in relation:
+		label = rel_to_label[relation]
+	else:
+		label = -rel_to_label[relation.replace('not ', '')]
+
+	print (tr_data)
+	data = {'arg0' : tr_data, 'arg1': lm_data, 'label': label}
+	with open('dataset', 'a+') as file:
+		file.write(json.dumps(data) + '\n')
 	# if relation != 'on' and relation != 'next to' and relation != 'touching':
 	# print (trs, lms)
 	if relation != 'on' and None not in trs and None not in lms:

@@ -408,3 +408,17 @@ class Entity(object):
 				self.components[0]['canopy'] = canopy
 				bpy.ops.wm.save_mainfile(filepath=bpy.data.filepath)
 			return canopy
+
+	def get_features(self):
+		features = []
+		for item in self.centroid:
+			features.append(item)
+		#features.append(self.centroid.tolist())
+		for point in self.bbox:
+			for coord in point:
+				features.append(coord)
+		#features.append(self.bbox)
+		for item in self.span:
+			features.append(item)
+		#features.append(self.span)
+		return features

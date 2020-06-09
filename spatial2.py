@@ -432,11 +432,11 @@ class Touching(Node):
 		mesh_dist = min(mesh_dist, planar_dist)
 		touch_face = 0
 
-		# print ('INIT...', len(lm.faces))
-		for face in lm.faces:
-			for v in tr.vertex_set:
-				touch_face = max(is_in_face(v, face), touch_face)
-		# print ('COMPLETE...')
+		#print ('INIT...', len(lm.faces))
+		# for face in lm.faces:
+		# 	for v in tr.vertex_set:
+		# 		touch_face = max(is_in_face(v, face), touch_face)
+		#print ('COMPLETE...')
 		if shared_volume == 0:
 			if touch_face > 0.95:
 				ret_val = touch_face
