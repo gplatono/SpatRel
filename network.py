@@ -49,9 +49,9 @@ class Net1(nn.Module):
         super(Net1, self).__init__()
         self.n_in = n_in
         self.n_out = n_out
-        self.linear1 = nn.Linear(n_in, 2)
-        self.hidden_1 = nn.Linear(2, 3)
-        self.hidden_2 = nn.Linear(3, n_out)
+        self.linear1 = nn.Linear(n_in, 10)
+        self.hidden_1 = nn.Linear(10, 5)
+        self.hidden_2 = nn.Linear(5, n_out)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, z):
@@ -70,15 +70,16 @@ class Net2(nn.Module):
         self.n_out = n_out
         self.input_layer = nn.Linear(n_in, h_shapes[0])
         self.hidden_layers = nn.ModuleList()
-        for k in range(1, len(h_shapes) - 1):
+        for k in range(0, len(h_shapes) - 1):
             self.hidden_layers.append(nn.Linear(h_shapes[k], h_shapes[k + 1]))
-        self.output_layer = nn.Linear(h_shapes[len(h_shapes)], n_out)
+        self.output_layer = nn.Linear(h_shapes[len(h_shapes)-1], n_out)
 
     def forward(self, z):
         z = self.input_layer(z)
         for layer in self.hidden_layers:
             z = layer(z)
-        z = nn.softmax(self.output_layer(z), dim=1)
+        z = self.output_layer(z)
+        #z = nn.softmax(self.output_layer(z), dim=1)
         return z
 
     
@@ -95,13 +96,14 @@ def train(train_loader, net, optimizer, criterion, epoch):
             inputs, labels = data
             optimizer.zero_grad()
             outputs = net(inputs)
+            labels = torch.max(labels, 1)[1]
             print ('outputs: ', outputs)
             print ('labels: ', labels)
+            # loss = criterion(outputs, torch.max(labels, 1)[1])
             loss = criterion(outputs, labels)
-            epoch_loss += loss.item()
-            #outputs.shape[0] * loss.item()
             loss.backward()
-            optimizer.step()            
+            optimizer.step()
+            epoch_loss += loss.item()
         # print loss
         print('epoch %d loss: %.3f' % (epoch_i+1, epoch_loss / len(train_loader)))
 
@@ -125,12 +127,13 @@ if __name__ == '__main__':
     # build dataloader
     train_loader, test_loader = build_data_loader(batch_size=2, num_workers=2, is_shuffle=True)
     # initialize model
-    net = Net1(n_in = 66, n_out = num_classes)
+    #net = Net1(n_in = 66, n_out = num_classes)
+    net = Net2(n_in=66, n_out=num_classes, h_shapes=[50, 40, 30, 10, 5])
     # use crossentropy loss
-    #criterion = nn.CrossEntropyLoss()
-    criterion = nn.BCEWithLogitsLoss()
+    criterion = nn.CrossEntropyLoss()
+    #criterion = nn.BCEWithLogitsLoss()
     # use sgd optimizer
-    optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+    optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9, weight_decay=0.1)
     # train
     train(train_loader, net, optimizer, criterion, epoch=1000)
     # save model
