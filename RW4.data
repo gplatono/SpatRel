@@ -1,6 +1,6 @@
 Ceiling Fan:between:Ceiling Light 1:Ceiling Light 2
-Desk 1:above:TV2
-TV2:on:Floor
+Desk 1:above:TV 2
+TV 2:on:Floor
 Banana 2:on:Desk 2
 Note 1:on:Desk 2
 Note 2:on:Desk 2
@@ -13,7 +13,7 @@ Laptop 1:on:Bookshelf 2
 Desk 1:between:Bookshelf 1:Bookshelf 2
 Desk 2:between:Bookshelf 1:Trash Can
 Blue Chair 2:between:Bookshelf 2:Bookshelf 3
-Red Chair:to the right of:TV2
+Red Chair 2:to the right of:TV 2
 Desk 2:in front of:Bookshelf 1
 Pencil 1:on:Desk 1
 Pencil 2:on:Desk 2
@@ -46,12 +46,12 @@ Note 3:near:Desk 2
 Pencil Holder:not near:Trash Can
 Ceiling Light 2:not on:Laptop 2
 Red Book 1:not next to:Red Book 2
-East Wall:not in between:Note 1:Note 2
-Bookshelf 1:not in between:Desk 1:Bookshelf 2
+East Wall:not between:Note 1:Note 2
+Bookshelf 1:not between:Desk 1:Bookshelf 2
 Banana 1:not on:Green Book 1
 Bowl:not on:Floor
 Red Chair 1:not on:Ceiling
-Blue Chair 2:not in between:Red Chair 1:Red Chair 2
+Blue Chair 2:not between:Red Chair 1:Red Chair 2
 Red Book 2:not on:Floor
 Yellow Book 1:not next to:Laptop 1
 TV 2:not near:Note 3
@@ -59,7 +59,7 @@ Trash can:not next to:Bookshelf 1
 Laptop 1:not near:Laptop 2
 Laptop 1:not on:Blue Chair 1
 TV 2:not on:Red Chair 2
-Pencil 1:not in between:TV 2:Red Chair 2
+Pencil 1:not between:TV 2:Red Chair 2
 Green Book 1:not on:Red Chair 1
 Green Book 1:not next to:Pencil Holder
 Blue Chair 1:not on:Bookshelf 3

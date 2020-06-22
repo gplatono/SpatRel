@@ -1,9 +1,9 @@
 Note:in:Trash Can
 Trash Can:beside:Desk
-Trash Can:between:Desk:bed1
+Trash Can:between:Desk:bed 1
 Trash Can:near:North Wall
 Sofa:near:East Wall
-Sofa:near:bed2
+Sofa:near:bed 2
 bed 1:near:North Wall
 bed 1:near:East Wall
 bed 2:right of:West Wall

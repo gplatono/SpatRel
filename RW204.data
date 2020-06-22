@@ -1,7 +1,7 @@
 Fridge:between:Bookshelf 1: Bookshelf 2
 Fridge:near:North Wall
-table1:between:Blue Chair 1: Blue Chair 2
-table1:below:Ceiling Fan
+table 1:between:Blue Chair 1: Blue Chair 2
+table 1:below:Ceiling Fan
 Ceiling Fan:between:Ceiling Light 1: Ceiling Light 2
 Sofa:near:West Wall
 Bookshelf 1:near:North Wall:West Wall
@@ -9,7 +9,7 @@ Bookshelf 2:near:North Wall:East Wall
 Coffee Table:next to:Sofa
 Coffee Table:beside:Sofa
 Coffee Table:in front of:Sofa
-Desk 2:near:East Wall
+Desk:near:East Wall
 Fridge:near:North Wall
 TV:near:East Wall
 TV:on:Desk
@@ -23,8 +23,8 @@ Red Book:on:Bookshelf 1
 Green Book:on:Bookshelf 1
 Yellow Book:on:Bookshelf 2
 Red Chair 2:beside:Desk
-glass:near:Sofa:West Wall
-glass:on:floor
+Vase:near:Sofa:West Wall
+Vase:on:floor
 Trash Can:next to:Desk
 Trash Can:near:East Wall
 Note:in:Trash Can

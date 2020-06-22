@@ -32,11 +32,11 @@ Blue Chair 2:below:Picture 2
 Picture 1:on:West Wall
 Ceiling Fan:above:Blue Chair 1
 Cardbox 2:below:Green Book 1
-Red Book 1:below:Ceiling Fan 2
+Red Book 1:below:Ceiling Light 2
 Yellow Book 2:below:Ceiling Fan
 Cardbox 2:left of:Blue Chair 1
 Picture 2:right of:Ceiling Light 2
-Picure 1:left of:Ceiling Light 1
+Picture 1:left of:Ceiling Light 1
 Cardbox 1:between:Picture 1:Picture 2
 
 

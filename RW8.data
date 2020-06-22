@@ -4,7 +4,7 @@ bowl:on:bed 1
 red chair:near:blue chair
 banana:next to:blue book
 yellow book:on:floor
-Ceiling Light 1:bookshelf 2
+Ceiling Light 1:next to:bookshelf 2
 picture:above:bed 1
 banana:on:Desk 2
 yellow book:next to:red chair
@@ -42,7 +42,7 @@ bookshelf 1:next to:bed 1
 picture:next to:bookshelf 1
 brown chair:on:floor
 Desk 2:in between:Trash Can:bed 2
-bow:near:picture
+bowl:near:picture
 blue chair:near:red chair
 Ceiling Light 1:next to:east wall
 Laptop:next to:east wall

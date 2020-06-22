@@ -2,15 +2,15 @@ trash can:next to:desk 2
 bowl:on:desk 2
 blue chair 2:next to:cardbox 1
 red book 2:near:blue book
-red book 1:in between:laptop:deep plte
+red book 1:in between:laptop:deep plate
 cardbox 2:next to:desk 1
 purple book 2:above:yellow book 1
 lamp:to the right of:purple book 2
 desk 1:on:east wall
-note:on:tabe 2
+note:on:table 2
 blue chair 1:next to:brown chair
 bookshelf 4:in between:desk 2:table 2
-green book:below:yellow book
+green book:below:yellow book 2
 bookshelf 2:to the right of:picture
 apple:near:red chair 1
 table 1:near:bookshelf 1

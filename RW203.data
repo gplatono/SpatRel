@@ -15,8 +15,8 @@ Yellow Book 1:below:Table
 Yellow Book 2:below:Table
 Red Book 1:on:Bookshelf 1
 Green Book 1:on:Bookshelf 1
-Glass:near:Bookshelf 2
-Glass:near:North Wall
+Vase:near:Bookshelf 2
+Vase:near:North Wall
 Coffee Table:between:Sofa 1:Sofa 2
 Coffee Table:on:floor
 Coffee Table:below:Ceiling

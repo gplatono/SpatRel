@@ -12,9 +12,11 @@ from world import World
 import spatial2
 
 types_ids = {
-	'chair':  'props.item.furniture.chair',
-	'table':  'props.item.furniture.table',    
-	'bed':     'props.item.furniture.bed',
+	'chair': 'props.item.furniture.chair',
+	'table': 'props.item.furniture.table',    
+	'long table': 'props.item.furniture.table.long table',    
+	'coffee table': 'props.item.furniture.table.coffee table',    
+	'bed': 'props.item.furniture.bed',
 	'sofa':  'props.item.furniture.sofa',
 	'bookshelf':  'props.item.furniture.bookshelf',
 	'desk':  'props.item.furniture.desk',
@@ -29,6 +31,7 @@ types_ids = {
 	'box': 'props.item.portable.box',
 	'ceiling light': 'props.item.stationary.ceiling light',
 	'lamp': 'props.item.portable.lamp',
+	'floor lamp': 'props.item.portable.lamp.floor lamp',
 	'apple': 'props.item.food.apple',
 	'banana': 'props.item.food.banana',
 	'plate': 'props.item.portable.plate',
@@ -83,10 +86,22 @@ spatial_module = spatial2.Spatial(world)
 # print ('Span: ', ent.span)
 # print ('Canopy: ', canopy)
 
+def fix(components):
+	ret_val = []
+	for item in components:
+		item.strip()
+		item = item.replace('in between', 'between')
+		item = item.replace('east of', 'to the right of')
+		ret_val.append(item)
+
+	return ret_val
+
 def run_testcase(testcase):
-	components = testcase.split(':')
+	if testcase == '':
+		return
+	components = fix(testcase.split(':'))
 	print (components)
-	relation = components[1].strip()
+	relation = components[1]
 	trs = [world.find_entity_by_name(components[0].strip())]
 	lms = [world.find_entity_by_name(item.strip()) for item in components[2:]]
 
@@ -95,11 +110,14 @@ def run_testcase(testcase):
 	lm_data = [item.get_features() for item in lms]
 	rel_to_label = {'on': 14, 'to the left of': 1, 'left of': 1, 'to the right of': 2, 'right of': 2, 'above': 3,
 			'below': 4, 'in front of': 5, 'behind': 6, 'over': 7, 'under': 8, 'underneath': 8, 'in': 9, 'inside': 9,
-			'touching': 10, 'touch': 10, 'at': 11, 'next to': 11, 'between': 12, 'near': 13, 'on top of': 14}
+			'touching': 10, 'touch': 10, 'at': 11, 'next to': 11, 'between': 12, 'near': 13, 'on top of': 14, 'beside': 15, 'besides': 15}
 	if 'not ' not in relation:
 		label = rel_to_label[relation]
 	else:
 		label = -rel_to_label[relation.replace('not ', '')]
+
+	if label != 1 and label != -1 and label != 2 and label != -2:
+		return
 
 	print (tr_data)
 	data = {'arg0' : tr_data, 'arg1': lm_data, 'label': label}

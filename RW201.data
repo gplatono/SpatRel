@@ -38,4 +38,4 @@ Picture 2:not on:East Wall
 Red Book 1:not on:Bookshelf 2
 Laptop:not under:Table
 Yellow Book 2:not under:Table
-Laptop:to the right of:Yellow Book2
+Laptop:to the right of:Yellow Book 2

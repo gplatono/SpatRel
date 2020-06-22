@@ -26,7 +26,7 @@ lamp:on:Desk 1
 Trash Can:next to:east wall
 bed 2:next to:north wall
 Ceiling Light 1:on:floor
-blue book:next to:boolshelf 2
+blue book:next to:bookshelf 2
 red chair:next to:Desk 1
 blue chair:next to:Desk 2
 note:near:bookshelf 1
