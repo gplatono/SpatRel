@@ -1,0 +1,35 @@
+Table:to the right of:Cardbox 2
+Ceiling Light 2:to the right of:Ceiling Light 1
+Picture 2:to the right of:West Wall
+CardBox 2:to the right of:Cardbox 1
+Ceiling Fan:to the right of:Ceiling Light 1
+Blue Chair 2:to the right of:Cardbox 2
+Blue Chair 2:to the right of:Table
+Yellow Book 2:to the right of:Laptop
+BookShelf 2:to the right of:Picture 1
+Picture 1:to the right of:Bookshelf 1
+Picture 1:to the left of:Bookshelf 2
+Yellow Book 2:to the left of:Blue Chair 2
+Blue Chair 2:to the left of:Blue Chair 1
+Laptop:to the left of:Blue Chair 2
+Ceiling Fan:to the left of:Ceiling Light 2
+Ceiling Light 1:to the left of:Ceiling Light 2
+Laptop:to the left of:Yellow Book 2
+Table:to the left of:Blue Chair 2
+Bookshelf 1:to the left of:Picture 1
+Cardbox 2:to the left of:Blue Chair 2
+Table:above:Cardbox 2
+Laptop:above:Cardbox 2
+Yellow Book 2:above:Cardbox 2
+Cardbox 1:above:Blue Chair 1
+Ceiling Light 2:above:Table
+Ceiling Light 2:above:Blue Chair 2
+Yellow Book 1:above:Green Book 1
+Red Book 1:above:Green Book 1
+Green Book 1:below:Yellow Book 1
+Green Book 1:below:Red Book 1
+Cardbox 2:below:Table
+Cardbox 2:below:Laptop
+Table:below:Ceiling Light 2
+Blue Chair 2:below:Ceiling Light 2
+Blue Chair 1:below:Cardbox 1

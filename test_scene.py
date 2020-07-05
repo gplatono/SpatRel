@@ -116,11 +116,14 @@ def run_testcase(testcase):
 	else:
 		label = -rel_to_label[relation.replace('not ', '')]
 
-	if label != 1 and label != -1 and label != 2 and label != -2:
-		return
+	# if label != 3 and label != -3 and label != 4 and label != -4:
+	#  	return
 
-	print (tr_data)
-	data = {'arg0' : tr_data, 'arg1': lm_data, 'label': label}
+	#print (tr_data)
+	observer_loc = list(map(lambda x: float(x), world.get_observer().location))
+	observer_front = list(map(lambda x: float(x), world.get_observer().front))
+	data = {'arg0' : tr_data, 'arg1': lm_data, 'label': label, 'observer_loc': observer_loc, 'observer_front': observer_front}
+	print (data)
 	with open('dataset', 'a+') as file:
 		file.write(json.dumps(data) + '\n')
 	# if relation != 'on' and relation != 'next to' and relation != 'touching':
@@ -136,6 +139,8 @@ with open(test_file) as f:
 	tests = [line.strip() for line in f.readlines()]
 	for test in tests:
 		print (run_testcase(test))
+
+sys.exit()
 
 # input()
 #bpy.ops.wm.quit_blender()

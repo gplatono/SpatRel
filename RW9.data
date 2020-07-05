@@ -43,3 +43,59 @@ red book:next to:east wall
 cardbox 2:near:yellow book
 bookshelf 1:to the right of:bed 1
 apple:near:cardbox 1
+Cardbox 2:in between:desk 2:desk 1
+picture:above:bed 3
+trash can:near:banana
+bowl:near:west wall
+laptop:near:note
+
+picture:not on:bookshelf 1
+bed 1:not in between:picture:bookshelf 2
+red book:not in between:note:deep plate
+bed 4:not in between:red book:laptop
+red book:not to the left of:note
+cardbox 2:not above:brown chair
+lamp:not on:cardbox 1
+red chair:not on:blue book
+blue book:not on:bed 2
+bed 3:not in between:purple book:green book
+note:not on:east wall
+laptop:not near:north wall
+red book:not near:west wall
+apple:not on:table
+desk 1:not in between:bed 1:bed 3
+red chair:not on:blue chair
+trash can:not near:bed 3
+bed 4:not on:lamp
+purple book:not next to:note
+bowl:not next to:red book
+trash can:not in between:bowl:red chair
+cardbox 1:not in between:bowl:apple
+table:not in between:green book:bed 3
+banana:not on:bed 2
+east wall:not next to:purple book
+blue chair:not next to:lamp
+desk 1:not on:table
+cardbox 2:not next to:red chair
+trash can:not on:bed 2
+cardbox 1:not in between:cardbox 2:bed 4
+yellow book:not on:table
+deep plate:not on:yellow book
+blue book:not in between:red chair:bed 1
+cardbox 1:not on:bed 3
+note:not next to:bed 1
+bookshelf 2:not on:north wall
+bed 1:not on:picture
+cardbox 2:not on:east wall
+lamp:not in between:bed 1:bed 2
+desk 2:not on:red chair
+laptop:not in between:cardbox 1:bookshelf 2
+bowl:not in between:bed 3:bed 4
+yellow book:not next to:laptop
+cardbox 2:not to the right of:red book
+blue chair:not on:bed 2
+bed 3:not in between:bed 1:bed 2
+west wall:not on:blue chair
+cardbox 1:not on:cardbox 2
+cardbox 2:not next to:banana
+lamp:not in between:red book:brown chair

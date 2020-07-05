@@ -3,7 +3,8 @@ Ceiling Fan:right of:Ceiling Light
 Picture 2:on:East Wall
 Picture 1:on:North Wall
 Picture 1:near:Ceiling
-Bookshelf:near:North Wall:East Wall
+Bookshelf:near:North Wall
+Bookshelf:near:East Wall
 Table:between:West Wall:East Wall
 Table:under:Ceiling
 Table:under:Ceiling Fan
@@ -11,7 +12,8 @@ Blue Chair 2:right of:Table
 Blue Chair 1:beside:Desk
 Laptop:on:Table
 Coffee Table:between:Sofa:Table
-Coffee Table:near:Sofa:Table
+Coffee Table:near:Sofa
+Coffee Table:near:Table
 Coffee Table:left of:Table
 Sofa:next to:West Wall
 Sofa:near:West Wall
@@ -24,7 +26,8 @@ Cardbox 1:on:Desk
 Cardbox 2:on:Cardbox 1
 Yellow Book:on:Desk
 Yellow Book:beside:lamp
-Desk:near:West Wall:North Wall
+Desk:near:West Wall
+Desk:near:North Wall
 Red Book:on:Bookshelf
 Green Book:on:Red Book
 Green Book:on:bookshelf

@@ -10,13 +10,15 @@ Blue Chair 1:next to:North Wall
 Note 1:on:Red Book 2
 Note 2:on:Blue Chair 2
 Laptop 1:on:Desk 1
-Laptop 1:near:West Wall:North Wall
+Laptop 1:near:West Wall
+Laptop 1:near:North Wall
 Laptop 2:on:Desk 2
 Laptop 2:in front of:TV
 Green Book 1:on:Desk 1
 Red Book 2:on:Green Book 1
 Yellow Book 2:on:Desk 1
-Yellow Book 2:beside:Red Book 2:Green Book 1
+Yellow Book 2:beside:Red Book 2
+Yellow Book 2:beside:Green Book 1
 Red Book 1:on:Bookshelf 1
 picture1:on:bed2
 Bowl:on:Floor
@@ -26,9 +28,10 @@ Banana 1:under:bed2
 Banana 2:on:Cardbox
 Pencil Holder:near:North Wall
 TV:next to:Laptop 2
-Bookshelf 1:near:North Wall:East Wall
+Bookshelf 1:near:North Wall
+Bookshelf 1:near:East Wall
 Desk 2:in front of:Bookshelf 1
-Banana 1:not on:Bed 2
+Banana 1:not on:Bed2
 TV:not on:Red Chair 2
 Blue Chair 2:not to the right of:Desk 1
 Bookshelf 1:not near:Desk 1

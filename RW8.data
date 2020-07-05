@@ -17,10 +17,10 @@ Desk 1:on:east wall
 Desk 2:on:west wall
 Trash Can:next to:west wall
 lamp:near:Cardbox 1
-apple1:in between:bed 2:Desk 2
-apple1:next to:west wall
-apple1:on:floor
-apple1:near:blue chair
+apple:in between:bed 2:Desk 2
+apple:next to:west wall
+apple:on:floor
+apple:near:blue chair
 Ceiling Light 1:next to:Desk 1
 picture:on:north wall
 Desk 1:next to:bookshelf 2
@@ -48,3 +48,57 @@ Ceiling Light 1:next to:east wall
 Laptop:next to:east wall
 lamp:above:floor
 blue book:near:west wall
+
+picture:not on:bed 1
+bookshelf 1:not on:picture
+green book:not to the left of:picture
+apple:not in between:yellow book:brown chair
+Trash Can:not in between:blue chair:red chair
+yellow book:not on:red chair
+Laptop:not next to:Cardbox 1
+Ceiling Light 1:not in between:red book:Laptop
+bowl:not on:floor
+Trash Can:not in between:banana:blue book
+Desk 1:not next to:west wall
+bed 2:not next to:note
+Desk 2:not to the right of:brown chair
+green book:not next to:red book
+bed 2:not near:Laptop
+Cardbox 1:not near:Trash Can
+banana:not in between:blue chair:bed 1
+lamp:not on:Desk 1
+ceiling:not on:yellow book
+green book:not on:bed 1
+purple book:not in between:Cardbox 1:bookshelf 2
+east wall:not near:blue book
+picture:not on:ceiling
+Ceiling Light 1:not on:ceiling
+apple:not in between:red chair:yellow book
+bowl:not next to:note
+brown chair:not next to:apple
+Trash Can:not on:blue chair
+apple:not on:west wall
+bowl:not on:red chair
+banana:not in between:green book:purple book
+note:not in between:Cardbox 1:bookshelf 2
+purple book:not next to:west wall
+blue chair:not on:Trash Can
+Cardbox 1:not in between:bookshelf 1:bed 2
+Laptop:not on:bookshelf 2
+red book:not in between:bookshelf 1:bookshelf 2
+blue book:not on:bed 2
+bowl:not on:Desk 2
+Trash Can:not next to:Ceiling Light 1
+picture:not on:west wall
+lamp:not to the left of:yellow book
+picture:not in between:green book:purple book
+blue chair:not next to:purple book
+yellow book:not below:brown chair
+apple:not in between:bed 1:bed 2
+note:not in between:lamp:Cardbox 1
+banana:not next to:bowl
+Laptop:not in between:red chair:brown chair
+purple book:not on:floor
+blue book:not on:ceiling
+red book:not next to:north wall
+brown chair:not on:bookshelf 2

@@ -493,6 +493,7 @@ class RightOf_Intrinsic(Node):
 		disp_vec = disp_vec / dist
 
 		intrinsic_right = np.array(lm.right)
+		print ('INTRINSIC: ', intrinsic_right, lm.right, disp_vec)
 		cos = intrinsic_right.dot(disp_vec)
 
 		final_score = math.e ** (- 0.1 * (1 - cos)) * math.e ** (- 0.05 * dist / max(tr.size, lm.size))
@@ -512,7 +513,7 @@ class RightOf(Node):
 		if type(tr) == Entity and type(lm) == Entity:
 			connections = self.get_connections()
 			deictic = connections['to_the_right_of_deictic'].compute(tr, lm)
-			extrinsic = connections['to_the_right_of_extrinsic'].compute(tr, lm)
+			extrinsic = connections['to_the_right_of_extrinsic'].compute(tr, lm)			
 			if lm.right is not None:
 				intrinsic = connections['to_the_right_of_intrinsic'].compute(tr, lm)
 			else:
@@ -553,8 +554,8 @@ class LeftOf(Node):
 		if type(tr) == Entity and type(lm) == Entity:
 			connections = self.get_connections()
 			deictic = connections['to_the_left_of_deictic'].compute(tr, lm)
-			extrinsic = connections['to_the_left_of_extrinsic'].compute(tr, lm)
-			if lm.right is not None:
+			extrinsic = connections['to_the_left_of_extrinsic'].compute(tr, lm)			
+			if tr.right is not None:
 				intrinsic = connections['to_the_left_of_intrinsic'].compute(tr, lm)
 			else:
 				intrinsic = 0

@@ -1,0 +1,42 @@
+Yellow Book 2:to the right of:Red Book 3
+Desk 2:to the right of:Red Chair 2
+Bowl:to the right of:Pencil 1
+Bowl:to the right of:Note 2
+Pencil Holder:to the right of:Yellow Book 2
+Pencil Holder:to the right of:Green Book 1
+Bookshelf 1:to the right of:Bookshelf 2
+Pencil 2:to the right of:Note 1
+Yellow Book 2:to the right of:Green Book 1
+Red Chair 2:to the right of:Desk 1
+Red Book 1:to the left of:Yellow Book 2
+Pencil 2:to the left of:Note 2
+Desk 1:to the left of:Desk 2
+Note 2:to the left of:Pencil 1
+Pencil 2:to the left of:Note 2
+Yellow Book 2:to the left of:Pencil Holder
+Laptop 2:to the left of:TV 2
+Green Book 1:to the left of:Pencil Holder
+Red Chair 2:to the left of:Banana 2
+Desk 1:to the left of:Red Chair 2
+Red Book 3:above:Red Book 1
+Red Book 3:above:Desk 1
+Red Book 2:above:Green Book 2
+Green Book 1:above:Desk 1
+Banana 1:above:Desk 1
+Ceiling Fan:above:Yellow Book 2
+Ceiling Fan:above:Red Book 3
+Ceiling Fan:above:Red Book 1
+Ceiling Fan:above:Desk 1
+Ceiling Light 2:above:Laptop 2
+Note 2:above:Desk 1
+Pencil 2:above:Desk 1
+Green Book 1:below:Ceiling Fan
+Green Book 1:below:Red Book 3
+Red Book 1:below:Green Book 1
+Red Book 1:below:Red Book 3
+Desk 1:below:Red Book 3
+Green Book 2:below:Red Book 2
+Desk 1:below:Green Book 1
+Desk 1:below:Ceiling Fan
+Red Book 3:below:Ceiling Fan
+Yellow Book 2:below:Ceiling Fan

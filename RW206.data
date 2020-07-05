@@ -1,5 +1,7 @@
-bed1:near:West Wall:North Wall
-bed2:near:East Wall:North Wall
+bed1:near:West Wall
+bed1:near:North Wall
+bed2:near:East Wall
+bed2:near:North Wall
 Sofa:near:North Wall
 Sofa:between:bed1:bed2
 TV:near:East Wall

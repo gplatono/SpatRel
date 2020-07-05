@@ -15,7 +15,7 @@ Trash Can:on:floor
 green book:on:purple book
 green book:on:bookshelf 1
 purple book:on:bookshelf 1
-Ceiling Light 1:near:green book
+Ceiling Light 1:near:purple book
 yellow book:near:red chair
 bookshelf 2:next to:bed 2
 brown chair:near:east wall
@@ -36,3 +36,64 @@ note:on:Desk 1
 lamp:on:desk 1
 Trash Can:to the right of:bed 1
 brown chair:near:north wall
+yellow book:in between:red chair:brown chair
+blue book:next to:bookshelf 2
+bookshelf 2:in between:Desk 2:bed 2
+note:next to:red chair
+Trash Can:near:red chair
+brown chair:to the right of:bed 2
+banana:near:blue book
+Ceiling Light 1:next to:green book
+note:near:green book
+picture:to the left of:brown chair
+lamp:near:bookshelf 1
+banana:next to:red book
+
+Trash Can:not near:bed 2
+picture:not near:bed 1
+Ceiling Light 1:not on:Trash Can
+purple book:not in between:red chair:brown chair
+note:not near:banana
+bed 1:not next to:bed 2
+bookshelf 1:not in between:bed 1:bed 2
+blue chair:not to the right of:red chair
+Ceiling Light 1:not next to:brown chair
+Desk 1:not on:purple book
+picture:not on:bed 2
+west wall:not near:bookshelf 1
+banana:not in between:red book:blue chair
+Trash Can:not on:red chair
+red chair:not on:yellow book
+red chair:not to the right of:Trash Can
+lamp:not in between:yellow book:note
+green book:not in between:red chair:lamp
+Ceiling Light 1:not near:picture
+picture:not next to:note
+banana:not next to:bed 2
+bookshelf 2:not on:bed 2
+blue book:not on:bookshelf 2
+lamp:not next to:Trash Can
+red book:not in between:blue chair:bed 2
+ceiling:not on:picture
+picture:not on:ceiling
+blue chair:not near:note
+Ceiling Light 1:not on:ceiling
+bed 2:not next to:east wall
+Trash Can:not above:red chair
+bed 1:not to the right of:red chair
+Ceiling Light 1:not to the left of:yellow book
+north wall:not next to:bed 1
+bookshelf 2:not on:blue chair
+Desk 2:not on:red book
+red book:not on:Desk 1
+banana:not on:bed 2
+Ceiling Light 1:not in between:blue book:bookshelf 2
+Trash Can:not on:Desk 1
+red chair:not in between:red book:blue chair
+bed 2:not on:north wall
+lamp:not on:ceiling
+blue book:not next to:yellow book
+banana:not near:picture
+west wall:not next to:Ceiling Light 1
+bed 1:not in between:blue book:bookshelf 2
+bed 2:not in between:red chair:brown chair

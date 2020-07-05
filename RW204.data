@@ -4,8 +4,10 @@ table 1:between:Blue Chair 1: Blue Chair 2
 table 1:below:Ceiling Fan
 Ceiling Fan:between:Ceiling Light 1: Ceiling Light 2
 Sofa:near:West Wall
-Bookshelf 1:near:North Wall:West Wall
-Bookshelf 2:near:North Wall:East Wall
+Bookshelf 1:near:North Wall
+Bookshelf 1:near:West Wall
+Bookshelf 2:near:North Wall
+Bookshelf 2:near:East Wall
 Coffee Table:next to:Sofa
 Coffee Table:beside:Sofa
 Coffee Table:in front of:Sofa
@@ -23,7 +25,8 @@ Red Book:on:Bookshelf 1
 Green Book:on:Bookshelf 1
 Yellow Book:on:Bookshelf 2
 Red Chair 2:beside:Desk
-Vase:near:Sofa:West Wall
+Vase:near:Sofa
+Vase:near:West Wall
 Vase:on:floor
 Trash Can:next to:Desk
 Trash Can:near:East Wall

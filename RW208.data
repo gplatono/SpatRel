@@ -25,7 +25,7 @@ Table:between:Blue Chair 1:Blue Chair 2
 Blue Chair 1:beside:Table
 Blue Chair 2:beside:Table
 Yellow Book 2:on:Table
-Red Book 2:on:Bokshelf 2
+Red Book 2:on:Bookshelf 2
 Green Book 2:on:Red Book 2
 Laptop:on:Table
 Fridge:between:Bookshelf 1:Desk

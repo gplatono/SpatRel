@@ -1,6 +1,8 @@
 import glob
 import subprocess
+import sys
 
+path = sys.argv[1]
 scenes = glob.glob("*.blend")
 tests = glob.glob("*.data")
 
