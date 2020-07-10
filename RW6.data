@@ -99,4 +99,6 @@ vase 2:not on:Trash Can
 Rose:not on:apple
 bed:not in between:table 2:red chair
 brown chair 2:not on:table 1
-
+brown chair 1:behind:red chair
+Bookshelf:behind:Trash Can
+bed:behind:brown chair 1

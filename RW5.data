@@ -83,3 +83,4 @@ brown chair:not in between:bed 1:bed 2
 table:not on:picture
 yellow_book:not on:purple book
 picture:not below:red_book
+apple:in:deep_plate

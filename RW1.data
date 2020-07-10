@@ -33,3 +33,63 @@ Cardbox 2:below:Laptop
 Table:below:Ceiling Light 2
 Blue Chair 2:below:Ceiling Light 2
 Blue Chair 1:below:Cardbox 1
+Blue Chair 1:in front of:North Wall
+North Wall:in front of: Bookshelf 1
+Cardbox 1:in front of: Bookshelf 1
+BookShelf 1:in front of:North Wall
+Table:in front of:Bookshelf 2
+Blue Chair 2:in front of:North Wall
+Cardbox 2:in front of:North Wall
+Cardbox 2:in front of: North Wall
+Laptop:in front of:Bookshelf 2
+Bookshelf 2:in front of:North Wall
+Bookshelf 2:not in front of:Picture 1
+Bookshelf 1:not in front of:Bookshelf 2
+Bookshelf 1:not in front of:Blue Chair 2
+Cardbox 2:not in front of:Cardbox 1
+Cardbox 2:not in front of Table
+Cardbox 2:not in front of:Picture 2
+Picture 1:not in front of:Picture 2
+Picture 1:not in front of:Bookshelf 2
+Laptop:not in front of:Blue Chair 2
+Laptop:not in front of:Yellow Book 2
+Yellow Book 2:not in front of:Yellow Book 1
+Red Book 2:not in front of:Green Book 2
+Green Book 2:not in front of: Bookshelf 2
+Ceiling Light 2:not in front of:Ceiling Light 1
+Ceiling Light 1:not in front of: Bookshelf 2
+North Wall:behind:Bookshelf 2
+North Wall:behind:Bookshelf 1
+North Wall:behind:Blue Chair 1
+North Wall:behind:Table
+Bookshelf 1:behind:Blue Chair 1
+Bookshelf 1:behind:Cardbox 1
+Bookshelf 1:not behind:Bookshelf 2
+Bookshelf 2:behind:Bluechair 2
+Bookshelf 2:behind:Cardbox 2
+Bookshelf 1:not behind:Bookshelf 2
+Bookshelf 2:not behind:Bookshelf 1
+Bookshelf 2:not behind: North Wall
+Bookshelf 2:not behind:Picture 1
+Table:not behind:Bookshelf
+Table:not behind:Blue Chair 2
+Table:not behind:Cardbox 2
+Cardbox 2:not behind:Table
+Cardbox 2:not behind: Laptop
+Laptop:not behind:Yellow Book 2
+Red Book 2:under:Green Book 2
+Table:under:Ceiling Light 2
+Table:under:Ceiling Fan
+Cardbox 2:under:Ceiling Fan
+Cardbox 2:under:Table
+Blue Chair 1:under:Ceiling Light 1
+Blue Chair 2:under:Picture 2
+Laptop:not under:Table
+Laptop:not under:Yellow Book 2
+Laptop:not under:Blue Chair 2
+Laptop:not under:Blue Chair 1
+Laptop:not under:Bookshelf 1
+Laptop:not under:Bookshelf 2
+Bookshelf 1:not under:Bookshelf 2
+Bookshelf 1:not under:Picture 1
+Bookshelf 1:not under:Picture 2

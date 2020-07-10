@@ -40,3 +40,72 @@ Desk 1:below:Green Book 1
 Desk 1:below:Ceiling Fan
 Red Book 3:below:Ceiling Fan
 Yellow Book 2:below:Ceiling Fan
+Desk 2:in front of:Bookshelf 1
+Desk 1:in front of:North Wall
+Blue Chair 2:in front of:Desk 1
+Red Chair 2:in front of:Desk 2
+Bookshelf 3:in front of:Bookshelf 2
+Red Chair 1:in front of:Bookshelf 3
+Blue Chair 1:in front of:Bookshelf 1
+Trash Can:in front of:Desk 2
+Laptop 2:in front of:TV 2
+Note 2:in front of:Pencil Holder
+Note 1:in front:Laptop 1
+Note 1:not in front of:Laptop 2
+Note 1:not in front of:Note 2
+Red Book 1:not in front of:Red Book 2
+Red Book 2:not in front of:Red Book 3
+Red Book 3:not in front of:Red Book 1
+Red Book 1:not in front of:Green Book 1
+Green Book 1:not in front of: Green Book 2
+Desk 1:not in front of:Bookshelf 3
+Bookshelf 1:not in front of:Bookshelf 3
+Bookshelf 3:not in front of:Bookshelf 1
+TV 2:not in front of:Banana 2
+Banana 2:not in front of:Banana 1
+Banana 1:not in front of:Banana 2
+Yellow Book 1:not in front of:Bookshelf 2
+Blue Chair 1:behind:Desk 2
+Bookshelf 1:behind:Desk 2
+Bookshelf 2:behind:Bookshelf 3
+Blue Chair 1:behind:Red Chair 2
+TV 2:behind:Laptop 2
+West Wall:behind:Bookshelf 3
+North Wall:behind:Bookshelf 2
+North Wall:behind:Bookshelf 1
+East Wall:behind: TV 2
+Desk 1:behind:Red Chair 2
+Blue Chair 2:not behind:Desk 1
+Desk 1:not behind:Desk 2
+Desk 2:not behind:Desk 1
+Bookshelf 3:not behind:Desk 1
+Bookshelf 1:not behind:Desk 2
+Bookshelf 2:not behind:Bookshelf 1
+Bookshelf 3:not behind:Bookshelf 2
+Bookshelf 1:not behind:Bookshelf 3
+Bookshelf 2:not behind:Bookshelf 3
+Laptop 1:not behind:Bowl
+Green Book 2:under:Red Book 2
+Green Book 1:under:Red Book 3
+Red Book 1:under:Green Book 1
+Red Book 1:under:Red Book 3
+Desk 1:under:Ceiling Fan 1
+Bookshelf 3:under:Ceiling Light 1
+Desk 2:under:Ceiling Fan 2
+Red Chair 2:under:Ceiling Fan 2
+Laptop 2:under:Ceiling Fan 2
+Ceiling Fan1:not under:Ceiling Fan 2
+Trash Can:not under:Desk 2
+Ceiling Fan:not under:Desk 2
+Desk 2:not under:Desk 1
+Desk 1:not under:Bowl
+Bowl:not under:Banana 1
+Blue Chair 2:not under:Desk 1
+Desk 1:not under:Desk 2
+North Wall: not under:West Wall
+North Wall:not under:Bookshelf 1
+Blue Chair 1:not under:Laptop 2
+Banana:in:Bowl
+Red Chair 1:not in:Bookshelf 3
+Red Book 2:not in:Bookshelf 3
+Green Book 2:not in:Bookshelf 3

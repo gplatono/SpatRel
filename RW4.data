@@ -88,3 +88,5 @@ Laptop 2:not on:Note 3
 Ceiling Light 1:not on:Red Book 1
 TV 2:not to the right of:Red Chair 2
 Pencil Holder:not below:Red Chair 1
+Note 3:in:Trash Can
+Banana 2:not in:Trash Can
