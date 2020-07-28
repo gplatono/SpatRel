@@ -39,7 +39,6 @@ class CustomNet:
 
 if __name__ == '__main__':
 
-
     net = CustomNet()
 
     train_size = 1000
