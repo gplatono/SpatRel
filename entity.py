@@ -47,7 +47,7 @@ class Entity(object):
 		if len(self.components) == 1 and type(self.components[0]) == bpy_types.Object:
 			self.category = self.Category.PRIMITIVE		
 
-		elif len(self.components) > 1 and type(self.components[0]) == Entity or type(self.components[0]) == bpy_types.Object: 
+		elif len(self.components) > 1 and (type(self.components[0]) == Entity or type(self.components[0]) == bpy_types.Object): 
 			self.category = self.Category.STRUCTURE
 		
 			ent_components = []

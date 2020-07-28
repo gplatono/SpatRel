@@ -6,6 +6,12 @@ import json
 
 
 num_classes = 15
+class Sample:
+    def __init__(self, val):
+        self.val = val
+        self.centroid = (val, val, val)
+        self.bbox = 0
+
 
 class Dataset(torch.utils.data.Dataset):
   def __init__(self, samples, labels):
@@ -90,7 +96,6 @@ def build_data_loader2(batch_size, num_workers, is_shuffle):
     test_loader = train_loader
     return train_loader, test_loader
 
-
 # data loader for multi-label
 def build_data_loader3(batch_size, num_workers, is_shuffle):
     data = None
@@ -119,6 +124,18 @@ def build_data_loader3(batch_size, num_workers, is_shuffle):
 
     print('labels: ', labels)
     print('label count: ', len(labels))
+    dataset = Dataset(samples, labels)
+    train_loader = DataLoader(dataset, batch_size = batch_size, shuffle = is_shuffle, num_workers = num_workers)
+    test_loader = train_loader
+    return train_loader, test_loader
+
+#For custom objects
+def build_custom_loader(batch_size, num_workers, is_shuffle):
+    samples = []
+    labels = []
+    for i in range(1000):
+        samples.append(Sample(i))
+        labels.append(i * i)
     dataset = Dataset(samples, labels)
     train_loader = DataLoader(dataset, batch_size = batch_size, shuffle = is_shuffle, num_workers = num_workers)
     test_loader = train_loader
@@ -213,22 +230,62 @@ def test(test_loader, net):
 
 
 
+class CustomNet:
+
+    def __init__(self):
+        self.params = torch.tensor([.5], dtype=torch.float32, requires_grad = True)
+
+    def compute(self, sample):
+        result = torch.tensor(sample.centroid, dtype=torch.float32) * self.params
+        return result
+
+    def parameters(self):
+        return [self.params]
+
 if __name__ == '__main__':
     # build dataloader
     # train_loader, test_loader = build_data_loader(batch_size=10, num_workers=1, is_shuffle=True, relation='near')
     """See rel_to_label dictionary for the set of options for 'relation' """
-    train_loader, test_loader = build_data_loader3(batch_size=10, num_workers=1, is_shuffle=True)
+    #train_loader, test_loader = build_custom_loader(batch_size=10, num_workers=1, is_shuffle=True)
     # initialize model
-    net = Net1(n_in=6, n_out=15)
+    net = CustomNet()
+
+    train_size = 1000
+    batch_size = 20
+    epochs = 10000
+
+    samples = []
+    labels = []
+    for i in range(train_size):
+        samples.append(Sample(i))
+        labels.append(torch.tensor(i, dtype = torch.float32))
+
+    optimizer = optim.Adam(net.parameters(), lr=0.001)
+    idx = 0
+    for epoch in range(epochs):
+        batch_loss = 0
+        for j in range(batch_size):            
+            optimizer.zero_grad()
+            outputs = net.compute(samples[idx])
+            batch_loss += torch.sum(torch.square(outputs - labels[idx]))
+            idx = idx + 1 if idx < train_size - 1 else 0
+            
+        batch_loss /= batch_size
+        batch_loss.backward()
+        optimizer.step()
+        print ("Epoch: %d, loss: %.3f, params: %.3f" % (epoch, batch_loss, net.params))        
+    #net = Net1(n_in=6, n_out=15)
     # net = Net2(n_in=72, n_out=1, h_shapes=[50, 40])
+    
+
     # criterion = nn.CrossEntropyLoss()
     criterion = nn.BCEWithLogitsLoss()
     # criterion = nn.MSELoss()
     # use sgd optimizer
-    optimizer = optim.Adam(net.parameters(), lr=0.001)
+    
     # train
-    train(train_loader, net, optimizer, criterion, epoch=100)
+    #custom_train(train_loader, net, optimizer, criterion, epoch=100)
     # save model
-    savepath = 'classifier_param.pth'
-    torch.save(net.state_dict(), savepath)
+    #savepath = 'classifier_param.pth'
+    #torch.save(net.state_dict(), savepath)
 
