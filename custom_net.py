@@ -28,10 +28,10 @@ class Sample:
 class CustomNet:
 
     def __init__(self):
-        self.params = torch.tensor([.5], dtype=torch.float32, requires_grad = True)
+        self.params = torch.tensor([1, 1, 1], dtype=torch.float32, requires_grad = True)
 
     def compute(self, sample):
-        result = torch.tensor(sample.centroid, dtype=torch.float32) * self.params
+        result = torch.dot(torch.tensor(sample.centroid, dtype=torch.float32), self.params)
         return result
 
     def parameters(self):
@@ -57,12 +57,14 @@ if __name__ == '__main__':
     for epoch in range(epochs):
         batch_loss = 0
         for j in range(batch_size):            
+
             optimizer.zero_grad()
-            outputs = net.compute(samples[idx])
+            outputs = net.compute(samples[idx])            
             batch_loss += torch.sum(torch.square(outputs - labels[idx]))
             idx = idx + 1 if idx < train_size - 1 else 0
             
         batch_loss /= batch_size
         batch_loss.backward()
         optimizer.step()
-        print ("Epoch: %d, loss: %.3f, params: %.3f" % (epoch, batch_loss, net.params))
+        print ("Epoch: %d, loss: %.3f" % (epoch, batch_loss))
+        print ("Params: ", net.params)
