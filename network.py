@@ -27,7 +27,6 @@ def build_data_loader1(batch_size, num_workers, is_shuffle, relation):
             'touching': 10, 'touch': 10, 'at': 11, 'next to': 11, 'between': 12, 'near': 13, 'on top of': 14, 'beside': 15, 'besides': 15}
     relation = rel_to_label[relation]
 
-
     data = None
     with open('dataset', 'r') as file:
         data = file.readlines()
@@ -124,6 +123,7 @@ def build_data_loader3(batch_size, num_workers, is_shuffle):
     return train_loader, test_loader
 
 
+# multi-label model
 class Net1(nn.Module):
     def __init__(self, n_in, n_out):
         super(Net1, self).__init__()
@@ -132,13 +132,14 @@ class Net1(nn.Module):
         self.hidden1 = nn.Linear(n_in, 10)
         self.hidden2 = nn.Linear(10, 5)
         self.output = nn.Linear(5, n_out)
-        self.softmax = nn.Softmax(dim=1)  # used for mutli-label
+        self.sigmoid = nn.Sigmoid()
+        # self.softmax = nn.Softmax(dim=1)
 
     def forward(self, z):
         z = self.hidden1(z)
         z = self.hidden2(z)
         z = self.output(z)
-        z = self.softmax(z)
+        z = self.sigmoid(z)
         return z
 
     
@@ -219,15 +220,13 @@ if __name__ == '__main__':
     
     net = Net1(n_in=6, n_out=15)
     # net = Net2(n_in=72, n_out=1, h_shapes=[50, 40])
-    
 
     # criterion = nn.CrossEntropyLoss()
-    criterion = nn.BCEWithLogitsLoss()
+    criterion = nn.BCELoss()
     # criterion = nn.MSELoss()
     # use sgd optimizer
-    
-    # train
     optimizer = optim.Adam(net.parameters(), lr=0.001)
+    # train
     train(train_loader, net, optimizer, criterion, epoch=100)
     # save model
     savepath = 'classifier_param.pth'
