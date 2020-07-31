@@ -187,6 +187,18 @@ class Spatial:
 					dist[(e2, e1)] = axial_dist
 		return dist
 
+	def process_sample(self, annotation):
+		relation = annotation[1]
+		trs = [self.world.find_entity_by_name(annotation[0].strip())]
+		lms = [self.world.find_entity_by_name(item.strip()) for item in annotation[2:]]
+		sample = [trs[0]] + lms
+		label = 1 if 'not' not in relation else 0
+		
+		relation = "Fill in the relation designator"
+
+		return sample, label, relation
+
+
 class Node:
 	def __init__(self, network=None, connections=None):
 		self.arity = 2

@@ -96,17 +96,6 @@ def fix(components):
 
 	return ret_val
 
-def process_sample(annotation):
-	relation = annotation[1]
-	trs = [world.find_entity_by_name(annotation[0].strip())]
-	lms = [world.find_entity_by_name(item.strip()) for item in annotation[2:]]
-	sample = [trs[0]] + lms
-	label = 1 if 'not' not in 'relation' else 0
-	
-	relation = "Fill in the relation designator"
-
-	return sample, label, relation
-
 
 
 def run_testcase(testcase):
