@@ -47,7 +47,7 @@ Bookshelf 2:not in front of:Picture 1
 Bookshelf 1:not in front of:Bookshelf 2
 Bookshelf 1:not in front of:Blue Chair 2
 Cardbox 2:not in front of:Cardbox 1
-Cardbox 2:not in front of Table
+Cardbox 2:not in front of:Table
 Cardbox 2:not in front of:Picture 2
 Picture 1:not in front of:Picture 2
 Picture 1:not in front of:Bookshelf 2

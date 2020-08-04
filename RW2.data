@@ -50,7 +50,7 @@ Blue Chair 1:in front of:Bookshelf 1
 Trash Can:in front of:Desk 2
 Laptop 2:in front of:TV 2
 Note 2:in front of:Pencil Holder
-Note 1:in front:Laptop 1
+Note 1:in front of:Laptop 1
 Note 1:not in front of:Laptop 2
 Note 1:not in front of:Note 2
 Red Book 1:not in front of:Red Book 2

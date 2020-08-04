@@ -42,7 +42,6 @@ Blue Chair 1:next to:West Wall
 Green Book 2:to the right of:Desk 1
 Trash Can:next to:East Wall
 Note 3:near:Desk 2
-
 Pencil Holder:not near:Trash Can
 Ceiling Light 2:not on:Laptop 2
 Red Book 1:not next to:Red Book 2

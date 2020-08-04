@@ -1,13 +1,14 @@
-import numpy as np
-import math
+#import numpy as np
+#import math
 #import spatial
 #from constraint_solver import *
+
 from entity import Entity
 from geometry_utils import *
 from queue import Queue
-from mathutils import Vector
+#from mathutils import Vector
 # import bpy_extras
-from functools import reduce
+#from functools import reduce
 import itertools
 
 world = None
@@ -92,6 +93,9 @@ class Spatial:
 			'near_to.p': self.near,
 			'close_to.p': self.near,
 			'close.a': self.near,
+			'next to': self.near,
+			'beside': self.near,
+			'besides': self.near,
 			'on.p': self.on,
 			'on_top_of.p': self.on,
 			'on top of': self.on,
@@ -143,6 +147,7 @@ class Spatial:
 			'far.a': self.behind,
 			'between.p': self.between,
 			'between': self.between,
+			'in between': self.between,
 			# 'clear.a': self.clear,
 			# 'where.a': spatial.where,
 			# 'exist.pred': exist,
@@ -192,9 +197,14 @@ class Spatial:
 		trs = [self.world.find_entity_by_name(annotation[0].strip())]
 		lms = [self.world.find_entity_by_name(item.strip()) for item in annotation[2:]]
 		sample = [trs[0]] + lms
-		label = 1 if 'not' not in relation else 0
-		
-		relation = "Fill in the relation designator"
+
+		if 'not' in relation:
+			label = 0
+			relation = relation.replace('not ', '')
+		else:
+			label = 1
+
+		relation = self.str_to_pred[relation].compute
 
 		return sample, label, relation
 
