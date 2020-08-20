@@ -10,67 +10,17 @@ from queue import Queue
 # import bpy_extras
 #from functools import reduce
 import itertools
+import json
 
 world = None
 observer = None
 
 class Spatial:
 	def __init__(self, world):
-		self.world = world
-		self.vis_proj = self.cache_2d_projections()
-		self.axial_distances = self.pairwise_axial_distances()
-
-		self.projection_intersection = ProjectionIntersection()
-		self.within_cone_region = WithinConeRegion()
-		self.frame_size = FrameSize()
-		self.raw_distance = RawDistance()
-		self.larger_than = LargerThan()
-		self.closer_than = CloserThan()
-		self.higher_than_centroidwise = HigherThan_Centroidwise()
-		self.higher_than = HigherThan(connections = {'higher_than_centroidwise': self.higher_than_centroidwise})
-		self.lower_than = LowerThan(connections = {'higher_than': self.higher_than})
-		self.taller_than = TallerThan()
-		self.at_same_height = AtSameHeight()
-		self.supported = Supported()
-		self.central = Central()
-		self.horizontal_deictic_component = HorizontalDeicticComponent(network = self)
-		self.vertical_deictic_component = VerticalDeicticComponent(network = self)
-		self.touching = Touching()
+		self.reload(world)
+		# self.world = world
+		# self.vis_proj = self.cache_2d_projections()
 		
-
-		self.to_the_right_of_deictic = RightOf_Deictic(connections = {'horizontal_deictic_component': self.horizontal_deictic_component,
-			'vertical_deictic_component': self.vertical_deictic_component})
-		self.to_the_right_of_extrinsic = RightOf_Extrinsic()
-		self.to_the_right_of_intrinsic = RightOf_Intrinsic()
-		self.to_the_right_of = RightOf(connections = {'to_the_right_of_deictic': self.to_the_right_of_deictic,
-			'to_the_right_of_intrinsic': self.to_the_right_of_intrinsic, 'to_the_right_of_extrinsic': self.to_the_right_of_extrinsic})
-		self.to_the_left_of_deictic = LeftOf_Deictic(connections = {'to_the_right_of_deictic': self.to_the_right_of_deictic})
-		self.to_the_left_of_extrinsic = LeftOf_Extrinsic(connections = {'to_the_right_of_extrinsic': self.to_the_right_of_extrinsic})
-		self.to_the_left_of_intrinsic = LeftOf_Intrinsic(connections = {'to_the_right_of_intrinsic': self.to_the_right_of_intrinsic})
-		self.to_the_left_of = LeftOf(connections = {'to_the_left_of_deictic': self.to_the_left_of_deictic,
-			'to_the_left_of_intrinsic': self.to_the_left_of_intrinsic, 'to_the_left_of_extrinsic': self.to_the_left_of_extrinsic})
-		self.in_front_of_deictic = InFrontOf_Deictic()
-		self.in_front_of_extrinsic = InFrontOf_Extrinsic()
-		self.in_front_of_intrinsic = InFrontOf_Intrinsic()
-		self.in_front_of = InFrontOf(connections = {'in_front_of_deictic': self.in_front_of_deictic,
-			'in_front_of_intrinsic': self.in_front_of_intrinsic, 'in_front_of_extrinsic': self.in_front_of_extrinsic})
-		self.behind_deictic = Behind_Deictic(connections = {'in_front_of_deictic': self.in_front_of_deictic})        
-		self.behind_extrinsic = Behind_Extrinsic(connections = {'in_front_of_extrinsic': self.in_front_of_extrinsic})
-		self.behind_intrinsic = Behind_Intrinsic(connections = {'in_front_of_intrinsic': self.in_front_of_intrinsic})
-		self.behind = Behind(connections = {'behind_deictic': self.behind_deictic,
-			'behind_intrinsic': self.behind_intrinsic, 'behind_extrinsic': self.behind_extrinsic})
-		self.above = Above(connections = {'within_cone_region': self.within_cone_region})
-		self.below = Below(connections = {'above': self.above})
-		self.near_raw = Near_Raw()
-		self.near = Near(connections = {'near_raw': self.near_raw})
-		self.over = Over(connections = {'above': self.above, 'projection_intersection': self.projection_intersection, 'near': self.near})
-		self.on = On(connections = {'above': self.above, 'touching': self.touching, 'projection_intersection': self.projection_intersection, 
-			'larger_than': self.larger_than})
-		self.under = Under(connections = {'on': self.on})
-		self.between = Between()
-		self.inside = Inside()
-		self.at = At(connections = {'at_same_height': self.at_same_height, 'touching': self.touching, 'near': self.near})
-
 		self.str_to_pred = {
 			'on.p': self.on,
 			'on': self.on,
@@ -166,6 +116,97 @@ class Spatial:
 			# 'green': green,
 			}
 
+	def init_relations(self):
+		self.axial_distances = self.pairwise_axial_distances()
+
+		self.projection_intersection = ProjectionIntersection()
+		self.within_cone_region = WithinConeRegion()
+		self.frame_size = FrameSize()
+		self.raw_distance = RawDistance()
+		self.larger_than = LargerThan()
+		self.closer_than = CloserThan()
+		self.higher_than_centroidwise = HigherThan_Centroidwise()
+		self.higher_than = HigherThan(connections = {'higher_than_centroidwise': self.higher_than_centroidwise})
+		self.lower_than = LowerThan(connections = {'higher_than': self.higher_than})
+		self.taller_than = TallerThan()
+		self.at_same_height = AtSameHeight()
+		self.supported = Supported()
+		self.central = Central()
+		self.horizontal_deictic_component = HorizontalDeicticComponent(network = self)
+		self.vertical_deictic_component = VerticalDeicticComponent(network = self)
+		self.touching = Touching()
+		
+
+		self.to_the_right_of_deictic = RightOf_Deictic(connections = {'horizontal_deictic_component': self.horizontal_deictic_component,
+			'vertical_deictic_component': self.vertical_deictic_component})
+		self.to_the_right_of_extrinsic = RightOf_Extrinsic()
+		self.to_the_right_of_intrinsic = RightOf_Intrinsic()
+		self.to_the_right_of = RightOf(connections = {'to_the_right_of_deictic': self.to_the_right_of_deictic,
+			'to_the_right_of_intrinsic': self.to_the_right_of_intrinsic, 'to_the_right_of_extrinsic': self.to_the_right_of_extrinsic})
+		self.to_the_left_of_deictic = LeftOf_Deictic(connections = {'to_the_right_of_deictic': self.to_the_right_of_deictic})
+		self.to_the_left_of_extrinsic = LeftOf_Extrinsic(connections = {'to_the_right_of_extrinsic': self.to_the_right_of_extrinsic})
+		self.to_the_left_of_intrinsic = LeftOf_Intrinsic(connections = {'to_the_right_of_intrinsic': self.to_the_right_of_intrinsic})
+		self.to_the_left_of = LeftOf(connections = {'to_the_left_of_deictic': self.to_the_left_of_deictic,
+			'to_the_left_of_intrinsic': self.to_the_left_of_intrinsic, 'to_the_left_of_extrinsic': self.to_the_left_of_extrinsic})
+		self.in_front_of_deictic = InFrontOf_Deictic()
+		self.in_front_of_extrinsic = InFrontOf_Extrinsic()
+		self.in_front_of_intrinsic = InFrontOf_Intrinsic()
+		self.in_front_of = InFrontOf(connections = {'in_front_of_deictic': self.in_front_of_deictic,
+			'in_front_of_intrinsic': self.in_front_of_intrinsic, 'in_front_of_extrinsic': self.in_front_of_extrinsic})
+		self.behind_deictic = Behind_Deictic(connections = {'in_front_of_deictic': self.in_front_of_deictic})        
+		self.behind_extrinsic = Behind_Extrinsic(connections = {'in_front_of_extrinsic': self.in_front_of_extrinsic})
+		self.behind_intrinsic = Behind_Intrinsic(connections = {'in_front_of_intrinsic': self.in_front_of_intrinsic})
+		self.behind = Behind(connections = {'behind_deictic': self.behind_deictic,
+			'behind_intrinsic': self.behind_intrinsic, 'behind_extrinsic': self.behind_extrinsic})
+		self.above = Above(connections = {'within_cone_region': self.within_cone_region})
+		self.below = Below(connections = {'above': self.above})
+		self.near_raw = Near_Raw()
+		self.near = Near(connections = {'near_raw': self.near_raw})
+		self.over = Over(connections = {'above': self.above, 'projection_intersection': self.projection_intersection, 'near': self.near})
+		self.on = On(connections = {'above': self.above, 'touching': self.touching, 'projection_intersection': self.projection_intersection, 
+			'larger_than': self.larger_than})
+		self.under = Under(connections = {'on': self.on})
+		self.between = Between()
+		self.inside = Inside()
+		self.at = At(connections = {'at_same_height': self.at_same_height, 'touching': self.touching, 'near': self.near})
+
+
+
+	def get_parameters(self):
+		if self.parameters is None:
+			param_dict = {}
+			for prop, obj in self.__dict__.items():
+				if hasattr(obj, 'parameters'):
+					param_dict[prop] = obj.parameters
+			self.parameters = param_dict
+		return self.parameters
+
+	def set_parameters(self, params):
+		for key in params:
+			rel = getattr(self, key)
+			for param in key:
+				rel.parameters[param] = key[param]
+
+	def save_parameters(self):		
+		with open('params', 'w') as file:
+			json.dump(self.get_parameters(), file)
+
+	def load_parameters(self):
+		with open('params', 'r') as file:
+			json_params = json.load(file)
+			self.set_parameters(json_params)
+
+	def preproc(self):
+		self.vis_proj = self.cache_2d_projections()
+
+	def reload(self, world):
+		self.world = world
+		self.observer = self.world.get_observer()
+		self.init_relations()
+		self.load_parameters()
+		print ("OBS: ", self.observer)
+		self.preproc()
+
 	def compute(self, relation, trs, lms):
 		if relation not in self.str_to_pred:
 			return -1        
@@ -177,7 +218,7 @@ class Spatial:
 	def cache_2d_projections(self):
 		proj = {}
 		for ent in self.world.entities:
-			proj[ent] = vp_project(ent, observer)
+			proj[ent] = vp_project(ent, self.observer)
 		return proj
 
 	def pairwise_axial_distances(self):
@@ -207,7 +248,6 @@ class Spatial:
 		relation = self.str_to_pred[relation].compute
 
 		return sample, label, relation
-
 
 class Node:
 	def __init__(self, network=None, connections=None):
@@ -439,6 +479,12 @@ class Touching(Node):
 	Computes the "touching" relation, where two entities are touching if they are "very close".
 	The result is a real number from [0, 1]
 	"""
+
+	def __init__(self, network = None, connections = None):
+		self.arity = 2
+		self.network = network
+		self.parameters = {"touch_face_threshold": torch.tensor(0.95, dtype=torch.float32), "mesh_dist_threshold": torch.tensor(0.1, dtype=torch.float32)}
+
 	def compute(self, tr, lm):
 		if tr == lm:
 			return 0        
@@ -460,9 +506,9 @@ class Touching(Node):
 		# 		touch_face = max(is_in_face(v, face), touch_face)
 		#print ('COMPLETE...')
 		if shared_volume == 0:
-			if touch_face > 0.95:
+			if touch_face > self.parameters['touch_face_threshold']:
 				ret_val = touch_face
-			elif mesh_dist < 0.1:
+			elif mesh_dist < self.parameters['mesh_dist_threshold']:
 				ret_val = math.exp(- mesh_dist)
 			else:
 				ret_val = math.exp(- 2 * mesh_dist)
@@ -591,6 +637,11 @@ class LeftOf(Node):
 		return 'to_the_left_of.p'
 
 class InFrontOf_Deictic(Node):
+	def __init__():
+		self.parameters = {"observer_dist_factor_weight": torch.tensor(0.5, dtype=torch.float32),\
+		 "projection_factor_weight": torch.tensor(0.5, dtype=torch.float32), \
+		 "projection_factor_scale": torch.tensor(-0.5, dtype=torch.float32)}
+
 	def compute(self, tr, lm):
 		# def in_front_of_extr(a, b, observer):
 		bbox_tr = tr.bbox
@@ -606,8 +657,12 @@ class InFrontOf_Deictic(Node):
 		scaled_proj_dist = dist / (max(get_2d_size(a_bbox), get_2d_size(b_bbox)) + 0.001)
 		a_dist = np.linalg.norm(tr.location - world.observer.location)
 		b_dist = np.linalg.norm(lm.location - world.observer.location)
+
+		observer_dist_factor = sigmoid(b_dist - a_dist, 1, 0.5)
+		projection_factor = math.e ** (self.parameters["projection_factor_scale"] * scaled_proj_dist)
 		
-		return 0.5 * (sigmoid(b_dist - a_dist, 1, 0.5) + math.e ** (-0.5 * scaled_proj_dist))
+		return self.parameters["observer_dist_factor_weight"] * observer_dist_factor \
+			+ self.parameters["projection_factor_weight"] * projection_factor
 
 	def str(self):
 		return 'in_front_of_deictic.p'
@@ -888,13 +943,17 @@ class On(Node):
 		return 'on.p'
 
 class Over(Node):
+	def __init__(self):
+		self.parameters = {"above_weight": torch.tensor(0.5, dtype=torch.float32), \
+		"projection_intersection_weight": torch.tensor(0.2, dtype=torch.float32), \
+		"near_weight": torch.tensor(0.3, dtype=torch.float32)}
 
 	def compute(self, tr, lm):
 		bbox_a = a.bbox
 		bbox_b = b.bbox
-		return 0.5 * self.connections['above'].compute(tr, lm) \
-			+ 0.2 * self.connections['projection_intersection'].compute(tr, lm) \
-			+ 0.3 * self.connections['near'].compute(tr, lm)
+		return self.parameters["above_weight"] * self.connections['above'].compute(tr, lm) \
+			+ self.parameters["projection_intersection_weight"] * self.connections['projection_intersection'].compute(tr, lm) \
+			+ self.parameters["near_weight"] * self.connections['near'].compute(tr, lm)
 
 	def str(self):
 		return 'over.p'
@@ -925,6 +984,9 @@ class At(Node):
 		return 'next_to.p'
 
 class Inside(Node):
+	def __init__(self):
+		self.arity = 2
+
 	def compute(self, tr, lm):
 		# a_bbox = a.bbox
 		# b_bbox = b.bbox
@@ -943,6 +1005,15 @@ class Central(Node):
 		center = np.average([ent.centroid for ent in context])
 
 		return math.exp(- 0.1 * np.linalg.norm(tr.centroid - center))
+
+class Apart(Node):
+	def compute(self, tr, lm):
+		shared_volume = get_bbox_intersection(tr, lm)
+		proportion = shared_volume / lm.volume
+		return sigmoid(proportion, 1.0, 1.0)
+
+	def str(self):
+		return 'apart.p'	
 
 # =======================================================================================================
 # ====================================OLD CODE STARTS HERE===============================================
