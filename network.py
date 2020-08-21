@@ -123,7 +123,6 @@ def build_data_loader3(batch_size, num_workers, is_shuffle):
     return train_loader, test_loader
 
 
-# multi-label model
 class Net1(nn.Module):
     def __init__(self, n_in, n_out):
         super(Net1, self).__init__()
