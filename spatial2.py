@@ -637,7 +637,7 @@ class LeftOf(Node):
 		return 'to_the_left_of.p'
 
 class InFrontOf_Deictic(Node):
-	def __init__():
+	def __init__(self):
 		self.parameters = {"observer_dist_factor_weight": torch.tensor(0.5, dtype=torch.float32),\
 		 "projection_factor_weight": torch.tensor(0.5, dtype=torch.float32), \
 		 "projection_factor_scale": torch.tensor(-0.5, dtype=torch.float32)}

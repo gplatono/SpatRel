@@ -97,7 +97,6 @@ def fix(components):
 	return ret_val
 
 
-
 def run_testcase(testcase):
 	if testcase == '':
 		return
