@@ -416,13 +416,16 @@ class LargerThan(Node):
 	The result is a real number from [0, 1].
 	"""
 
-	def compute(self, tr, lm):
-		bbox_tr = tr.bbox
-		bbox_lm = lm.bbox
-		bbox_dim_diff = (bbox_lm[7][0] - bbox_lm[0][0] + bbox_lm[7][1] - bbox_lm[0][1] + bbox_lm[7][2] - bbox_lm[0][2]) \
-						- (bbox_tr[7][0] - bbox_tr[0][0] + bbox_tr[7][1] - bbox_tr[0][1] + bbox_tr[7][2] - bbox_tr[0][
-			2])
-		return 1 / (1 + math.e ** bbox_dim_diff)
+    def __init__(self):
+        self.parameters = {"bbox_diff_weight": torch.tensor(0.5, dtype=torch.float32, requires_grad=True)}
+
+    def compute(self, tr, lm):
+        bbox_tr = tr.bbox
+        bbox_lm = lm.bbox
+        bbox_dim_diff = (bbox_lm[7][0] - bbox_lm[0][0] + bbox_lm[7][1] - bbox_lm[0][1] + bbox_lm[7][2] - bbox_lm[0][2]) \
+                        - (bbox_tr[7][0] - bbox_tr[0][0] + bbox_tr[7][1] - bbox_tr[0][1] + bbox_tr[7][2] - bbox_tr[0][
+            2])
+        return 1 / (1 + math.e ** (bbox_dim_diff *self.parameters['bbox_diff_weight']))
 
 	def str(self):
 		return 'larger_than.p'
@@ -576,18 +579,18 @@ class Touching(Node):
 class RightOf_Deictic(Node):
 	"""Deictic sense of the to-the-right-of relation."""
 
-	def __init__(self):
-		self.params = torch.tensor([0.4, 0.6], dtype=torch.float32, requires_grad=True)
+    def __init__(self):
+        self.parameters = {"weight": torch.tensor([0.4, 0.6], dtype=torch.float32, requires_grad=True)}
 
-	def compute(self, tr, lm):
-		horizontal_component = self.connections['horizontal_deictic_component'].compute(tr, lm)
-		# asym_inv_exp(axial_dist[0], 1, 1, 0.05)
-		vertical_component = self.connections['vertical_deictic_component'].compute(tr, lm)
-		# math.exp(- math.fabs(axial_dist[1]))
-		hv_component = torch.tensor([horizontal_component, vertical_component],
-									dtype=torch.float32)  # transferred tensor
-		final_score = torch.dot(hv_component, self.params)
-		return final_score
+    def compute(self, tr, lm):
+        horizontal_component = self.connections['horizontal_deictic_component'].compute(tr, lm)
+        # asym_inv_exp(axial_dist[0], 1, 1, 0.05)
+        vertical_component = self.connections['vertical_deictic_component'].compute(tr, lm)
+        # math.exp(- math.fabs(axial_dist[1]))
+        hv_component = torch.tensor([horizontal_component, vertical_component],
+                                    dtype=torch.float32)  # transferred tensor
+        final_score = torch.dot(hv_component, self.parameter["weight"])
+        return final_score
 
 	def str(self):
 		return 'to_the_right_of_deictic.p'
@@ -596,17 +599,22 @@ class RightOf_Deictic(Node):
 class RightOf_Extrinsic(Node):
 	"""Extrinsic sense of the to-the-right-of relation."""
 
-	def compute(self, tr, lm):
-		disp_vec = np.array(tr.bbox_centroid - lm.bbox_centroid)
-		dist = np.linalg.norm(disp_vec)
-		disp_vec = disp_vec / dist
+    def __init__(self):
+        self.parameters = {"angle_weight": torch.tensor(0.1, dtype=torch.float32, requires_grad=True),
+                           "size_weight": torch.tensor(0.05, dtype=torch.float32, requires_grad=True)}
+
+    def compute(self, tr, lm):
+        disp_vec = np.array(tr.bbox_centroid - lm.bbox_centroid)
+        dist = np.linalg.norm(disp_vec)
+        disp_vec = disp_vec / dist
 
 		extrinsic_right = np.array([1, 0, 0])
 		cos = extrinsic_right.dot(disp_vec)
 
-		final_score = math.e ** (- 0.1 * (1 - cos)) * math.e ** (- 0.05 * dist / max(tr.size, lm.size))
-		final_score = torch.tensor([final_score], dtype=torch.float32)
-		return final_score
+        final_score = math.e ** (- self.parameters["angle_weight"] * (1 - cos)) \
+                      * math.e ** (- self.parameters["size_weight"] * dist / max(tr.size, lm.size))
+        final_score = torch.tensor([final_score], dtype=torch.float32)
+        return final_score
 
 	def str(self):
 		return 'to_the_right_of_extrinsic.p'
@@ -615,18 +623,23 @@ class RightOf_Extrinsic(Node):
 class RightOf_Intrinsic(Node):
 	"""Intrinsic sense of the to-the-right-of relation."""
 
-	def compute(self, tr, lm):
-		disp_vec = np.array(tr.bbox_centroid - lm.bbox_centroid)
-		dist = np.linalg.norm(disp_vec)
-		disp_vec = disp_vec / dist
+    def __init__(self):
+        self.parameters = {"angle_weight": torch.tensor(0.1, dtype=torch.float32, requires_grad=True),
+                           "size_weight": torch.tensor(0.1, dtype=torch.float32, requires_grad=True)}
+
+    def compute(self, tr, lm):
+        disp_vec = np.array(tr.bbox_centroid - lm.bbox_centroid)
+        dist = np.linalg.norm(disp_vec)
+        disp_vec = disp_vec / dist
 
 		intrinsic_right = np.array(lm.right)
 		print('INTRINSIC: ', intrinsic_right, lm.right, disp_vec)
 		cos = intrinsic_right.dot(disp_vec)
 
-		final_score = math.e ** (- 0.1 * (1 - cos)) * math.e ** (- 0.05 * dist / max(tr.size, lm.size))
-		final_score = torch.tensor([final_score], dtype=torch.float32)
-		return final_score
+        final_score = math.e ** (- self.parameters["angle_weight"] * (1 - cos)) \
+                      * math.e ** (- self.parameters["size_weight"] * dist / max(tr.size, lm.size))
+        final_score = torch.tensor([final_score], dtype=torch.float32)
+        return final_score
 
 	def str(self):
 		return 'to_the_right_of_intrinsic.p'
@@ -738,26 +751,34 @@ class InFrontOf_Deictic(Node):
 
 
 class InFrontOf_Extrinsic(Node):
-	def compute(self, tr, lm):
-		# proj_dist = math.fabs(world.front_axis.dot(a.location)) - math.fabs(world.front_axis.dot(b.location))
-		# proj_dist_scaled = proj_dist / max(a.size, b.size)
-		# print ("PROJ_DISTANCE", proj_dist_scaled)
+    def __init__(self):
+        self.parameters = {"centroid_weight": torch.tensor(0.01, dtype=torch.float32, requires_grad=True),
+                           "wiithin_cone_weight": torch.tensor(0.7, dtype=torch.float32, requires_grad=True)}
 
-		final_score = math.e ** (- 0.01 * get_centroid_distance_scaled(tr, lm)) * within_cone(lm.centroid - tr.centroid,
-																							  -world.front_axis, 0.7)
-		final_score = torch.tensor(final_score, dtype=torch.float32)
-		return final_score
+    def compute(self, tr, lm):
+        # proj_dist = math.fabs(world.front_axis.dot(a.location)) - math.fabs(world.front_axis.dot(b.location))
+        # proj_dist_scaled = proj_dist / max(a.size, b.size)
+        # print ("PROJ_DISTANCE", proj_dist_scaled)
+
+        final_score = math.e ** (- self.parameters["centroid_weight"] * get_centroid_distance_scaled(tr, lm)) \
+                      * within_cone(lm.centroid - tr.centroid, -world.front_axis, self.parameters["within_cone_weight"])
+        final_score = torch.tensor(final_score, dtype=torch.float32)
+        return final_score
 
 	def str(self):
 		return 'in_front_of_extrinsic.p'
 
 
 class InFrontOf_Intrinsic(Node):
-	def compute(self, tr, lm):
-		final_score = math.e ** (- 0.01 * get_centroid_distance_scaled(tr, lm)) * within_cone(lm.centroid - tr.centroid,
-																							  -lm.front, 0.7)
-		final_score = torch.tensor(final_score, dtype=torch.float32)
-		return final_score
+    def __init__(self):
+        self.parameters = {"centroid_weight": torch.tensor(0.01, dtype=torch.float32, requires_grad=True),
+                           "within_cone_weight": torch.tensor(0.7, dtype=torch.float32, requires_grad=True)}
+
+    def compute(self, tr, lm):
+        final_score = math.e ** (- self.parameters["centroid_weight"] * get_centroid_distance_scaled(tr, lm)) \
+                      * within_cone(lm.centroid - tr.centroid, -lm.front, self.parameters["within_cone_weight"])
+        final_score = torch.tensor(final_score, dtype=torch.float32)
+        return final_score
 
 	def str(self):
 		return 'in_front_of_intrinsic.p'
@@ -825,6 +846,8 @@ class Behind(Node):
 
 
 class Above(Node):
+    def __init__(self):
+        self.parameters = {"wihtin_cone_weight": torch.tensor(0.1, dtype=torch.float32, requires_grad=True)}
 
 	def compute(self, tr, lm):
 		"""Computes the 'a above b' relation, returns the certainty value.
@@ -835,23 +858,13 @@ class Above(Node):
 		Return value:
 		float value from [0, 1]
 		"""
-		# bbox_a = a.bbox
-		# bbox_b = b.bbox
-		# span_a = a.get_span()
-		# span_b = b.get_span()
-		# center_a = a.get_bbox_centroid()
-		# center_b = b.get_bbox_centroid()
-		# scaled_vertical_distance = (center_a[2] - center_b[2]) / ((span_a[5] - span_a[4]) + (span_b[5] - span_b[4]))
-		# print ("ABOVE:", sigmoid(a.centroid[2] - b.centroid[2], 1, 0.1))
-		# print ("CONE:",within_cone(a.centroid - b.centroid, Vector((0, 0, 1)), 0.05))
-		vertical_dist_scaled = (tr.centroid[2] - lm.centroid[2]) / (max(tr.dimensions[2], lm.dimensions[2]) + 0.01)
-		# print ("WITHIN CONE: ", a, within_cone(a.centroid - b.centroid, np.array([0, 0, 1.0]), 0.1), sigmoid(vertical_dist_scaled, 1, 3), vertical_dist_scaled)
-		return self.connections['within_cone_region'].compute(tr.centroid - lm.centroid, np.array([0, 0, 1.0]), 0.1) \
-			   * sigmoid(vertical_dist_scaled, 1, 3)  # math.e ** (- 0.01 * get_centroid_distance_scaled(a, b))
+        vertical_dist_scaled = (tr.centroid[2] - lm.centroid[2]) / (max(tr.dimensions[2], lm.dimensions[2]) + 0.01)
+        # print ("WITHIN CONE: ", a, within_cone(a.centroid - b.centroid, np.array([0, 0, 1.0]), 0.1), sigmoid(vertical_dist_scaled, 1, 3), vertical_dist_scaled)
+        return self.connections['within_cone_region'].compute(tr.centroid - lm.centroid, np.array([0, 0, 1.0]), self.parameters["within_cone_weight"]) \
+               * sigmoid(vertical_dist_scaled, 1, 3)  # math.e ** (- 0.01 * get_centroid_distance_scaled(a, b))
 
-	def str(self):
-		return 'above.p'
-
+    def str(self):
+        return 'above.p'
 
 class Below(Node):
 
@@ -871,88 +884,70 @@ class Below(Node):
 
 
 class Near_Raw(Node):
-	def compute(self, tr, lm):
-		bbox_tr = tr.bbox
-		bbox_lm = lm.bbox
-		dist = dist_obj(tr, lm)
-		max_dim_a = max(bbox_tr[7][0] - bbox_tr[0][0],
-						bbox_tr[7][1] - bbox_tr[0][1],
-						bbox_tr[7][2] - bbox_tr[0][2])
-		max_dim_b = max(bbox_lm[7][0] - bbox_lm[0][0],
-						bbox_lm[7][1] - bbox_lm[0][1],
-						bbox_lm[7][2] - bbox_lm[0][2])
-		if tr.get('planar') is not None:
-			# print ("TEST", a.name, b.name)
-			dist = min(dist, get_planar_distance_scaled(tr, lm))
-		elif lm.get('planar') is not None:
-			dist = min(dist, get_planar_distance_scaled(tr, lm))
-		elif tr.get('vertical_rod') is not None or tr.get('horizontal_rod') is not None or tr.get('rod') is not None:
-			dist = min(dist, get_line_distance_scaled(tr, lm))
-		elif lm.get('vertical_rod') is not None or lm.get('horizontal_rod') is not None or lm.get('rod') is not None:
-			dist = min(dist, get_line_distance_scaled(lm, tr))
-		elif tr.get('concave') is not None or lm.get('concave') is not None:
-			dist = min(dist, closest_mesh_distance_scaled(tr, lm))
+    def __init__(self):
+        self.parameters = {"raw_metric_weight": torch.tensor(0.1, dtype=torch.float32, requires_grad=True)}
 
-		fr_size = FrameSize().compute()
-		raw_metric = math.e ** (- 0.1 * dist)
-		'''0.5 * (1 - min(1, dist / avg_dist + 0.01) +'''
-		# print("RAW NEAR: ", tr, lm, raw_metric * (1 - raw_metric / fr_size))
-		return raw_metric * (1 - raw_metric / fr_size)
+    def compute(self, tr, lm):
+        bbox_tr = tr.bbox
+        bbox_lm = lm.bbox
+        dist = dist_obj(tr, lm)
+        max_dim_a = max(bbox_tr[7][0] - bbox_tr[0][0],
+                        bbox_tr[7][1] - bbox_tr[0][1],
+                        bbox_tr[7][2] - bbox_tr[0][2])
+        max_dim_b = max(bbox_lm[7][0] - bbox_lm[0][0],
+                        bbox_lm[7][1] - bbox_lm[0][1],
+                        bbox_lm[7][2] - bbox_lm[0][2])
+        if tr.get('planar') is not None:
+            # print ("TEST", a.name, b.name)
+            dist = min(dist, get_planar_distance_scaled(tr, lm))
+        elif lm.get('planar') is not None:
+            dist = min(dist, get_planar_distance_scaled(tr, lm))
+        elif tr.get('vertical_rod') is not None or tr.get('horizontal_rod') is not None or tr.get('rod') is not None:
+            dist = min(dist, get_line_distance_scaled(tr, lm))
+        elif lm.get('vertical_rod') is not None or lm.get('horizontal_rod') is not None or lm.get('rod') is not None:
+            dist = min(dist, get_line_distance_scaled(lm, tr))
+        elif tr.get('concave') is not None or lm.get('concave') is not None:
+            dist = min(dist, closest_mesh_distance_scaled(tr, lm))
 
-	def str(self):
-		return 'near_raw.p'
+        fr_size = FrameSize().compute()
+        raw_metric = math.e ** (- self.parameters["raw_metric_weight"] * dist)
+        '''0.5 * (1 - min(1, dist / avg_dist + 0.01) +'''
+        # print("RAW NEAR: ", tr, lm, raw_metric * (1 - raw_metric / fr_size))
+        return raw_metric * (1 - raw_metric / fr_size)
 
+    def str(self):
+        return 'near_raw.p'
 
 class Near(Node):
+    def __init__(self):
+        self.parameters = {"size_weight": torch.tensor([0.1], dtype=torch.float32, requires_grad=True)}
 
-	def __init__(self):
-		self.params = torch.tensor([0.1], dtype=torch.float32, requires_grad=True)
+    def compute(self, tr, lm=None):
 
-	def compute(self, tr, lm=None):
+        if tr == lm:
+            return 0
+        connections = self.get_connections()
+        raw_near_measure = connections['near_raw'].compute(tr, lm)
+        raw_near_tr = [connections['near_raw'].compute(tr, entity) for entity in world.entities if entity != tr]
+        raw_near_lm = [connections['near_raw'].compute(lm, entity) for entity in world.entities if entity != lm]
+        avg_near = 0.5 * (np.average(raw_near_tr) + np.average(raw_near_lm))
+        near_measure = raw_near_measure + (raw_near_measure - avg_near) * min(raw_near_measure, 1 - raw_near_measure)
+        near_measure = torch.tensor([near_measure], dtype=torch.float32)  # transfer to tensor
+        if tr.compute_size() > lm.compute_size():
+            near_measure -= self.parameters["size_weight"]
+        elif tr.compute_size() < lm.compute_size():
+            near_measure += self.parameters["size_weight"]
+        return near_measure
 
-		if tr == lm:
-			return 0
-		connections = self.get_connections()
-		raw_near_measure = connections['near_raw'].compute(tr, lm)
-		raw_near_tr = [connections['near_raw'].compute(tr, entity) for entity in world.entities if entity != tr]
-		raw_near_lm = [connections['near_raw'].compute(lm, entity) for entity in world.entities if entity != lm]
-		avg_near = 0.5 * (np.average(raw_near_tr) + np.average(raw_near_lm))
-		#     max_near_tr = max(raw_near_tr)
-		#     max_near_lm = max(raw_near_lm)
-		#     max_near = max(raw_near_measure, max_near_tr, max_near_lm)
-		# # for entity in entities:
-		#     if entity != tr and entity != lm:
-		#         raw_near_tr = [connections['near_raw'].compute(tr, entity) for entity in entities if entity != tr and entity != lm]
-		#         raw_near_lm = [connections['near_raw'].compute(lm, entity) for entity in entities if entity != tr and entity != lm]
-		#         near_lm_entity = connections['near_raw'].compute(lm, entity)
-		#         # print (entity.name, near_tr_entity, near_lm_entity)
-		#         # if dist_a_to_entity < raw_dist:
-		#          += [near_tr_entity]
-		#         # if dist_b_to_entity < raw_dist:
-		#         raw_near_lm += [near_lm_entity]
-
-		# ratio = raw_near_measure / max_near
-		# if (raw_near_measure < avg_near):
-		#     near_measure_final = 0.5 * raw_near_measure
-		# else:
-		#     near_measure_final = raw_near_measure * ratio
-		near_measure = raw_near_measure + (raw_near_measure - avg_near) * min(raw_near_measure, 1 - raw_near_measure)
-		near_measure = torch.tensor([near_measure], dtype=torch.float32)  # transfer to tensor
-		if tr.compute_size() > lm.compute_size():
-			near_measure -= self.params
-		elif tr.compute_size() < lm.compute_size():
-			near_measure += self.params
-		return near_measure
-
-	def str(self):
-		return 'near.p'
-
+    def str(self):
+        return 'near.p'
 
 class Between(Node):
 
-	def __init__(self, connections=None):
-		self.set_connections(connections)
-		self.parameters = {'distance_scaling': torch.tensor([-0.05], dtype=torch.float32, requires_grad=True)}
+    def __init__(self, connections=None):
+        self.set_connections(connections)
+        self.parameters = {'distance_scaling': torch.tensor([-0.05], dtype=torch.float32, requires_grad=True)
+                           "tr_size_weight": torch.tensor(2, dtype=torch.float32, requires_grad=True)}
 
 	def compute(self, tr, lm1, lm2):
 		# print("ENTERING THE BETWEEN...", a, b, c)
@@ -966,7 +961,7 @@ class Between(Node):
 
 		cos = np.dot(tr_to_lm1, tr_to_lm2) / (np.linalg.norm(tr_to_lm1) * np.linalg.norm(tr_to_lm2) + 0.001)
 
-		scaled_dist = np.linalg.norm(lm1.centroid - lm2.centroid) / (2 * tr.size)
+        scaled_dist = np.linalg.norm(lm1.centroid - lm2.centroid) / (self.parameters["tr_size_weight"] * tr.size)
 
 		dist_coeff = math.exp(self.parameters['distance_scaling'] * torch.tensor([scaled_dist], dtype=torch.float32))
 
@@ -997,47 +992,51 @@ class MetonymicOn(Node):
 # Inputs: a, b - entities
 # Return value: real number from [0, 1]
 class On(Node):
-	def compute(self, tr, lm):
-		if tr == lm:
-			return 0
-		proj_dist = np.linalg.norm(np.array([tr.location[0] - lm.location[0], tr.location[1] - lm.location[1]]))
-		proj_dist_scaled = proj_dist / (max(tr.size, lm.size) + 0.01)
-		# print ("LOCA: ", proj_dist_scaled)
-		hor_offset = math.e ** (-0.3 * proj_dist_scaled)
-		# print ("PROJ DIST: ", a, b, hor_offset)
-		# print ("ON METRICS: ", touching(a, b), above(a, b), hor_offset, touching(a, b) * above(a, b) * hor_offset)
-		ret_val = self.connections['touching'].compute(tr, lm) * self.connections['above'].compute(tr, lm) \
-			if hor_offset < 0.8 \
-			else self.connections['above'].compute(tr, lm)  # * touching(a, b)
-		# print ("ON METRICS: ", touching(a, b), above(a, b), hor_offset, touching(a, b) * above(a, b) * hor_offset)
-		# ret_val = max(ret_val, supporting(b, a))
+    def __init__(self):
+        self.parameters = {"hor_offset_weight": torch.tensor(0.3, dtype=torch.float32, requires_grad=True),
+                           "hor_offset_threshold": torch.tensor(0.7, dtype=torch.float32, requires_grad=True)}
 
-		# print ("CURRENT ON: ", a, b, ret_val, above(a, b), touching(a, b), hor_offset)
-		#    ret_val =  touching(a, b) * hor_offset if above(a, b) < 0.88 else above(a, b) * touching(a, b)
-		# print ("CURRENT ON:", ret_val)
-		if lm.get('planar') is not None and self.connections['larger_than'].compute(lm, tr) and tr.centroid[2] > 0.5 * \
-				tr.dimensions[2]:
-			ret_val = torch.max(ret_val, self.connections['touching'](tr, lm))
-		# ret_val = 0.5 * (v_offset(a, b) + get_proj_intersection(a, b))
-		# print ("ON {}, {}, {}".format(ret_val, get_proj_intersection(a, b), v_offset(a, b)))
-		# ret_val = max(ret_val, 0.5 * (above(a, b) + touching(a, b)))
-		# print ("ON {}".format(ret_val))
-		for ob in lm.components:
-			ob_ent = Entity(ob)
-			if ob.get('working_surface') is not None or ob.get('planar') is not None:
-				# transfer to tensors
-				cmp1 = 0.5 * (v_offset(tr, ob_ent) + self.connections['projection_intersection'].compute(tr, ob_ent))
-				cmp1 = torch.tensor([cmp1], dtype=torch.float32)
-				cmp2 = 0.5 * (int(near(tr, ob_ent) > 0.99) + self.connections['larger_than'].compute(ob_ent, tr))
-				cmp2 = torch.tensor([cmp2], dtype=torch.float32)
-				ret_val = max(ret_val, cmp1)
-				ret_val = max(ret_val, cmp2)
-		if lm.get('planar') is not None and isVertical(lm):
-			ret_val = max(ret_val, math.exp(- 0.5 * get_planar_distance_scaled(tr, lm)))
-		return ret_val
+    def compute(self, tr, lm):
+        if tr == lm:
+            return 0
+        proj_dist = np.linalg.norm(np.array([tr.location[0] - lm.location[0], tr.location[1] - lm.location[1]]))
+        proj_dist_scaled = proj_dist / (max(tr.size, lm.size) + 0.01)
+        # print ("LOCA: ", proj_dist_scaled)
+        hor_offset = math.e ** (-self.parameters["hor_offset_weight"] * proj_dist_scaled)
+        # print ("PROJ DIST: ", a, b, hor_offset)
+        # print ("ON METRICS: ", touching(a, b), above(a, b), hor_offset, touching(a, b) * above(a, b) * hor_offset)
+        ret_val = self.connections['touching'].compute(tr, lm) * self.connections['above'].compute(tr, lm) \
+            if hor_offset < self.parameter["hor_offset_threshold"] \
+            else self.connections['above'].compute(tr, lm)  # * touching(a, b)
+        # print ("ON METRICS: ", touching(a, b), above(a, b), hor_offset, touching(a, b) * above(a, b) * hor_offset)
+        # ret_val = max(ret_val, supporting(b, a))
 
-	def str(self):
-		return 'on.p'
+        # print ("CURRENT ON: ", a, b, ret_val, above(a, b), touching(a, b), hor_offset)
+        #    ret_val =  touching(a, b) * hor_offset if above(a, b) < 0.88 else above(a, b) * touching(a, b)
+        # print ("CURRENT ON:", ret_val)
+        if lm.get('planar') is not None and self.connections['larger_than'].compute(lm, tr) and tr.centroid[2] > 0.5 * \
+                tr.dimensions[2]:
+            ret_val = torch.max(ret_val, self.connections['touching'](tr, lm))
+        # ret_val = 0.5 * (v_offset(a, b) + get_proj_intersection(a, b))
+        # print ("ON {}, {}, {}".format(ret_val, get_proj_intersection(a, b), v_offset(a, b)))
+        # ret_val = max(ret_val, 0.5 * (above(a, b) + touching(a, b)))
+        # print ("ON {}".format(ret_val))
+        for ob in lm.components:
+            ob_ent = Entity(ob)
+            if ob.get('working_surface') is not None or ob.get('planar') is not None:
+                # transfer to tensors
+                cmp1 = 0.5 * (v_offset(tr, ob_ent) + self.connections['projection_intersection'].compute(tr, ob_ent))
+                cmp1 = torch.tensor([cmp1], dtype=torch.float32)
+                cmp2 = 0.5 * (int(near(tr, ob_ent) > 0.99) + self.connections['larger_than'].compute(ob_ent, tr))
+                cmp2 = torch.tensor([cmp2], dtype=torch.float32)
+                ret_val = max(ret_val, cmp1)
+                ret_val = max(ret_val, cmp2)
+        if lm.get('planar') is not None and isVertical(lm):
+            ret_val = max(ret_val, math.exp(- 0.5 * get_planar_distance_scaled(tr, lm)))
+        return ret_val
+
+    def str(self):
+        return 'on.p'
 
 
 class Over(Node):
@@ -1102,12 +1101,15 @@ class Inside(Node):
 
 
 class Central(Node):
-	def compute(self, tr, context=None):
-		if context is None:
-			context = self.network.world.active_context
-		center = np.average([ent.centroid for ent in context])
+    def __init__(self):
+        self.parameters = {"centroid_weight": torch.tensor(0.1, dtype=torch.float32, requires_grad=True)}
 
-		return math.exp(- 0.1 * np.linalg.norm(tr.centroid - center))
+    def compute(self, tr, context=None):
+        if context is None:
+            context = self.network.world.active_context
+        center = np.average([ent.centroid for ent in context])
+
+        return math.exp(- self.parameters["centroid_ewight"] * np.linalg.norm(tr.centroid - center))
 
 
 class Apart(Node):
