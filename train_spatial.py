@@ -5,8 +5,8 @@ import subprocess
 
 path_to_data = sys.argv[1]
 
-scene_path = path_to_data + os.sep + "scenes"
-ann_path = path_to_data + os.sep + "annotations"
+scene_path = path_to_data + "scenes"
+ann_path = path_to_data + "annotations"
 
 scenes = glob.glob(scene_path + os.sep + "*.blend")
 annotations = glob.glob(ann_path + os.sep + "*.data")
@@ -18,9 +18,9 @@ def train(epochs):
 	for epoch in range(epochs):
 		scene = scenes[scene_idx]
 		name = scene.split(os.sep)[-1].split(".blend")[0] + '.data'
-		print(scene, name)
-		if ann_path + os.sep + name in annotations:
-			command = ['blender', scene, '-P', 'train_scene.py', '--', scene.split('.')[0] + '.data']
+		print("SCENE DATA:", scene, name)
+		if ann_path + os.sep + name in annotations and 'Jon' not in scene:
+			command = ['../blender-2.83.5-linux64/blender', scene, '-P', 'train_scene.py', '--', ann_path + os.sep + name]
 			subprocess.run(command)
 
 		scene_idx += 1

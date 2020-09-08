@@ -82,12 +82,13 @@ class Entity(object):
 	def compute_geometry(self):
 		#Compute mesh-related data
 		self.vertex_set = self.compute_vertex_set()
+
 		self.faces = self.compute_faces()
 
 		#The coordiante span of the entity. In other words,
 		#the minimum and maximum coordinates of entity's points
 		self.span = self.compute_span()
-		self.span_t = torch.Tensor(self.span, dtype = torch.float32)
+		self.span_t = torch.tensor(self.span, dtype = torch.float32)
 
 		#Separate values for the span of the entity, for easier access
 		self.x_max = self.span[1]
@@ -105,27 +106,27 @@ class Entity(object):
 
 		#The bounding box, stored as a list of triples of vertex coordinates
 		self.bbox = self.compute_bbox()
-		self.bbox_t = torch.Tensor(self.bbox, dtype = torch.float32)
+		self.bbox_t = torch.tensor(self.bbox, dtype = torch.float32)
 
 		#Bounding box's centroid
 		self.bbox_centroid = self.compute_bbox_centroid()
-		self.bbox_centroid_t = torch.Tensor(self.bbox_centroid, dtype = torch.float32)
+		self.bbox_centroid_t = torch.tensor(self.bbox_centroid, dtype = torch.float32)
 
 
 		#Dimensions of the entity in the format
 		#[xmax - xmin, ymax - ymin, zmax - zmin]
 		self.dimensions = self.compute_dimensions()
-		self.dimensions_t = torch.Tensor(self.dimensions, dtype = torch.float32)
+		self.dimensions_t = torch.tensor(self.dimensions, dtype = torch.float32)
 
 		#Entity's mesh centroid
 		self.centroid = self.compute_centroid()
-		self.centroid_t = torch.Tensor(self.centroid, dtype = torch.float32)
+		self.centroid_t = torch.tensor(self.centroid, dtype = torch.float32)
 		self.location = self.centroid
 		self.location_t = self.centroid_t
 	  
 		#The fundamental intrinsic vectors
 		self.up = np.array([0, 0, 1])
-		self.up_t = torch.Tensor(self.up, dtype = torch.float32)
+		self.up_t = torch.tensor(self.up, dtype = torch.float32)
 
 		self.front = np.array(self.components[0].get('frontal')) \
 			if self.components[0].get('frontal') is not None else self.generate_frontal()
@@ -143,9 +144,9 @@ class Entity(object):
 		self.radius = self.compute_radius()
 		self.volume = self.compute_volume()
 		self.size = self.compute_size()
-		self.radius_t = torch.Tensor(self.radius, dtype = torch.float32)
-		self.volume_t = torch.Tensor(self.volume, dtype = torch.float32)
-		self.size_t = torch.Tensor(self.size, dtype = torch.float32)
+		self.radius_t = torch.tensor(self.radius, dtype = torch.float32)
+		self.volume_t = torch.tensor(self.volume, dtype = torch.float32)
+		self.size_t = torch.tensor(self.size, dtype = torch.float32)
 	   
 		self.parent_offset = self.compute_parent_offset()
 		self.ordering = self.induce_linear_order()
