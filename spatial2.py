@@ -181,11 +181,13 @@ class Spatial:
 
 	def get_parameters(self):
 		if self.parameters is None:
-			param_dict = {}
+			params = []
 			for prop, obj in self.__dict__.items():
 				if hasattr(obj, 'parameters'):
-					param_dict[prop] = obj.parameters
-			self.parameters = param_dict
+					# print('param: ', obj.parameters)
+					for param, val in obj.parameters.items():
+						params.append(val)
+			self.parameters = params
 		return self.parameters
 
 	def set_parameters(self, params):
@@ -204,8 +206,6 @@ class Spatial:
 				json_params = json.load(file)
 				if json_params != "":
 					self.set_parameters(json_params)
-
-		
 
 	def preproc(self):
 		self.parameters = None
@@ -262,11 +262,12 @@ class Spatial:
 		return sample, label, relation
 
 	def train(self, data, iterations):
-		print (self.parameters)
-		optimizer = torch.optim.Adam(self.get_parameters(), lr=0.001)
+		param = self.get_parameters()
+		print("param: ", param)
+		optimizer = torch.optim.Adam(param, lr=0.001)
 		for iter in range(iterations):
 			scene_loss = 0
-		
+
 			for annotation in data:
 				sample, label, relation = self.process_sample(annotation)
 				label = torch.tensor(label, dtype=torch.float32, requires_grad=True)
@@ -274,7 +275,7 @@ class Spatial:
 				scene_loss += torch.abs(label - output)
 
 			scene_loss /= len(data)
-			loss.backward()
+			scene_loss.backward()
 			optimizer.step()
 
 
@@ -283,7 +284,7 @@ class Node:
 		self.arity = 2
 		self.network = network
 		self.set_connections(connections)
-		self.parameters = []
+		# self.parameters = []
 
 	def set_connections(self, connections):
 		self.connections = connections
@@ -426,7 +427,7 @@ class LargerThan(Node):
 		bbox_dim_diff = (bbox_lm[7][0] - bbox_lm[0][0] + bbox_lm[7][1] - bbox_lm[0][1] + bbox_lm[7][2] - bbox_lm[0][2]) \
 						- (bbox_tr[7][0] - bbox_tr[0][0] + bbox_tr[7][1] - bbox_tr[0][1] + bbox_tr[7][2] - bbox_tr[0][
 			2])
-		return 1 / (1 + math.e ** (bbox_dim_diff *self.parameters['bbox_diff_weight']))
+		return 1 / (1 + math.e ** (bbox_dim_diff * self.parameters['bbox_diff_weight']))
 
 	def str(self):
 		return 'larger_than.p'
@@ -863,11 +864,13 @@ class Above(Node):
 		"""
 		vertical_dist_scaled = (tr.centroid[2] - lm.centroid[2]) / (max(tr.dimensions[2], lm.dimensions[2]) + 0.01)
 		# print ("WITHIN CONE: ", a, within_cone(a.centroid - b.centroid, np.array([0, 0, 1.0]), 0.1), sigmoid(vertical_dist_scaled, 1, 3), vertical_dist_scaled)
-		return self.connections['within_cone_region'].compute(tr.centroid - lm.centroid, np.array([0, 0, 1.0]), self.parameters["within_cone_weight"]) \
+		return self.connections['within_cone_region'].compute(tr.centroid - lm.centroid, np.array([0, 0, 1.0]),
+															  self.parameters["within_cone_weight"]) \
 			   * sigmoid(vertical_dist_scaled, 1, 3)  # math.e ** (- 0.01 * get_centroid_distance_scaled(a, b))
 
 	def str(self):
 		return 'above.p'
+
 
 class Below(Node):
 
@@ -921,6 +924,7 @@ class Near_Raw(Node):
 	def str(self):
 		return 'near_raw.p'
 
+
 class Near(Node):
 	def __init__(self, connections):
 		self.connections = connections
@@ -945,6 +949,7 @@ class Near(Node):
 
 	def str(self):
 		return 'near.p'
+
 
 class Between(Node):
 

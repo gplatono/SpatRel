@@ -2,7 +2,7 @@ import bpy
 import sys
 import os
 
-print (sys.executable)
+# print (sys.executable)
 filepath = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, filepath)
 sys.path.append('/home/georgiy/.local/lib/python3.7/site-packages/')
