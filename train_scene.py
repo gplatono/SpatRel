@@ -20,11 +20,11 @@ spatial = Spatial(world)
 with open(datapath, "r") as f:
 	#print ("DATAPATH: ", datapath)
 	lines = f.readlines()
-	annotations = []
-	for line in lines:
-		if line.strip() != "":
-			annotations.append(line)
-	#annotations = [line.split(":") for line in f.readlines()]
+	# annotations = []
+	# for line in lines:
+	# 	if line.strip() != "":
+	# 		annotations.append(line)
+	annotations = [line.split(":") for line in lines if line.strip() != ""]
 	spatial.reload(world)
 	spatial.train(annotations, 10)
 	spatial.save_parameters()
