@@ -205,6 +205,8 @@ class Spatial:
 				if json_params != "":
 					self.set_parameters(json_params)
 
+		
+
 	def preproc(self):
 		self.parameters = None
 		self.vis_proj = self.cache_2d_projections()
@@ -260,6 +262,7 @@ class Spatial:
 		return sample, label, relation
 
 	def train(self, data, iterations):
+		print (self.parameters)
 		optimizer = torch.optim.Adam(self.get_parameters(), lr=0.001)
 		for iter in range(iterations):
 			scene_loss = 0

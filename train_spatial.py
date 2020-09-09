@@ -5,8 +5,8 @@ import subprocess
 
 path_to_data = sys.argv[1]
 
-scene_path = path_to_data + "scenes"
-ann_path = path_to_data + "annotations"
+scene_path = path_to_data + os.sep + "scenes"
+ann_path = path_to_data + os.sep + "annotations"
 
 scenes = glob.glob(scene_path + os.sep + "*.blend")
 annotations = glob.glob(ann_path + os.sep + "*.data")

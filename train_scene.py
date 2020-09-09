@@ -25,5 +25,6 @@ with open(datapath, "r") as f:
 		if line.strip() != "":
 			annotations.append(line)
 	#annotations = [line.split(":") for line in f.readlines()]
+	spatial.reload(world)
 	spatial.train(annotations, 10)
 	spatial.save_parameters()
