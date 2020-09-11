@@ -165,7 +165,7 @@ class Spatial:
 		self.behind_intrinsic = Behind_Intrinsic(connections={'in_front_of_intrinsic': self.in_front_of_intrinsic})
 		self.behind = Behind(connections={'behind_deictic': self.behind_deictic,
 										  'behind_intrinsic': self.behind_intrinsic,
-										  'behind_extrinsic': self.behind_extrinsic})
+										  'behind_extrinsic': self.behind_extrinsic}, network=self)
 		self.above = Above(connections={'within_cone_region': self.within_cone_region})
 		self.below = Below(connections={'above': self.above})
 		self.near_raw = Near_Raw(connections={'frame_size': self.frame_size})
@@ -185,10 +185,10 @@ class Spatial:
 			params = {}
 			for prop, obj in self.__dict__.items():
 				if hasattr(obj, 'parameters'):
-					params[obj.__str__()] = {}
+					params[obj.str()] = {}
 					# print('param: ', obj.parameters)
 					for param, val in obj.parameters.items():
-						params[obj.__str__()][param] = val
+						params[obj.str()][param] = val
 			self.parameters = params
 
 		return self.parameters
@@ -867,15 +867,19 @@ class Behind_Intrinsic(Node):
 
 
 class Behind(Node):
+	def __init__(self, connections, network):
+		self.connections = connections
+		self.network = network
+
 	def compute(self, tr, lm=None):
 		ret_val = 0
 		if type(tr) == Entity and type(lm) == Entity:
 			connections = self.get_connections()
-			return torch.max(connections['in_front_of_deictic'].compute(tr, lm),
-							 connections['in_front_of_intrinsic'].compute(tr, lm),
-							 connections['in_front_of_extrinsic'].compute(tr, lm))
+			return torch.max(connections['behind_deictic'].compute(tr, lm),
+							 connections['behind_intrinsic'].compute(tr, lm),
+							 connections['behind_extrinsic'].compute(tr, lm))
 		elif lm is None:
-			ret_val = np.average([self.compute(tr, entity) for entity in world.active_context])
+			ret_val = np.average([self.compute(tr, entity) for entity in self.network.world.active_context])
 		return ret_val
 
 	def str(self):
@@ -1162,6 +1166,9 @@ class Central(Node):
 		center = np.average([ent.centroid for ent in context])
 
 		return math.exp(- self.parameters["centroid_ewight"] * np.linalg.norm(tr.centroid - center))
+
+	def str(self):
+		return "central.a"
 
 
 class Apart(Node):
