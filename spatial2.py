@@ -248,6 +248,7 @@ class Spatial:
 	def process_sample(self, annotation):
 		relation = annotation[1]
 		trs = [self.world.find_entity_by_name(annotation[0].strip())]
+		# print("trs: ", trs)
 		lms = [self.world.find_entity_by_name(item.strip()) for item in annotation[2:]]
 		sample = [trs[0]] + lms
 
@@ -271,7 +272,10 @@ class Spatial:
 
 			for annotation in data:
 				annotation = [item.strip() for item in annotation]
+				print("annotation: ", annotation)
 				sample, label, relation = self.process_sample(annotation)
+				# print("rel: ", relation)
+				# print('sample: ', *sample)
 				label = torch.tensor(label, dtype=torch.float32, requires_grad=True)
 				output = relation(*sample)
 				scene_loss += torch.abs(label - output)
@@ -1039,7 +1043,12 @@ class On(Node):
 		# ret_val = max(ret_val, 0.5 * (above(a, b) + touching(a, b)))
 		# print ("ON {}".format(ret_val))
 		for ob in lm.components:
-			ob_ent = Entity(ob)
+			# ob_ent = Entity(ob)
+			if type(ob) == Entity:
+				ob_ent = ob
+			else:
+				ob_ent = Entity(ob)
+			# print("obtype: ", type(ob))
 			if ob.get('working_surface') is not None or ob.get('planar') is not None:
 				# transfer to tensors
 				cmp1 = 0.5 * (v_offset(tr, ob_ent) + self.connections['projection_intersection'].compute(tr, ob_ent))
