@@ -813,7 +813,7 @@ class InFrontOf(Node):
 			else:
 				intrinsic = torch.tensor(0, dtype=torch.float32)
 
-			return torch.max(deictic, extrinsic, intrinsic)
+			return torch.max(torch.tensor([deictic, extrinsic, intrinsic], dtype=torch.float32))
 		elif lm is None:
 			ret_val = np.average([self.compute(tr, entity) for entity in world.active_context])
 		return ret_val
