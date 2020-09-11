@@ -194,10 +194,10 @@ class Spatial:
 		return self.parameters
 
 	def get_numpy_params(self):
-		params = self.get_parameters
+		params = self.get_parameters()
 		for obj in params:
 			for param in params[obj]:
-				params[obj][param] = params[obj][param].cpu().numpy()
+				params[obj][param] = params[obj][param].detach().numpy().tolist()
 
 		return params
 
