@@ -153,8 +153,8 @@ class Spatial:
 		self.to_the_left_of = LeftOf(connections={'to_the_left_of_deictic': self.to_the_left_of_deictic,
 												  'to_the_left_of_intrinsic': self.to_the_left_of_intrinsic,
 												  'to_the_left_of_extrinsic': self.to_the_left_of_extrinsic})
-		self.in_front_of_deictic = InFrontOf_Deictic()
-		self.in_front_of_extrinsic = InFrontOf_Extrinsic()
+		self.in_front_of_deictic = InFrontOf_Deictic(network=self)
+		self.in_front_of_extrinsic = InFrontOf_Extrinsic(network=self)
 		self.in_front_of_intrinsic = InFrontOf_Intrinsic()
 		self.in_front_of = InFrontOf(connections={'in_front_of_deictic': self.in_front_of_deictic,
 												  'in_front_of_intrinsic': self.in_front_of_intrinsic,
@@ -601,7 +601,7 @@ class RightOf_Deictic(Node):
 		# math.exp(- math.fabs(axial_dist[1]))
 		hv_component = torch.tensor([horizontal_component, vertical_component],
 									dtype=torch.float32)  # transferred tensor
-		final_score = torch.dot(hv_component, self.parameter["weight"])
+		final_score = torch.dot(hv_component, self.parameters["weight"])
 		return final_score
 
 	def str(self):
@@ -673,7 +673,7 @@ class RightOf(Node):
 				intrinsic = connections['to_the_right_of_intrinsic'].compute(tr, lm)
 			else:
 				intrinsic = torch.tensor([0], dtype=torch.float32)
-			return torch.max(deictic, extrinsic, intrinsic)
+			return torch.max(torch.tensor([deictic, extrinsic, intrinsic], dtype=torch.float32))
 		elif lm is None:
 			ret_val = np.average([self.compute(tr, entity) for entity in world.active_context])
 		return ret_val
@@ -717,7 +717,7 @@ class LeftOf(Node):
 				intrinsic = connections['to_the_left_of_intrinsic'].compute(tr, lm)
 			else:
 				intrinsic = torch.tensor([0], dtype=torch.float32)
-			return torch.max(deictic, extrinsic, intrinsic)
+			return torch.max(torch.tensor([deictic, extrinsic, intrinsic], dtype=torch.float32))
 
 		elif lm is None:
 			ret_val = np.average([self.compute(tr, entity) for entity in world.active_context])
@@ -728,7 +728,8 @@ class LeftOf(Node):
 
 
 class InFrontOf_Deictic(Node):
-	def __init__(self):
+	def __init__(self, network):
+		self.network = network
 		self.parameters = {"observer_dist_factor_weight": torch.tensor(0.5, dtype=torch.float32, requires_grad=True),
 						   "projection_factor_weight": torch.tensor(0.5, dtype=torch.float32, requires_grad=True),
 						   "projection_factor_scale": torch.tensor(-0.5, dtype=torch.float32, requires_grad=True)}
@@ -739,15 +740,15 @@ class InFrontOf_Deictic(Node):
 		max_dim_a = max(bbox_tr[7][0] - bbox_tr[0][0],
 						bbox_tr[7][1] - bbox_tr[0][1],
 						bbox_tr[7][2] - bbox_tr[0][2]) + 0.0001
-		dist = get_distance_from_line(world.get_observer().centroid, lm.centroid, tr.centroid)
-		a_bbox = get_2d_bbox(vp_project(tr, world.get_observer()))
-		b_bbox = get_2d_bbox(vp_project(lm, world.get_observer()))
+		dist = get_distance_from_line(self.network.world.get_observer().centroid, lm.centroid, tr.centroid)
+		a_bbox = get_2d_bbox(vp_project(tr, self.network.world.get_observer()))
+		b_bbox = get_2d_bbox(vp_project(lm, self.network.world.get_observer()))
 		a_center = projection_bbox_center(a_bbox)
 		b_center = projection_bbox_center(b_bbox)
 		dist = np.linalg.norm(a_center - b_center)
 		scaled_proj_dist = dist / (max(get_2d_size(a_bbox), get_2d_size(b_bbox)) + 0.001)
-		a_dist = np.linalg.norm(tr.location - world.observer.location)
-		b_dist = np.linalg.norm(lm.location - world.observer.location)
+		a_dist = np.linalg.norm(tr.location - self.network.world.observer.location)
+		b_dist = np.linalg.norm(lm.location - self.network.world.observer.location)
 
 		observer_dist_factor = sigmoid(b_dist - a_dist, 1, 0.5)
 		# transfer to tensors
@@ -763,9 +764,10 @@ class InFrontOf_Deictic(Node):
 
 
 class InFrontOf_Extrinsic(Node):
-	def __init__(self):
+	def __init__(self, network):
+		self.network = network
 		self.parameters = {"centroid_weight": torch.tensor(0.01, dtype=torch.float32, requires_grad=True),
-						   "wiithin_cone_weight": torch.tensor(0.7, dtype=torch.float32, requires_grad=True)}
+						   "within_cone_weight": torch.tensor(0.7, dtype=torch.float32, requires_grad=True)}
 
 	def compute(self, tr, lm):
 		# proj_dist = math.fabs(world.front_axis.dot(a.location)) - math.fabs(world.front_axis.dot(b.location))
@@ -773,7 +775,7 @@ class InFrontOf_Extrinsic(Node):
 		# print ("PROJ_DISTANCE", proj_dist_scaled)
 
 		final_score = math.e ** (- self.parameters["centroid_weight"] * get_centroid_distance_scaled(tr, lm)) \
-					  * within_cone(lm.centroid - tr.centroid, -world.front_axis, self.parameters["within_cone_weight"])
+					  * within_cone(lm.centroid - tr.centroid, -self.network.world.front_axis, self.parameters["within_cone_weight"])
 		final_score = torch.tensor(final_score, dtype=torch.float32)
 		return final_score
 
@@ -1488,13 +1490,13 @@ def vp_project(entity, observer):
 # 	return ret_val
 
 
-# # Computes a special function that takes a maximum value at cutoff point
-# # and decreasing to zero with linear speed to the left, and with exponetial speed to the right
-# # Inputs: x - position; cutoff - maximum point; left, right - degradation coeeficients for left and
-# # right sides of the function
-# # Return value: real number from [0, 1]
-# def asym_inv_exp(x, cutoff, left, right):
-# 	return math.exp(- right * math.fabs(x - cutoff)) if x >= cutoff else max(0, left * (x / cutoff) ** 3)
+# Computes a special function that takes a maximum value at cutoff point
+# and decreasing to zero with linear speed to the left, and with exponetial speed to the right
+# Inputs: x - position; cutoff - maximum point; left, right - degradation coeeficients for left and
+# right sides of the function
+# Return value: real number from [0, 1]
+def asym_inv_exp(x, cutoff, left, right):
+	return math.exp(- right * math.fabs(x - cutoff)) if x >= cutoff else max(0, left * (x / cutoff) ** 3)
 
 
 # # Symmetric to the asym_inv_exp.

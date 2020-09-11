@@ -20,7 +20,8 @@ def train(epochs):
 		name = scene.split(os.sep)[-1].split(".blend")[0] + '.data'
 		#print("SCENE DATA:", scene, name)
 		if ann_path + os.sep + name in annotations and 'Jon' not in scene:
-			command = ['/Applications/Blender.app/Contents/MacOS/Blender', scene, '-P', 'train_scene.py', '--', ann_path + os.sep + name]
+			#command = ['/Applications/Blender.app/Contents/MacOS/Blender', scene, '-P', 'train_scene.py', '--', ann_path + os.sep + name]
+			command = ['../blender-2.83.5-linux64/blender', scene, '-P', 'train_scene.py', '--', ann_path + os.sep + name]
 			subprocess.run(command)
 		scene_idx += 1
 
