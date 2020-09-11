@@ -154,7 +154,8 @@ class Spatial:
 												  'to_the_left_of_intrinsic': self.to_the_left_of_intrinsic,
 												  'to_the_left_of_extrinsic': self.to_the_left_of_extrinsic})
 		self.in_front_of_deictic = InFrontOf_Deictic(network=self)
-		self.in_front_of_extrinsic = InFrontOf_Extrinsic(network=self)
+		self.in_front_of_extrinsic = InFrontOf_Extrinsic(connections={'within_cone_region': self.within_cone_region}, 
+			network=self)
 		self.in_front_of_intrinsic = InFrontOf_Intrinsic()
 		self.in_front_of = InFrontOf(connections={'in_front_of_deictic': self.in_front_of_deictic,
 												  'in_front_of_intrinsic': self.in_front_of_intrinsic,
@@ -279,6 +280,7 @@ class Spatial:
 				label = torch.tensor(label, dtype=torch.float32, requires_grad=True)
 				output = relation(*sample)
 				scene_loss += torch.abs(label - output)
+				print (scene_loss)
 
 			scene_loss /= len(data)
 			scene_loss.backward()
@@ -764,8 +766,9 @@ class InFrontOf_Deictic(Node):
 
 
 class InFrontOf_Extrinsic(Node):
-	def __init__(self, network):
+	def __init__(self, connections, network):
 		self.network = network
+		self.connections = connections
 		self.parameters = {"centroid_weight": torch.tensor(0.01, dtype=torch.float32, requires_grad=True),
 						   "within_cone_weight": torch.tensor(0.7, dtype=torch.float32, requires_grad=True)}
 
@@ -775,7 +778,7 @@ class InFrontOf_Extrinsic(Node):
 		# print ("PROJ_DISTANCE", proj_dist_scaled)
 
 		final_score = math.e ** (- self.parameters["centroid_weight"] * get_centroid_distance_scaled(tr, lm)) \
-					  * within_cone(lm.centroid - tr.centroid, -self.network.world.front_axis, self.parameters["within_cone_weight"])
+					  * self.connections['within_cone_region'].compute(lm.centroid - tr.centroid, -self.network.world.front_axis, self.parameters["within_cone_weight"])
 		final_score = torch.tensor(final_score, dtype=torch.float32)
 		return final_score
 
