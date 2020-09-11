@@ -156,7 +156,7 @@ class Spatial:
 		self.in_front_of_deictic = InFrontOf_Deictic(network=self)
 		self.in_front_of_extrinsic = InFrontOf_Extrinsic(connections={'within_cone_region': self.within_cone_region}, 
 			network=self)
-		self.in_front_of_intrinsic = InFrontOf_Intrinsic()
+		self.in_front_of_intrinsic = InFrontOf_Intrinsic(connections={'within_cone_region': self.within_cone_region})
 		self.in_front_of = InFrontOf(connections={'in_front_of_deictic': self.in_front_of_deictic,
 												  'in_front_of_intrinsic': self.in_front_of_intrinsic,
 												  'in_front_of_extrinsic': self.in_front_of_extrinsic})
@@ -182,15 +182,32 @@ class Spatial:
 
 	def get_parameters(self):
 		if self.parameters is None:
-			params = []
+			params = {}
 			for prop, obj in self.__dict__.items():
 				if hasattr(obj, 'parameters'):
+					params[obj.__str__()] = {}
 					# print('param: ', obj.parameters)
 					for param, val in obj.parameters.items():
-						params.append(val)
+						params[obj.__str__()][param] = val
 			self.parameters = params
 
 		return self.parameters
+
+	def get_numpy_params(self):
+		params = self.get_parameters
+		for obj in params:
+			for param in params[obj]:
+				params[obj][param] = params[obj][param].cpu().numpy()
+
+		return params
+
+	def get_param_list(self):
+		params = self.get_parameters()
+		param_list = []
+		for obj in params:
+			for param in params[obj]:
+				param_list.append(params[obj][param])
+		return param_list
 
 	def set_parameters(self, params):
 		for key in params:
@@ -200,7 +217,7 @@ class Spatial:
 
 	def save_parameters(self):
 		with open('params', 'w') as file:
-			json.dump(self.get_parameters(), file)
+			json.dump(self.get_numpy_params(), file)
 
 	def load_parameters(self):
 		if os.path.exists('params'):
@@ -266,7 +283,7 @@ class Spatial:
 		return sample, label, relation
 
 	def train(self, data, iterations):
-		param = self.get_parameters()
+		param = self.get_param_list()
 		#print("param: ", param)
 		optimizer = torch.optim.Adam(param, lr=0.001)
 		for iter in range(iterations):
@@ -789,13 +806,14 @@ class InFrontOf_Extrinsic(Node):
 
 
 class InFrontOf_Intrinsic(Node):
-	def __init__(self):
+	def __init__(self, connections):
+		self.connections = connections
 		self.parameters = {"centroid_weight": torch.tensor(0.01, dtype=torch.float32, requires_grad=True),
 						   "within_cone_weight": torch.tensor(0.7, dtype=torch.float32, requires_grad=True)}
 
 	def compute(self, tr, lm):
 		final_score = math.e ** (- self.parameters["centroid_weight"] * get_centroid_distance_scaled(tr, lm)) \
-					  * within_cone(lm.centroid - tr.centroid, -lm.front, self.parameters["within_cone_weight"])
+					  * self.connections['within_cone_region'].compute(lm.centroid - tr.centroid, -lm.front, self.parameters["within_cone_weight"])
 		final_score = torch.tensor(final_score, dtype=torch.float32)
 		return final_score
 
