@@ -189,6 +189,7 @@ class Spatial:
 					for param, val in obj.parameters.items():
 						params.append(val)
 			self.parameters = params
+
 		return self.parameters
 
 	def set_parameters(self, params):
@@ -273,16 +274,17 @@ class Spatial:
 
 			for annotation in data:
 				annotation = [item.strip() for item in annotation]
-				print("annotation: ", annotation)
+				#print("annotation: ", annotation)
 				sample, label, relation = self.process_sample(annotation)
 				# print("rel: ", relation)
 				# print('sample: ', *sample)
 				label = torch.tensor(label, dtype=torch.float32, requires_grad=True)
 				output = relation(*sample)
 				scene_loss += torch.abs(label - output)
-				print (scene_loss)
 
 			scene_loss /= len(data)
+			print (scene_loss)
+
 			scene_loss.backward()
 			optimizer.step()
 
