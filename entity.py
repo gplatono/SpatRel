@@ -276,7 +276,7 @@ class Entity(object):
 
 	def generate_frontal(self):	
 		#print (self.name, self.type_structure)	
-		types_fr = ['sofa', 'bookshelf', 'desk', 'tv', 'poster', 'picture',	'fridge', 'wall']
+		types_fr = ['sofa', 'bookshelf', 'desk', 'tv', 'poster', 'picture',	'fridge', 'wall', 'book']
 		types_nf = ['chair','table', 'bed', 'book', 'laptop', 'pencil', 'pencil holder', 'note', 'rose', 'vase', 'cardbox', 'box', 'ceiling light', \
 			'lamp',	'apple','banana', 'plate', 'bowl', 'trash bin', 'trash can', 'ceiling fan', 'block', 'floor', 'ceiling']
 		#print (self.type_structure)

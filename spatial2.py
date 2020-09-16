@@ -812,6 +812,7 @@ class InFrontOf_Intrinsic(Node):
 						   "within_cone_weight": torch.tensor(0.7, dtype=torch.float32, requires_grad=True)}
 
 	def compute(self, tr, lm):
+		#print ("FRONT ", lm, lm.front)
 		final_score = math.e ** (- self.parameters["centroid_weight"] * get_centroid_distance_scaled(tr, lm)) \
 					  * self.connections['within_cone_region'].compute(lm.centroid - tr.centroid, -lm.front, self.parameters["within_cone_weight"])
 		final_score = torch.tensor(final_score, dtype=torch.float32)
@@ -875,9 +876,9 @@ class Behind(Node):
 		ret_val = 0
 		if type(tr) == Entity and type(lm) == Entity:
 			connections = self.get_connections()
-			return torch.max(connections['behind_deictic'].compute(tr, lm),
+			return torch.max(torch.tensor([connections['behind_deictic'].compute(tr, lm),
 							 connections['behind_intrinsic'].compute(tr, lm),
-							 connections['behind_extrinsic'].compute(tr, lm))
+							 connections['behind_extrinsic'].compute(tr, lm)], requires_grad=True))
 		elif lm is None:
 			ret_val = np.average([self.compute(tr, entity) for entity in self.network.world.active_context])
 		return ret_val
