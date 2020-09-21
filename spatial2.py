@@ -236,7 +236,7 @@ class Spatial:
 		self.preproc()
 		self.init_relations()
 		self.load_parameters()
-		print("OBS: ", self.observer)
+		#print("OBS: ", self.observer)
 
 	def compute(self, relation, trs, lms):
 		if relation not in self.str_to_pred:
@@ -282,27 +282,68 @@ class Spatial:
 
 		return sample, label, relation
 
+	def plot_grad_flow(self, named_parameters):
+		"""Plots the gradients flowing through different layers in the net during training.
+		Can be used for checking for possible gradient vanishing / exploding problems.
+		Usage: Plug this function in Trainer class after loss.backwards() as
+		"plot_grad_flow(self.model.named_parameters())" to visualize the gradient flow"""
+
+		ave_grads = []
+		max_grads = []
+		layers = []
+		for p in named_parameters:
+			if (p.requires_grad):# and ("bias" not in n):
+				#layers.append(n)
+				layers.append(p)
+				ave_grads.append(p.grad.abs().mean())
+				max_grads.append(p.grad.abs().max())
+		plt.bar(np.arange(len(max_grads)), max_grads, alpha=0.1, lw=1, color="c")
+		plt.bar(np.arange(len(max_grads)), ave_grads, alpha=0.1, lw=1, color="b")
+		plt.hlines(0, 0, len(ave_grads) + 1, lw=2, color="k")
+		plt.xticks(range(0, len(ave_grads), 1), layers, rotation="vertical")
+		plt.xlim(left=0, right=len(ave_grads))
+		plt.ylim(bottom=-0.001, top=0.02)  # zoom in on the lower gradient regions
+		plt.xlabel("Layers")
+		plt.ylabel("average gradient")
+		plt.title("Gradient flow")
+		plt.grid(True)
+		plt.legend([Line2D([0], [0], color="c", lw=4),
+				Line2D([0], [0], color="b", lw=4),
+				Line2D([0], [0], color="k", lw=4)], ['max-gradient', 'mean-gradient', 'zero-gradient'])
+
 	def train(self, data, iterations):
 		param = self.get_param_list()
 		#print("param: ", param)
-		optimizer = torch.optim.Adam(param, lr=0.001)
+		optimizer = torch.optim.Adam(param, lr=0.1)
 		for iter in range(iterations):
+			optimizer.zero_grad()
+
 			scene_loss = 0
 
 			for annotation in data:
 				annotation = [item.strip() for item in annotation]
+				if "above" not in annotation[1]:
+					continue
 				#print("annotation: ", annotation)
 				sample, label, relation = self.process_sample(annotation)
 				# print("rel: ", relation)
 				# print('sample: ', *sample)
 				label = torch.tensor(label, dtype=torch.float32, requires_grad=True)
 				output = relation(*sample)
-				scene_loss += torch.abs(label - output)
+				output.retain_grad()
+				scene_loss += torch.square(label - output)
 
 			scene_loss /= len(data)
-			print (scene_loss)
+			scene_loss.retain_grad()
+			#import pdb
+			#pdb.set_trace()
 
-			scene_loss.backward()
+			scene_loss.backward(retain_graph=True)
+			print (scene_loss, output.grad, scene_loss.grad, self.above, self.above.val1.grad)
+			#self.plot_grad_flow(param)
+			#print (scene_loss.grad)
+			for par in param:
+			 	print (par, par.grad, par.is_leaf)
 			optimizer.step()
 
 
@@ -376,14 +417,15 @@ class WithinConeRegion(Node):
 	"""
 
 	def __init__(self, ):
-		self.parameters = {'exponent_multiplier': torch.tensor([2], dtype=torch.float32, requires_grad=True)}
+		self.parameters = {'exponent_multiplier': torch.autograd.Variable(torch.tensor([2], dtype=torch.float32, requires_grad=True), requires_grad=True)}
 
 	def compute(self, vect, direction, width):
 		cos = direction.dot(vect) / (np.linalg.norm(direction) * np.linalg.norm(vect))
 		angle = math.acos(cos)
+		within_measure = torch.autograd.Variable(torch.tensor([width - angle], 
+																	  dtype=torch.float32, requires_grad=True), requires_grad=True)
 		final_score = 1 / (1 + math.e ** (
-				self.parameters['exponent_multiplier'] * torch.tensor([width - angle],
-																	  dtype=torch.float32)))  # transfer to tensor
+				self.parameters['exponent_multiplier'] * within_measure)) # transfer to tensor
 		return final_score
 
 	def str(self):
@@ -798,7 +840,11 @@ class InFrontOf_Extrinsic(Node):
 
 		final_score = math.e ** (- self.parameters["centroid_weight"] * get_centroid_distance_scaled(tr, lm)) \
 					  * self.connections['within_cone_region'].compute(lm.centroid - tr.centroid, -self.network.world.front_axis, self.parameters["within_cone_weight"])
-		final_score = torch.tensor(final_score, dtype=torch.float32)
+
+		#print (type(final_score))			 
+		print ("FC: ", final_score)
+		#final_score = torch.tensor(final_score, dtype=torch.float32)
+
 		return final_score
 
 	def str(self):
@@ -815,7 +861,10 @@ class InFrontOf_Intrinsic(Node):
 		#print ("FRONT ", lm, lm.front)
 		final_score = math.e ** (- self.parameters["centroid_weight"] * get_centroid_distance_scaled(tr, lm)) \
 					  * self.connections['within_cone_region'].compute(lm.centroid - tr.centroid, -lm.front, self.parameters["within_cone_weight"])
-		final_score = torch.tensor(final_score, dtype=torch.float32)
+		#final_score = torch.tensor(final_score, dtype=torch.float32)
+		#print (type(final_score))
+		print ("FC: ", final_score)			 
+		
 		return final_score
 
 	def str(self):
@@ -889,8 +938,9 @@ class Behind(Node):
 
 class Above(Node):
 	def __init__(self, connections):
+		print ("INIT ABOVE", self)
 		self.connections = connections
-		self.parameters = {"within_cone_weight": torch.tensor(0.1, dtype=torch.float32, requires_grad=True)}
+		self.parameters = {"within_cone_weight": torch.autograd.Variable(torch.tensor(0.1, dtype=torch.float32, requires_grad=True), requires_grad=True)}
 
 	def compute(self, tr, lm):
 		"""Computes the 'a above b' relation, returns the certainty value.
@@ -903,9 +953,14 @@ class Above(Node):
 		"""
 		vertical_dist_scaled = (tr.centroid[2] - lm.centroid[2]) / (max(tr.dimensions[2], lm.dimensions[2]) + 0.01)
 		# print ("WITHIN CONE: ", a, within_cone(a.centroid - b.centroid, np.array([0, 0, 1.0]), 0.1), sigmoid(vertical_dist_scaled, 1, 3), vertical_dist_scaled)
-		return self.connections['within_cone_region'].compute(tr.centroid - lm.centroid, np.array([0, 0, 1.0]),
+		ret_val = self.connections['within_cone_region'].compute(tr.centroid - lm.centroid, np.array([0, 0, 1.0]),
 															  self.parameters["within_cone_weight"]) \
 			   * sigmoid(vertical_dist_scaled, 1, 3)  # math.e ** (- 0.01 * get_centroid_distance_scaled(a, b))
+		#print ("RET: ", ret_val, type(ret_val), ret_val.requires_grad)
+		ret_val.retain_grad()
+		self.val1 = ret_val
+		#print (self, self.val1)
+		return ret_val
 
 	def str(self):
 		return 'above.p'
