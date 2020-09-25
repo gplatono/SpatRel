@@ -282,35 +282,6 @@ class Spatial:
 
 		return sample, label, relation
 
-	def plot_grad_flow(self, named_parameters):
-		"""Plots the gradients flowing through different layers in the net during training.
-		Can be used for checking for possible gradient vanishing / exploding problems.
-		Usage: Plug this function in Trainer class after loss.backwards() as
-		"plot_grad_flow(self.model.named_parameters())" to visualize the gradient flow"""
-
-		ave_grads = []
-		max_grads = []
-		layers = []
-		for p in named_parameters:
-			if (p.requires_grad):# and ("bias" not in n):
-				#layers.append(n)
-				layers.append(p)
-				ave_grads.append(p.grad.abs().mean())
-				max_grads.append(p.grad.abs().max())
-		plt.bar(np.arange(len(max_grads)), max_grads, alpha=0.1, lw=1, color="c")
-		plt.bar(np.arange(len(max_grads)), ave_grads, alpha=0.1, lw=1, color="b")
-		plt.hlines(0, 0, len(ave_grads) + 1, lw=2, color="k")
-		plt.xticks(range(0, len(ave_grads), 1), layers, rotation="vertical")
-		plt.xlim(left=0, right=len(ave_grads))
-		plt.ylim(bottom=-0.001, top=0.02)  # zoom in on the lower gradient regions
-		plt.xlabel("Layers")
-		plt.ylabel("average gradient")
-		plt.title("Gradient flow")
-		plt.grid(True)
-		plt.legend([Line2D([0], [0], color="c", lw=4),
-				Line2D([0], [0], color="b", lw=4),
-				Line2D([0], [0], color="k", lw=4)], ['max-gradient', 'mean-gradient', 'zero-gradient'])
-
 	def train(self, data, iterations):
 		param = self.get_param_list()
 		#print("param: ", param)
@@ -319,33 +290,40 @@ class Spatial:
 			optimizer.zero_grad()
 
 			scene_loss = 0
-
+			scene_accuracy = 0
 			for annotation in data:
 				annotation = [item.strip() for item in annotation]
-				if "above" not in annotation[1]:
+				if "between" not in annotation[1]:
 					continue
-				#print("annotation: ", annotation)
+				print("annotation: ", annotation)
 				sample, label, relation = self.process_sample(annotation)
 				# print("rel: ", relation)
 				# print('sample: ', *sample)
 				label = torch.tensor(label, dtype=torch.float32, requires_grad=True)
 				output = relation(*sample)
+				# print("output", output)
+				# print("label", label)
+
+				# test accuracy
+				acc = torch.round(torch.abs(output - label))
+				acc = 1 - torch.sum(acc) / torch.numel(acc)
+				print('batch acc: ', acc * 100)
+				scene_accuracy += acc
+
 				output.retain_grad()
-				scene_loss += torch.square(label - output)
+
+				loss = torch.square(label - output)
+				# loss.backward()
+				scene_loss += loss
+				# optimizer.step()
 
 			scene_loss /= len(data)
 			scene_loss.retain_grad()
-			#import pdb
-			#pdb.set_trace()
 
 			scene_loss.backward(retain_graph=True)
-			print (scene_loss, output.grad, scene_loss.grad, self.above, self.above.val1.grad)
-			#self.plot_grad_flow(param)
-			#print (scene_loss.grad)
-			for par in param:
-			 	print (par, par.grad, par.is_leaf)
+			print ("Loss: ", scene_loss, output.grad, scene_loss.grad)
 			optimizer.step()
-
+			print("Acc: ", 100 * scene_accuracy/len(data))
 
 class Node:
 	def __init__(self, network=None, connections=None):
@@ -841,10 +819,6 @@ class InFrontOf_Extrinsic(Node):
 		final_score = math.e ** (- self.parameters["centroid_weight"] * get_centroid_distance_scaled(tr, lm)) \
 					  * self.connections['within_cone_region'].compute(lm.centroid - tr.centroid, -self.network.world.front_axis, self.parameters["within_cone_weight"])
 
-		#print (type(final_score))			 
-		print ("FC: ", final_score)
-		#final_score = torch.tensor(final_score, dtype=torch.float32)
-
 		return final_score
 
 	def str(self):
@@ -1068,9 +1042,9 @@ class Between(Node):
 
 		scaled_dist = np.linalg.norm(lm1.centroid - lm2.centroid) / (self.parameters["tr_size_weight"] * tr.size)
 
-		dist_coeff = math.exp(self.parameters['distance_scaling'] * torch.tensor([scaled_dist], dtype=torch.float32))
-
-		ret_val = math.exp(- math.fabs(-1 - cos)) * dist_coeff
+		dist_coeff = torch.exp(self.parameters['distance_scaling'] * torch.tensor([scaled_dist], dtype=torch.float32))
+		exp = torch.tensor([- math.fabs(-1 - cos)], dtype=torch.float32)
+		ret_val = torch.exp(exp) * dist_coeff
 		return ret_val
 
 	def str(self):
