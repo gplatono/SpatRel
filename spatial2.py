@@ -143,7 +143,7 @@ class Spatial:
 		self.to_the_right_of_intrinsic = RightOf_Intrinsic()
 		self.to_the_right_of = RightOf(connections={'to_the_right_of_deictic': self.to_the_right_of_deictic,
 													'to_the_right_of_intrinsic': self.to_the_right_of_intrinsic,
-													'to_the_right_of_extrinsic': self.to_the_right_of_extrinsic})
+													'to_the_right_of_extrinsic': self.to_the_right_of_extrinsic}, network=self)
 		self.to_the_left_of_deictic = LeftOf_Deictic(
 			connections={'to_the_right_of_deictic': self.to_the_right_of_deictic})
 		self.to_the_left_of_extrinsic = LeftOf_Extrinsic(
@@ -211,9 +211,12 @@ class Spatial:
 
 	def set_parameters(self, params):
 		for key in params:
-			rel = getattr(self, key)
-			for param in key:
-				rel.parameters[param] = key[param]
+			for prop, obj in self.__dict__.items():
+				if obj.__str__() == key:		
+					obj.parameters = key
+					#rel = getattr(self, key)
+					# for param in key:				
+					# 	obj.parameters[param] = key[param]
 
 	def save_parameters(self):
 		with open('params', 'w') as file:
@@ -262,6 +265,9 @@ class Spatial:
 					axial_dist = scaled_axial_distance(tr_bbox, lm_bbox)
 					dist[(e1, e2)] = axial_dist
 					dist[(e2, e1)] = axial_dist
+				elif (e1, e2) not in dist:
+					dist[(e1, e2)] = (0, 0)
+					dist[(e2, e1)] = (0, 0)
 		return dist
 
 	def process_sample(self, annotation):
@@ -285,17 +291,18 @@ class Spatial:
 	def train(self, data, iterations):
 		param = self.get_param_list()
 		#print("param: ", param)
-		optimizer = torch.optim.Adam(param, lr=0.1)
+		optimizer = torch.optim.Adam(param, lr=0.2)
 		for iter in range(iterations):
 			optimizer.zero_grad()
 
 			scene_loss = 0
 			scene_accuracy = 0
+			processed = 0
 			for annotation in data:
 				annotation = [item.strip() for item in annotation]
-				if "between" not in annotation[1]:
-					continue
-				print("annotation: ", annotation)
+				# if "above" not in annotation[1]:
+				#   	continue
+				#print("annotation: ", annotation)
 				sample, label, relation = self.process_sample(annotation)
 				# print("rel: ", relation)
 				# print('sample: ', *sample)
@@ -305,16 +312,17 @@ class Spatial:
 				# print("label", label)
 
 				# test accuracy
-				acc = torch.round(torch.abs(output - label))
-				acc = 1 - torch.sum(acc) / torch.numel(acc)
-				print('batch acc: ', acc * 100)
+				acc = 1 - torch.round(torch.abs(output - label))
+				#acc = 1 - torch.sum(acc) / torch.numel(acc)
+				#print('batch acc: ', acc * 100)
 				scene_accuracy += acc
 
-				output.retain_grad()
+				#output.retain_grad()
 
 				loss = torch.square(label - output)
 				# loss.backward()
 				scene_loss += loss
+				processed += 1.0
 				# optimizer.step()
 
 			scene_loss /= len(data)
@@ -323,7 +331,7 @@ class Spatial:
 			scene_loss.backward(retain_graph=True)
 			print ("Loss: ", scene_loss, output.grad, scene_loss.grad)
 			optimizer.step()
-			print("Acc: ", 100 * scene_accuracy/len(data))
+			print("Acc: ", 100 * scene_accuracy / processed)
 
 class Node:
 	def __init__(self, network=None, connections=None):
@@ -686,7 +694,7 @@ class RightOf_Intrinsic(Node):
 		disp_vec = disp_vec / dist
 
 		intrinsic_right = np.array(lm.right)
-		print('INTRINSIC: ', intrinsic_right, lm.right, disp_vec)
+		#print('INTRINSIC: ', intrinsic_right, lm.right, disp_vec)
 		cos = intrinsic_right.dot(disp_vec)
 
 		final_score = math.e ** (- self.parameters["angle_weight"] * (1 - cos)) \
@@ -701,7 +709,8 @@ class RightOf_Intrinsic(Node):
 class RightOf(Node):
 	"""Implementation of the general to-the-right-of relation."""
 
-	def __init__(self, connections):
+	def __init__(self, connections, network):
+		self.network = network
 		self.set_connections(connections)
 
 	def compute(self, tr, lm=None):
@@ -716,7 +725,7 @@ class RightOf(Node):
 				intrinsic = torch.tensor([0], dtype=torch.float32)
 			return torch.max(torch.tensor([deictic, extrinsic, intrinsic], dtype=torch.float32))
 		elif lm is None:
-			ret_val = np.average([self.compute(tr, entity) for entity in world.active_context])
+			ret_val = np.average([self.compute(tr, entity) for entity in self.network.world.active_context])
 		return ret_val
 
 	def str(self):
@@ -837,7 +846,7 @@ class InFrontOf_Intrinsic(Node):
 					  * self.connections['within_cone_region'].compute(lm.centroid - tr.centroid, -lm.front, self.parameters["within_cone_weight"])
 		#final_score = torch.tensor(final_score, dtype=torch.float32)
 		#print (type(final_score))
-		print ("FC: ", final_score)			 
+		#print ("FC: ", final_score)			 
 		
 		return final_score
 
@@ -1111,9 +1120,9 @@ class On(Node):
 			if ob.get('working_surface') is not None or ob.get('planar') is not None:
 				# transfer to tensors
 				cmp1 = 0.5 * (v_offset(tr, ob_ent) + self.connections['projection_intersection'].compute(tr, ob_ent))
-				cmp1 = torch.tensor([cmp1], dtype=torch.float32)
+				cmp1 = torch.tensor([cmp1], dtype=torch.float32, requires_grad = True)
 				cmp2 = 0.5 * (int(self.connections['near'].compute(tr, ob_ent) > 0.99) + self.connections['larger_than'].compute(ob_ent, tr))
-				cmp2 = torch.tensor([cmp2], dtype=torch.float32)
+				cmp2 = torch.tensor([cmp2], dtype=torch.float32, requires_grad = True)
 				ret_val = max(ret_val, cmp1)
 				ret_val = max(ret_val, cmp2)
 		if lm.get('planar') is not None and isVertical(lm):
