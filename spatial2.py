@@ -300,7 +300,7 @@ class Spatial:
 	def train(self, data, iterations):
 		param = self.get_param_list()
 		# print("param: ", param)
-		optimizer = torch.optim.Adam(param, lr=0.05) #weight_decay=0.05)
+		optimizer = torch.optim.Adam(param, lr=0.1) #weight_decay=0.05)
 		for iter in range(iterations):
 			optimizer.zero_grad()
 
@@ -309,8 +309,8 @@ class Spatial:
 			processed = 0
 			for annotation in data:
 				annotation = [item.strip() for item in annotation]
-				if "right of" not in annotation[1]:
-					continue
+				# if "next to" not in annotation[1]:
+				# 	continue
 				# print("annotation: ", annotation)
 				sample, label, relation = self.process_sample(annotation)
 				if relation is None:
@@ -318,7 +318,7 @@ class Spatial:
 				# print("rel: ", relation)
 				# print('sample: ', *sample)
 				#label = torch.tensor(label, dtype=torch.float32, requires_grad=True)				
-				#print (sample, label, relation)
+				print (sample, label, relation)
 				output = relation(*sample)
 
 				#print("ANNOTATION: ", annotation, round(float(output), 2), round(float(label), 2))				
@@ -550,7 +550,7 @@ class TallerThan(Node):
 		return 'taller_than.p'
 
 
-class AtSameHeight(Node):	
+class AtSameHeight(Node):
 	def compute(self, tr, lm):
 		"""
 		Check if two entities are at the same height
@@ -570,7 +570,7 @@ class Supported(Node):
 	"""
 
 	def __init__(self):
-		self.parameters = {'rel_dist': torch.tensor([0.8], dtype=torch.float32, requires_grad=True)}
+		self.parameters = {'rel_dist': torch.tensor(0.8, dtype=torch.float32, requires_grad=True)}
 
 	def compute(self, tr, lm):
 		direct_support = self.connections['touching'](tr, lm) * self.connections['above'](tr, lm)  # tensor

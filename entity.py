@@ -34,6 +34,8 @@ class Entity(object):
 		self.components = components
 		self.name = name if name is not None else components[0].name
 
+		print ("COMP: ", components)
+
 		if explore_children == True:
 			#Filling in the constituent objects starting with the parent
 			queue = [item for item in self.components]
@@ -176,6 +178,7 @@ class Entity(object):
 		of the meshes of constituent objects.
 		"""
 		vertices = []
+		print (self.components, self.category)
 		if self.category == self.Category.PRIMITIVE:
 			# 	vertices += [self.components[0].matrix_world @ v.co for v in self.components[0].data.vertices]
 			# for ent in self.components:

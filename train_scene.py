@@ -26,6 +26,6 @@ with open(datapath, "r") as f:
 	# 		annotations.append(line)
 	annotations = [line.split(":") for line in lines if line.strip() != ""]
 	#spatial.reload(world)
-	spatial.train(annotations, 2000)
+	spatial.train(annotations, 20)
 	spatial.save_parameters()
 	bpy.ops.wm.quit_blender()
