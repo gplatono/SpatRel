@@ -20,6 +20,8 @@ class Spatial:
 		self.reload(world)
 		# self.world = world
 		# self.vis_proj = self.cache_2d_projections()
+		self.spat_rel = ['supported_by.p', 'touching.p', 'to_the_right_of.p', 'to_the_left_of.p', 'in_front_of.p', 'behind.p', 'above.p', 'below.p', 'near.p', 'over.p', 'on.p', 'under.p', 'between.p', 'inside.p', 'next_to.p']
+
 
 		self.str_to_pred = {
 			'on.p': self.on,
@@ -190,7 +192,7 @@ class Spatial:
 		if self.parameters is None:
 			params = {}
 			for prop, obj in self.__dict__.items():
-				if hasattr(obj, 'parameters'):
+				if hasattr(obj, 'parameters'):					
 					params[obj.str()] = {}
 					# print('param: ', obj.parameters)
 					for param, val in obj.parameters.items():
@@ -215,11 +217,13 @@ class Spatial:
 				param_list.append(params[obj][param])
 		return param_list
 
-	def set_parameters(self, params):
-		for key in params:
+	def set_parameters(self, obj_params):
+		for obj_name in obj_params:			
 			for prop, obj in self.__dict__.items():
-				if obj.__str__() == key:
-					obj.parameters = key
+				if hasattr(obj, 'str') and obj.str() == obj_name:
+					for param_name in obj_params[obj_name]:
+						obj.parameters[param_name] = torch.tensor(obj_params[obj_name][param_name], dtype=torch.float32, requires_grad=True)
+					#obj.parameters = key
 				# rel = getattr(self, key)
 				# for param in key:
 				# 	obj.parameters[param] = key[param]
@@ -300,13 +304,20 @@ class Spatial:
 	def train(self, data, iterations):
 		param = self.get_param_list()
 		# print("param: ", param)
-		optimizer = torch.optim.Adam(param, lr=0.1) #weight_decay=0.05)
+		rel_acc = {}
+				
+		optimizer = torch.optim.Adam(param, lr=0.01) #weight_decay=0.05)
 		for iter in range(iterations):
 			optimizer.zero_grad()
 
 			scene_loss = 0
 			scene_accuracy = 0
 			processed = 0
+
+			for prop, obj in self.__dict__.items():
+				if hasattr(obj, 'str') and obj.str() in self.spat_rel and obj.str() not in rel_acc:
+					rel_acc[obj.str()] = {'total': 0, 'acc': 0}
+		
 			for annotation in data:
 				annotation = [item.strip() for item in annotation]
 				# if "next to" not in annotation[1]:
@@ -315,10 +326,8 @@ class Spatial:
 				sample, label, relation = self.process_sample(annotation)
 				if relation is None:
 					continue
-				# print("rel: ", relation)
-				# print('sample: ', *sample)
 				#label = torch.tensor(label, dtype=torch.float32, requires_grad=True)				
-				print (sample, label, relation)
+				#print (sample, label, relation)
 				output = relation(*sample)
 
 				#print("ANNOTATION: ", annotation, round(float(output), 2), round(float(label), 2))				
@@ -328,20 +337,30 @@ class Spatial:
 				# print('batch acc: ', acc * 100)
 				scene_accuracy += acc
 
+				rel_acc[relation.__self__.str()]['total'] += 1
+				rel_acc[relation.__self__.str()]['acc'] += acc
+
 				output.retain_grad()
 
 				loss = torch.square(label - output)
 				scene_loss += loss
 				processed += 1.0
+			
 
 			scene_loss /= len(data)
 			scene_loss.retain_grad()
 
 			scene_loss.backward(retain_graph=True)
-			print("Loss: ", scene_loss, output.grad, scene_loss.grad)
+			print("Loss: {:.3f}, Acc: {:.2f}".format(float(scene_loss), float(100 * scene_accuracy / processed)))#, output.grad, scene_loss.grad)
 			optimizer.step()
-			print("Acc: ", 100 * scene_accuracy / processed)
 
+		for key in rel_acc:
+			if rel_acc[key]['total'] != 0:
+				rel_acc[key]['acc'] = float(rel_acc[key]['acc'] / rel_acc[key]['total'])
+			#print (key.upper() + ", {} annotations, accuracy: {:.3f}".format(rel_acc[key]['total'], rel_acc[key]['acc']))
+		with open('rel_accuracies', 'w') as file:
+			json.dump(rel_acc, file)
+			
 
 class Node:
 	def __init__(self, network=None, connections=None):
@@ -420,11 +439,8 @@ class WithinConeRegion(Node):
 	def compute(self, vect, direction, width):
 		cos = direction.dot(vect) / (np.linalg.norm(direction) * np.linalg.norm(vect))
 		angle = math.acos(cos)
-		within_measure = torch.autograd.Variable(torch.tensor(width - angle,
-															  dtype=torch.float32, requires_grad=True),
-												 requires_grad=True)
-		final_score = 1 / (1 + math.e ** (
-				self.parameters['exponent_multiplier'] * within_measure))  # transfer to tensor
+		within_measure = width - angle
+		final_score = 1 / (1 + math.e ** (self.parameters['exponent_multiplier'] * within_measure)) 
 		return final_score
 
 	def str(self):
@@ -868,15 +884,14 @@ class InFrontOf_Intrinsic(Node):
 		self.parameters = {"centroid_weight": torch.tensor(0.01, dtype=torch.float32, requires_grad=True),
 						   "within_cone_weight": torch.tensor(0.7, dtype=torch.float32, requires_grad=True)}
 
-	def compute(self, tr, lm):
-		# print ("FRONT ", lm, lm.front)
-		final_score = math.e ** (- self.parameters["centroid_weight"] * get_centroid_distance_scaled(tr, lm)) \
-					  * self.connections['within_cone_region'].compute(lm.centroid - tr.centroid, -lm.front,
+	def compute(self, tr, lm):		
+		if lm.front is not None:
+			final_score = math.e ** (- self.parameters["centroid_weight"] * get_centroid_distance_scaled(tr, lm)) \
+					  * self.connections['within_cone_region'].compute(lm.centroid - tr.centroid, -lm.front,					  	
 																	   self.parameters["within_cone_weight"])
-		# final_score = torch.tensor(final_score, dtype=torch.float32)
-		# print (type(final_score))
-		# print ("FC: ", final_score)
-
+		else:
+			final_score = torch.tensor(0.0, dtype=torch.float32, requires_grad=True)
+		
 		return final_score
 
 	def str(self):
@@ -886,15 +901,13 @@ class InFrontOf_Intrinsic(Node):
 class InFrontOf(Node):
 	def compute(self, tr, lm=None):
 		ret_val = 0
+
 		if type(tr) == Entity and type(lm) == Entity:
 			connections = self.get_connections()
 			deictic = connections['in_front_of_deictic'].compute(tr, lm)
 			extrinsic = connections['in_front_of_extrinsic'].compute(tr, lm)
-			if lm.front is not None:
-				intrinsic = connections['in_front_of_intrinsic'].compute(tr, lm)
-			else:
-				intrinsic = torch.tensor(0, dtype=torch.float32, requires_grad=True)
-
+			intrinsic = connections['in_front_of_intrinsic'].compute(tr, lm)
+			
 			return torch.max(torch.tensor([deictic, extrinsic, intrinsic], dtype=torch.float32, requires_grad=True))
 		elif lm is None:
 			ret_val = np.average([self.compute(tr, entity) for entity in world.active_context])
@@ -921,7 +934,7 @@ class Behind_Extrinsic(Node):
 
 
 class Behind_Intrinsic(Node):
-	def compute(self, tr, lm):
+	def compute(self, tr, lm):		
 		return self.get_connections()['in_front_of_intrinsic'].compute(tr=lm, lm=tr)
 
 	def str(self):
@@ -935,7 +948,7 @@ class Behind(Node):
 
 	def compute(self, tr, lm=None):
 		ret_val = 0
-		if type(tr) == Entity and type(lm) == Entity:
+		if type(tr) == Entity and type(lm) == Entity:			
 			connections = self.get_connections()
 			return torch.max(torch.tensor([connections['behind_deictic'].compute(tr, lm),
 										   connections['behind_intrinsic'].compute(tr, lm),
@@ -1051,7 +1064,7 @@ class Near(Node):
 			dtype=torch.float32, requires_grad=True)
 		avg_near = 0.5 * (torch.mean(raw_near_tr) + torch.mean(raw_near_lm))
 		near_measure = raw_near_measure + (raw_near_measure - avg_near) * min(raw_near_measure, 1 - raw_near_measure)
-		near_measure = torch.tensor(near_measure, dtype=torch.float32, requires_grad=True)  # transfer to tensor
+		#near_measure = torch.tensor(near_measure, dtype=torch.float32, requires_grad=True)  # transfer to tensor
 		if tr.compute_size() > lm.compute_size():
 			near_measure = near_measure - self.parameters["size_weight"]
 		elif tr.compute_size() < lm.compute_size():
@@ -1126,7 +1139,7 @@ class On(Node):
 
 	def compute(self, tr, lm):
 		if tr == lm:
-			return 0
+			return torch.tensor(0.0, requires_grad=True)
 		proj_dist = torch.tensor(np.linalg.norm(np.array([tr.location[0] - lm.location[0], tr.location[1] - lm.location[1]])), dtype=torch.float32, requires_grad=True)
 		proj_dist_scaled = proj_dist / (max(tr.size, lm.size) + 0.01)
 		# print ("LOCA: ", proj_dist_scaled)

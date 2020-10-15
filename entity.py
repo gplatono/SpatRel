@@ -32,9 +32,11 @@ class Entity(object):
 			components = [components]
 
 		self.components = components
-		self.name = name if name is not None else components[0].name
-
-		print ("COMP: ", components)
+		
+		if name is not None:
+			self.name = name
+		else:
+			self.name = self.components[0].name
 
 		if explore_children == True:
 			#Filling in the constituent objects starting with the parent
@@ -47,22 +49,25 @@ class Entity(object):
 						self.components.append(ob)
 						queue.append(ob)
 
+		#print ("COMP: ", components, explore_children, type(self.components[0]))
+
 		if len(self.components) == 1 and type(self.components[0]) == bpy_types.Object:
 			self.category = self.Category.PRIMITIVE		
 
-		elif len(self.components) > 1 and (type(self.components[0]) == Entity or type(self.components[0]) == bpy_types.Object): 
+		elif len(self.components) > 1 and (type(self.components[0]) == Entity or type(self.components[0]) == bpy_types.Object): 			
 			self.category = self.Category.STRUCTURE
 		
 			ent_components = []
 			for comp in self.components:
-				if type(comp) == Entity:
-					ent_components.append(comp)
-				else:
-					ent_components.append(Entity(comp, explore_children=False))
+				if len(comp.data.vertices) > 0:
+					if type(comp) == Entity:
+						ent_components.append(comp)
+					else:
+						ent_components.append(Entity(comp, explore_children=False))
 			self.components = ent_components
 			#self.components = [item for entity in components for item in entity.components]
 			#self.components = [item for entity in components for item in entity.components]
-			self.name = 'struct=(' + '+'.join([item.name for item in self.components]) + ')'
+			#self.name = 'struct=(' + '+'.join([item.name for item in self.components]) + ')'
 			comp_names = [ent.name for ent in self.components if ent.components[0].get('main') is not None]
 			if len(comp_names) == 1:
 				self.name = comp_names[0]
@@ -178,7 +183,7 @@ class Entity(object):
 		of the meshes of constituent objects.
 		"""
 		vertices = []
-		print (self.components, self.category)
+		#print (self.components, self.category)
 		if self.category == self.Category.PRIMITIVE:
 			# 	vertices += [self.components[0].matrix_world @ v.co for v in self.components[0].data.vertices]
 			# for ent in self.components:
