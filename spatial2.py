@@ -327,7 +327,7 @@ class Spatial:
 				if relation is None:
 					continue
 				#label = torch.tensor(label, dtype=torch.float32, requires_grad=True)				
-				#print (sample, label, relation)
+				print (sample, label, relation)
 				output = relation(*sample)
 
 				#print("ANNOTATION: ", annotation, round(float(output), 2), round(float(label), 2))				
