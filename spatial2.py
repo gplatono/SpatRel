@@ -1081,7 +1081,7 @@ class Between(Node):
 
 	def __init__(self, connections=None):
 		self.set_connections(connections)
-		self.parameters = {'distance_scaling': torch.tensor(-0.05, dtype=torch.float32, requires_grad=True),
+		self.parameters = {'distance_scaling': torch.tensor(0.05, dtype=torch.float32, requires_grad=True),
 						   "tr_size_weight": torch.tensor(2, dtype=torch.float32, requires_grad=True)}
 
 	def compute(self, tr, lm1, lm2):
@@ -1098,10 +1098,12 @@ class Between(Node):
 
 		scaled_dist = np.linalg.norm(lm1.centroid - lm2.centroid) / (self.parameters["tr_size_weight"] * tr.size)
 
-		dist_coeff = math.e ** (self.parameters['distance_scaling'] * scaled_dist)
+		dist_coeff = math.e ** (- torch.abs(self.parameters['distance_scaling'] * scaled_dist))
 		#exp = torch.tensor(- math.fabs(-1 - cos), dtype=torch.float32)
 		#ret_val = torch.exp(exp) * dist_coeff
+		#print (dist_coeff, math.e ** (- math.fabs(-1 - cos)))
 		ret_val = math.e ** (- math.fabs(-1 - cos)) * dist_coeff
+		print (ret_val)
 		return ret_val
 
 	def str(self):
