@@ -3,6 +3,7 @@ import sys
 import glob
 import subprocess
 import json
+import copy
 
 path_to_data = sys.argv[1]
 
@@ -31,11 +32,14 @@ def train(epochs):
 
 			if tmp_acc is not None and tmp_acc != "":
 				if rel_acc is None:
-					rel_acc = tmp_acc.copy()
+					rel_acc = copy.deepcopy(tmp_acc)
+					for key in rel_acc:
+						rel_acc[key]['total'] = [rel_acc[key]['total']]
+						rel_acc[key]['acc'] = [rel_acc[key]['acc']]
 				else:
 					for key in tmp_acc:
-						rel_acc[key]['total'] += tmp_acc[key]['total']
-						rel_acc[key]['acc'] += tmp_acc[key]['acc']
+						rel_acc[key]['total'].append(tmp_acc[key]['total'])
+						rel_acc[key]['acc'].append(tmp_acc[key]['acc'])
 
 				print ()
 				for key in tmp_acc:
@@ -48,9 +52,12 @@ def train(epochs):
 		if scene_idx == len(scenes):
 			scene_idx = 0
 
+	#print (rel_acc)
+
 	for key in rel_acc:
-		rel_acc[key]['acc'] = rel_acc[key]['acc'] / actual_epoch
-		print (key.upper() + ", {} total ann, avg accuracy: {:.3f}".format(rel_acc[key]['total'], rel_acc[key]['acc']))
+		total_non_zero = sum(list(map(lambda x: 1 if x != 0 else 0, rel_acc[key]['total'])))
+		rel_acc[key]['acc'] = sum(rel_acc[key]['acc']) / total_non_zero if total_non_zero != 0 else 0
+		print (key.upper() + ", {} total ann, avg accuracy: {:.3f}".format(sum(rel_acc[key]['total']), rel_acc[key]['acc']))
 
 if __name__ == "__main__":
 	train(len(scenes))
