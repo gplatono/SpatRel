@@ -315,7 +315,7 @@ class Spatial:
 			processed = 0
 
 			for prop, obj in self.__dict__.items():
-				if hasattr(obj, 'str') and obj.str() in self.spat_rel and obj.str() not in rel_acc:
+				if hasattr(obj, 'str') and obj.str() in self.spat_rel:
 					rel_acc[obj.str()] = {'total': 0, 'acc': 0}
 		
 			for annotation in data:
@@ -327,7 +327,7 @@ class Spatial:
 				if relation is None:
 					continue
 				#label = torch.tensor(label, dtype=torch.float32, requires_grad=True)				
-				print (sample, label, relation)
+				#print (sample, label, relation)
 				output = relation(*sample)
 
 				#print("ANNOTATION: ", annotation, round(float(output), 2), round(float(label), 2))				
@@ -345,7 +345,8 @@ class Spatial:
 				loss = torch.square(label - output)
 				scene_loss += loss
 				processed += 1.0
-			
+
+			#print (rel_acc)
 
 			scene_loss /= len(data)
 			scene_loss.retain_grad()

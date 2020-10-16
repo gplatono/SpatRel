@@ -12,8 +12,6 @@ ann_path = path_to_data + os.sep + "annotations"
 scenes = glob.glob(scene_path + os.sep + "*.blend")
 annotations = glob.glob(ann_path + os.sep + "*.data")
 
-#print (scenes, annotations)
-
 def train(epochs):
 	scene_idx = 0
 	rel_acc = None
@@ -22,7 +20,7 @@ def train(epochs):
 		scene = scenes[scene_idx]
 		name = scene.split(os.sep)[-1].split(".blend")[0] + '.data'
 		#print("SCENE DATA:", scene, name)
-		if ann_path + os.sep + name in annotations and 'JonWorld3' in scene:
+		if ann_path + os.sep + name in annotations:
 			#command = ['/Applications/Blender.app/Contents/MacOS/Blender', scene, '-P', 'train_scene.py', '--', ann_path + os.sep + name]
 			command = ['../blender/blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name]
 			subprocess.run(command)
@@ -55,4 +53,4 @@ def train(epochs):
 		print (key.upper() + ", {} total ann, avg accuracy: {:.3f}".format(rel_acc[key]['total'], rel_acc[key]['acc']))
 
 if __name__ == "__main__":
-	train(100)
+	train(len(scenes))
