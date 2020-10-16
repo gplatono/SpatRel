@@ -689,7 +689,7 @@ class RightOf_Deictic(Node):
         return final_score
 
     def str(self):
-        return 'to_the_right_of.p'
+        return 'to_the_right_of_deictic.p'
 
 
 class RightOf_Extrinsic(Node):
