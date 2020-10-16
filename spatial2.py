@@ -143,13 +143,10 @@ class Spatial:
                          'vertical_deictic_component': self.vertical_deictic_component})
         self.to_the_right_of_extrinsic = RightOf_Extrinsic()
         self.to_the_right_of_intrinsic = RightOf_Intrinsic()
-        # self.to_the_right_of = RightOf(connections={'to_the_right_of_deictic': self.to_the_right_of_deictic,
-        # 											'to_the_right_of_intrinsic': self.to_the_right_of_intrinsic,
-        # 											'to_the_right_of_extrinsic': self.to_the_right_of_extrinsic},
-        # 							   network=self)
-        self.to_the_right_of =RightOf_Deictic(
-            connections={'horizontal_deictic_component': self.horizontal_deictic_component,
-                         'vertical_deictic_component': self.vertical_deictic_component})
+        self.to_the_right_of = RightOf(connections={'to_the_right_of_deictic': self.to_the_right_of_deictic,
+        											'to_the_right_of_intrinsic': self.to_the_right_of_intrinsic,
+        											'to_the_right_of_extrinsic': self.to_the_right_of_extrinsic},
+        							   network=self)
         self.to_the_left_of_deictic = LeftOf_Deictic(
             connections={'to_the_right_of_deictic': self.to_the_right_of_deictic})
         self.to_the_left_of_extrinsic = LeftOf_Extrinsic(
@@ -672,11 +669,7 @@ class RightOf_Deictic(Node):
     def __init__(self, connections):
         self.connections = connections
         self.parameters = {"hor_weight": torch.tensor(0.4, dtype=torch.float32, requires_grad=True),
-                           "ver_weight": torch.tensor(0.6, dtype=torch.float32, requires_grad=True),
-                           "sigmoid_decay": torch.tensor(0.6, dtype=torch.float32, requires_grad=True),
-                           "angle_weight": torch.tensor(0.1, dtype=torch.float32, requires_grad=True),
-                           "size_weight": torch.tensor(0.05, dtype=torch.float32, requires_grad=True)
-                           }
+                           "ver_weight": torch.tensor(0.6, dtype=torch.float32, requires_grad=True)}
 
     def compute(self, tr, lm):
         horizontal_component = self.connections['horizontal_deictic_component'].compute(tr, lm)
@@ -690,18 +683,9 @@ class RightOf_Deictic(Node):
         #                             dtype=torch.float32)  # transferred tensor
         # final_score = torch.dot(hv_component, self.parameters["weight"])
         # print(final_score)
-        final_score1 = 1 / (1 + math.e ** (- self.parameters['sigmoid_decay'] * factor_sum))
+        final_score = 1 / (1 + math.e ** (- self.parameters['sigmoid_decay'] * factor_sum))
 
-        disp_vec = np.array(tr.bbox_centroid - lm.bbox_centroid)
-        dist = np.linalg.norm(disp_vec)
-        disp_vec = disp_vec / dist
-        intrinsic_right = np.array(lm.right)
-        # print('INTRINSIC: ', intrinsic_right, lm.right, disp_vec)
-        cos = intrinsic_right.dot(disp_vec)
-        final_score2 = math.e ** (- self.parameters["angle_weight"] * (1 - cos)) \
-                    * math.e ** (- self.parameters["size_weight"] * dist / max(tr.size, lm.size))
-
-        return torch.max(final_score1, final_score2)
+        return final_score
 
     def str(self):
         return 'to_the_right_of.p'
