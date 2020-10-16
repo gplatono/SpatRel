@@ -669,7 +669,8 @@ class RightOf_Deictic(Node):
     def __init__(self, connections):
         self.connections = connections
         self.parameters = {"hor_weight": torch.tensor(0.4, dtype=torch.float32, requires_grad=True),
-                           "ver_weight": torch.tensor(0.6, dtype=torch.float32, requires_grad=True)}
+                           "ver_weight": torch.tensor(0.6, dtype=torch.float32, requires_grad=True),
+                           "sigmoid_decay": torch.tensor(0.6, dtype=torch.float32, requires_grad=True)}
 
     def compute(self, tr, lm):
         horizontal_component = self.connections['horizontal_deictic_component'].compute(tr, lm)
