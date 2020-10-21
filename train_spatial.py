@@ -13,6 +13,8 @@ ann_path = path_to_data + os.sep + "annotations"
 scenes = glob.glob(scene_path + os.sep + "*.blend")
 annotations = glob.glob(ann_path + os.sep + "*.data")
 
+print(len(scenes))
+
 def train(epochs):
 	scene_idx = 0
 	rel_acc = None
@@ -23,7 +25,8 @@ def train(epochs):
 		#print("SCENE DATA:", scene, name)
 		if ann_path + os.sep + name in annotations:
 			#command = ['/Applications/Blender.app/Contents/MacOS/Blender', scene, '-P', 'train_scene.py', '--', ann_path + os.sep + name]
-			command = ['../blender/blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name]
+			command = ['C:\\Program Files\\Blender Foundation\\Blender 2.90\\blender.exe', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name]
+			#command = ['../blender/blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name]
 			subprocess.run(command)
 			
 			tmp_acc = None
