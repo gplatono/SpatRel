@@ -13,6 +13,8 @@ ann_path = path_to_data + os.sep + "annotations"
 scenes = glob.glob(scene_path + os.sep + "*.blend")
 annotations = glob.glob(ann_path + os.sep + "*.data")
 
+print(len(scenes))
+
 def train(epochs):
 	scene_idx = 0
 	rel_acc = None
