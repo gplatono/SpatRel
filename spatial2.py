@@ -318,8 +318,17 @@ class Spatial:
 			for annotation in data:
 				annotation = [item.strip() for item in annotation]
 				# if "touching" not in annotation[1]:
-				#  	continue
+				#   	continue
+
+				### postive test ###
+				# if "not" in annotation[1]:
+				# 	continue
+				### negative test ###
+				# if "not" not in annotation[1]:
+				# 	continue
 				# print("annotation: ", annotation)
+
+
 				sample, label, relation = self.process_sample(annotation)
 				if relation is None:
 					continue
@@ -344,7 +353,7 @@ class Spatial:
 
 				#output.retain_grad()
 
-				
+
 				processed += 1.0
 
 			#print (rel_acc)
@@ -353,7 +362,10 @@ class Spatial:
 			#scene_loss.retain_grad()
 
 			scene_loss.backward(retain_graph=True)
-			print("Loss: {:.3f}, Acc: {:.2f}".format(float(scene_loss), float(100 * scene_accuracy / processed)))#, output.grad, scene_loss.grad)
+			if processed != 0:
+				print("Loss: {:.3f}, Acc: {:.2f}".format(float(scene_loss), float(100 * scene_accuracy / processed)))#, output.grad, scene_loss.grad)
+			else:
+				print("no annotations found!")
 			optimizer.step()
 
 		for key in rel_acc:
@@ -1103,7 +1115,7 @@ class Between(Node):
 		#ret_val = torch.exp(exp) * dist_coeff
 		#print (dist_coeff, math.e ** (- math.fabs(-1 - cos)))
 		ret_val = math.e ** (- math.fabs(-1 - cos)) * dist_coeff
-		print (ret_val)
+		# print (ret_val)
 		return ret_val
 
 	def str(self):
