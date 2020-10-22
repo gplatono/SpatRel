@@ -317,8 +317,8 @@ class Spatial:
 
 			for annotation in data:
 				annotation = [item.strip() for item in annotation]
-				# if "touching" not in annotation[1]:
-				#  	continue
+				if "touching" not in annotation[1]:
+					continue
 				# print("annotation: ", annotation)
 				sample, label, relation = self.process_sample(annotation)
 				if relation is None:
@@ -628,12 +628,14 @@ class Touching(Node):
 	def __init__(self, network=None, connections=None):
 		self.arity = 2
 		self.network = network
-		self.parameters = {"touch_face_threshold": torch.tensor([0.95], dtype=torch.float32, requires_grad=True),
-						   "mesh_dist_threshold": torch.tensor([0.1], dtype=torch.float32, requires_grad=True)}
+		self.parameters = {"touch_face_threshold": torch.tensor(0.95, dtype=torch.float32, requires_grad=True),
+						   "mesh_dist_threshold": torch.tensor(0.1, dtype=torch.float32, requires_grad=True), 
+						   "mesh_vs_volume_weight": torch.tensor(0.3, dtype=torch.float32, requires_grad=True),
+						   "mesh_dist_scale": torch.tensor(1.0, dtype=torch.float32, requires_grad=True)}
 
 	def compute(self, tr, lm):
 		if tr == lm:
-			return 0
+			return torch.tensor(0.0)
 		mesh_dist = 1e9
 		planar_dist = 1e9
 		shared_volume = shared_volume_scaled(tr, lm)
@@ -644,7 +646,9 @@ class Touching(Node):
 		if get_centroid_distance_scaled(tr, lm) <= 1.5:
 			mesh_dist = closest_mesh_distance(tr, lm) / (min(tr.size, lm.size) + 0.01)
 		mesh_dist = torch.tensor(min(mesh_dist, planar_dist), dtype=torch.float32, requires_grad=True)  # transfer to tensors
-		touch_face = torch.tensor(0, dtype=torch.float32, requires_grad=True)
+		touch_face = torch.tensor(0.0, dtype=torch.float32, requires_grad=True)
+
+		mesh_dist_factor = torch.exp(- torch.abs(self.parameters["mesh_dist_scale"]) * mesh_dist)
 
 		# print ('INIT...', len(lm.faces))
 		# for face in lm.faces:
@@ -657,9 +661,13 @@ class Touching(Node):
 			elif mesh_dist < self.parameters['mesh_dist_threshold']:
 				ret_val = torch.exp(- mesh_dist)
 			else:
-				ret_val = torch.exp(- 2 * mesh_dist)
-		else:
-			ret_val = 0.3 * torch.exp(- 2 * mesh_dist) + 0.7 * (shared_volume > 0)
+				ret_val = mesh_dist_factor
+		else:			
+			ret_val = self.parameters["mesh_vs_volume_weight"] * mesh_dist_factor
+			if shared_volume > 0:
+				ret_val += 1.0 - self.parameters["mesh_vs_volume_weight"]
+
+		#print (ret_val)		
 		# print ("Touching " + a.name + ", " + b.name + ": " + str(ret_val))
 		return ret_val
 
@@ -1103,7 +1111,7 @@ class Between(Node):
 		#ret_val = torch.exp(exp) * dist_coeff
 		#print (dist_coeff, math.e ** (- math.fabs(-1 - cos)))
 		ret_val = math.e ** (- math.fabs(-1 - cos)) * dist_coeff
-		print (ret_val)
+		#print (ret_val)
 		return ret_val
 
 	def str(self):
