@@ -20,7 +20,7 @@ class Spatial:
 		self.reload(world)
 		# self.world = world
 		# self.vis_proj = self.cache_2d_projections()
-		self.spat_rel = ['supported_by.p', 'touching.p', 'to_the_right_of.p', 'to_the_left_of.p', 'in_front_of.p', 'behind.p', 'above.p', 'below.p', 'near.p', 'over.p', 'on.p', 'under.p', 'between.p', 'inside.p', 'next_to.p']
+		self.spat_rel = ['to_the_right_of_deictic.p', 'supported_by.p', 'touching.p', 'to_the_right_of.p', 'to_the_left_of.p', 'in_front_of.p', 'behind.p', 'above.p', 'below.p', 'near.p', 'over.p', 'on.p', 'under.p', 'between.p', 'inside.p', 'next_to.p']
 
 
 		self.str_to_pred = {
@@ -319,7 +319,7 @@ class Spatial:
 
 			for annotation in data:
 				annotation = [item.strip() for item in annotation]
-				if "right" not in annotation[1]:
+				if "right of d" not in annotation[1]:
 					continue
 
 				### postive test ###
@@ -668,7 +668,7 @@ class Touching(Node):
 		# for face in lm.faces:
 		# 	for v in tr.vertex_set:
 		# 		touch_face = max(is_in_face(v, face), touch_face)
-		# print ('COMPLETE...')
+		# # print ('COMPLETE...')
 		if shared_volume == 0:
 			if touch_face > self.parameters['touch_face_threshold']:
 				ret_val = touch_face
