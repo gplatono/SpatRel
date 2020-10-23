@@ -319,7 +319,9 @@ class Spatial:
 
 			for annotation in data:
 				annotation = [item.strip() for item in annotation]
-				if "above" not in annotation[1]:
+				# if "above" not in annotation[1] and "below" not in annotation[1]:
+				# 	continue
+				if "touching" not in annotation[1]:
 					continue
 
 				### postive test ###
@@ -338,7 +340,7 @@ class Spatial:
 				#print (sample, label, relation)
 				output = relation(*sample)
 
-				#print("ANNOTATION: ", annotation, round(float(output), 2), round(float(label), 2))
+				print("ANNOTATION: ", annotation, round(float(output), 2), round(float(label), 2))
 				loss = torch.square(label - output)
 				scene_loss = scene_loss + loss
 
@@ -449,14 +451,18 @@ class WithinConeRegion(Node):
 	"""
 
 	def __init__(self, ):
-		self.parameters = {'exponent_multiplier': torch.autograd.Variable(torch.tensor(2.0, dtype=torch.float32, requires_grad=True),
-														   requires_grad=True)}
+		self.parameters = {'scale_multiplier': torch.tensor(2.0, dtype=torch.float32, requires_grad=True)}
 
 	def compute(self, vect, direction, width):
-		cos = direction.dot(vect) / (np.linalg.norm(direction) * np.linalg.norm(vect))
+		direction = direction / np.linalg.norm(direction)
+		vect = vect / np.linalg.norm(vect)
+		cos = direction.dot(vect)# / (np.linalg.norm(direction) * np.linalg.norm(vect))
 		angle = math.acos(cos)
 		within_measure = width - angle
-		final_score = 1 / (1 + math.e ** (self.parameters['exponent_multiplier'] * within_measure))
+
+
+		final_score = 1 / (1 + math.e ** (- torch.abs(self.parameters['scale_multiplier']) * within_measure))
+		print ("WITHIN CONE, VECT: {}, DIR: {}, WIDTH: {}, COS: {}, WITHIN: {}, FINAL: {}".format(vect, direction, width, cos, within_measure, final_score))
 		return final_score
 
 	def str(self):
@@ -988,7 +994,7 @@ class Behind(Node):
 class Above(Node):
 	def __init__(self, connections):
 		self.connections = connections
-		self.parameters = {"within_cone_weight": torch.autograd.Variable(torch.tensor(0.1, dtype=torch.float32, requires_grad=True),  requires_grad=True)}
+		self.parameters = {"cone_width": torch.tensor(0.1, dtype=torch.float32, requires_grad=True)}
 
 	def compute(self, tr, lm):
 		"""Computes the 'a above b' relation, returns the certainty value.
@@ -1001,9 +1007,9 @@ class Above(Node):
 		"""
 		vertical_dist_scaled = (tr.centroid[2] - lm.centroid[2]) / (max(tr.dimensions[2], lm.dimensions[2]) + 0.01)
 		# print ("WITHIN CONE: ", a, within_cone(a.centroid - b.centroid, np.array([0, 0, 1.0]), 0.1), sigmoid(vertical_dist_scaled, 1, 3), vertical_dist_scaled)
-		ret_val = self.connections['within_cone_region'].compute(tr.centroid - lm.centroid, np.array([0, 0, 1.0]),
-																 self.parameters["within_cone_weight"]) \
-				  * sigmoid(vertical_dist_scaled, 1, 3)  # math.e ** (- 0.01 * get_centroid_distance_scaled(a, b))
+		ret_val = self.connections['within_cone_region'].compute(tr.centroid - lm.centroid, np.array([0, 0, 1.0]), self.parameters["cone_width"])
+		print ("ABOVE FACTORS: ", tr.location, lm.location, ret_val, sigmoid(vertical_dist_scaled, 1, 3))
+		ret_val = ret_val * sigmoid(vertical_dist_scaled, 1, 3)  # math.e ** (- 0.01 * get_centroid_distance_scaled(a, b))		
 		# print ("RET: ", ret_val, type(ret_val), ret_val.requires_grad)
 		#ret_val.retain_grad()
 		#self.val1 = ret_val
