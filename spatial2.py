@@ -34,7 +34,7 @@ class Spatial:
 			'leftmost.a': self.to_the_left_of,
 			'to_the_right_of.p': self.to_the_right_of,
 			'to the right of': self.to_the_right_of,
-			'to the right of deictic': self.to_the_right_of_deictic,
+			'to the right of d': self.to_the_right_of_deictic,
 			'right of': self.to_the_right_of,
 			'right.a': self.to_the_right_of,
 			'rightmost.a': self.to_the_right_of,
