@@ -319,7 +319,7 @@ class Spatial:
 
 			for annotation in data:
 				annotation = [item.strip() for item in annotation]
-				if "right of d" not in annotation[1]:
+				if "above" not in annotation[1]:
 					continue
 
 				### postive test ###
