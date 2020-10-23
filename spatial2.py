@@ -34,11 +34,13 @@ class Spatial:
 			'leftmost.a': self.to_the_left_of,
 			'to_the_right_of.p': self.to_the_right_of,
 			'to the right of': self.to_the_right_of,
+			'to the right of deictic': self.to_the_right_of_deictic,
 			'right of': self.to_the_right_of,
 			'right.a': self.to_the_right_of,
 			'rightmost.a': self.to_the_right_of,
 			'right.p': self.to_the_right_of,
 			'left.p': self.to_the_left_of,
+
 
 			'near.p': self.near,
 			'near': self.near,
@@ -317,10 +319,8 @@ class Spatial:
 
 			for annotation in data:
 				annotation = [item.strip() for item in annotation]
-				if "touching" not in annotation[1]:
+				if "right" not in annotation[1]:
 					continue
-				# if "touching" not in annotation[1]:
-				#   	continue
 
 				### postive test ###
 				# if "not" in annotation[1]:
