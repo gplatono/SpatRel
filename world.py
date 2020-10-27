@@ -163,7 +163,7 @@ class World(object):
 		observer_entity.camera = cam_ob
 		observer_entity.location = np.array(cam_ob.location)
 		observer_entity.up = np.array([0, 1, 3])
-		observer_entity.right = np.array([1, 0, 0])
+		observer_entity.right = np.array([0, -1.0, 0])
 		observer_entity.set_frontal(observer_entity.location)
 		return observer_entity
 

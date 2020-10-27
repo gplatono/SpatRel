@@ -263,7 +263,7 @@ class Spatial:
 		proj = {}
 		for ent in self.world.entities:
 			proj[ent] = vp_project(ent, self.observer)
-			print (ent, proj[ent])
+			#print (ent, proj[ent])
 		return proj
 
 	def pairwise_axial_distances(self):
@@ -276,7 +276,7 @@ class Spatial:
 					axial_dist = scaled_axial_distance(tr_bbox, lm_bbox)
 					#print (e1.name, tr_bbox, e2.name, lm_bbox, axial_dist)
 					dist[(e1, e2)] = axial_dist
-					dist[(e2, e1)] = axial_dist
+					dist[(e2, e1)] = (-axial_dist[0], -axial_dist[1])
 				elif (e1, e2) not in dist:
 					dist[(e1, e2)] = (0, 0)
 					dist[(e2, e1)] = (0, 0)
@@ -631,8 +631,9 @@ class Supported(Node):
 
 class HorizontalDeicticComponent(Node):
 	def compute(self, tr, lm):
-		axial_dist = self.network.axial_distances[(tr, lm)]		
-		return asym_inv_exp(-axial_dist[0], 1, 1, 0.05)
+		axial_dist = self.network.axial_distances[(tr, lm)]
+		print (tr.name, lm.name, axial_dist[0])
+		return asym_inv_exp(axial_dist[0], 1, 1, 0.05)
 
 
 class VerticalDeicticComponent(Node):
@@ -714,21 +715,20 @@ class RightOf_Deictic(Node):
 		# math.exp(- math.fabs(axial_dist[1]))
 		#horizontal_component = torch.tensor(horizontal_component, dtype=torch.float32, requires_grad=True)
 		#vertical_component = torch.tensor(vertical_component, dtype=torch.float32, requires_grad=True)
-		factor_sum = self.parameters["hor_weight"] * horizontal_component + self.parameters["ver_weight"] * vertical_component
-		print ("HOR COMP: ", horizontal_component, "VERT COMP: ", vertical_component)
+		factor_sum = self.parameters["hor_weight"] * horizontal_component + self.parameters["ver_weight"] * vertical_component		
 		# hv_component = torch.tensor([horizontal_component, vertical_component],
 		#                             dtype=torch.float32)  # transferred tensor
 		# final_score = torch.dot(hv_component, self.parameters["weight"])
 		# print(final_score)
-		#final_score = 1 / (1 + math.e ** (- self.parameters['sigmoid_decay'] * factor_sum))		
+		#final_score = 1 / (1 + math.e ** (- self.parameters['sigmoid_decay'] * factor_sum))
 		#final_score = torch.exp(- torch.abs(self.parameters['exp_decay']) * factor_sum)
 		hor_weight = torch.abs(self.parameters["hor_weight"])
 		ver_weight = torch.abs(self.parameters["ver_weight"])
-		hor_weight = self.parameters["hor_weight"] / (self.parameters["hor_weight"] + self.parameters["ver_weight"])
-		ver_weight = self.parameters["ver_weight"] / (self.parameters["hor_weight"] + self.parameters["ver_weight"])
-		final_score = hor_weight * horizontal_component + ver_weight * vertical_component
-
-		print ("HOR COMP: ", horizontal_component, "VERT COMP: ", vertical_component, final_score)
+		hor_weight = hor_weight / (hor_weight + ver_weight)
+		ver_weight = ver_weight / (hor_weight + ver_weight)
+		#final_score = hor_weight * horizontal_component + ver_weight * vertical_component
+		final_score = (hor_weight * horizontal_component + (1 - hor_weight)) * (ver_weight * vertical_component + (1 - ver_weight))
+		print ("HOR COMP: ", horizontal_component, "HOR WEIGHT: ", hor_weight, "VERT COMP: ", vertical_component, "VERT WEIGHT: ", ver_weight, final_score)
 
 		return final_score
 
