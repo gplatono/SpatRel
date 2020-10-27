@@ -324,6 +324,7 @@ class Spatial:
 				# if "above" not in annotation[1] and "below" not in annotation[1]:
 				# 	continue
 				if "right" not in annotation[1] and "left" not in annotation[1]:
+				#if "near" not in annotation[1]:
 					continue
 
 				### postive test ###
@@ -720,15 +721,15 @@ class RightOf_Deictic(Node):
 		#                             dtype=torch.float32)  # transferred tensor
 		# final_score = torch.dot(hv_component, self.parameters["weight"])
 		# print(final_score)
-		#final_score = 1 / (1 + math.e ** (- self.parameters['sigmoid_decay'] * factor_sum))
+		final_score = 1 / (1 + math.e ** (- torch.abs(self.parameters['sigmoid_decay']) * factor_sum))
 		#final_score = torch.exp(- torch.abs(self.parameters['exp_decay']) * factor_sum)
-		hor_weight = torch.abs(self.parameters["hor_weight"])
-		ver_weight = torch.abs(self.parameters["ver_weight"])
-		hor_weight = hor_weight / (hor_weight + ver_weight)
-		ver_weight = ver_weight / (hor_weight + ver_weight)
+		# hor_weight = torch.abs(self.parameters["hor_weight"])
+		# ver_weight = torch.abs(self.parameters["ver_weight"])
+		# hor_weight = hor_weight / (hor_weight + ver_weight)
+		# ver_weight = ver_weight / (hor_weight + ver_weight)
 		#final_score = hor_weight * horizontal_component + ver_weight * vertical_component
-		final_score = (hor_weight * horizontal_component + (1 - hor_weight)) * (ver_weight * vertical_component + (1 - ver_weight))
-		print ("HOR COMP: ", horizontal_component, "HOR WEIGHT: ", hor_weight, "VERT COMP: ", vertical_component, "VERT WEIGHT: ", ver_weight, final_score)
+		#final_score = (hor_weight * horizontal_component + (1 - hor_weight)) * (ver_weight * vertical_component + (1 - ver_weight))
+		#print ("HOR COMP: ", horizontal_component, "HOR WEIGHT: ", hor_weight, "VERT COMP: ", vertical_component, "VERT WEIGHT: ", ver_weight, final_score)
 
 		return final_score
 
