@@ -132,6 +132,7 @@ dmypy.json
 .blend1
 
 rel_accuracies
+params
 
 #Haoyu
 /network1.py
