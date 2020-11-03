@@ -29,7 +29,7 @@ class World(object):
 		self.simulation_mode = simulation_mode
 
 		#Set the fundamental extrinsic axes
-		self.right_axis = np.array([1, 0, 0])
+		self.right_axis = np.array([0, -1, 0])
 		self.front_axis = np.array([0, -1.0, 0])
 		self.up_axis = np.array([0, 0, 1.0])
 		#Sizes of BW objects in meters
@@ -163,7 +163,7 @@ class World(object):
 		observer_entity.camera = cam_ob
 		observer_entity.location = np.array(cam_ob.location)
 		observer_entity.up = np.array([0, 1, 3])
-		observer_entity.right = np.array([1, 0, 0])
+		observer_entity.right = np.array([0, -1.0, 0])
 		observer_entity.set_frontal(observer_entity.location)
 		return observer_entity
 
