@@ -92,6 +92,7 @@ class Spatial:
 			'in front of': self.in_front_of,
 			'front.a': self.in_front_of,
 			'frontmost.a': self.in_front_of,
+			'in front of d': self.in_front_of_deictic,
 
 			'behind.p': self.behind,
 			'behind': self.behind,
@@ -821,7 +822,7 @@ class RightOf(Node):
 			return torch.max(deictic, torch.max(extrinsic, intrinsic))
 		elif lm is None:
 			ret_val = torch.mean([self.compute(tr, entity) for entity in self.network.world.active_context])
-		return ret_va
+		return ret_val
 
 	def str(self):
 		return 'to_the_right_of.p'
