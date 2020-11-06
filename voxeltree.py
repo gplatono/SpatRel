@@ -24,6 +24,7 @@ class Voxel:
 		self.compute_bbox()		
 		self.intersect_list = []
 		temp_size = 0.01
+		increment = 
 		scope_copy = copy(scope)
 		while temp_size < self.size - 0.000001:				
 			for entity in scope:

@@ -4,6 +4,31 @@ import bpy, bmesh
 from mathutils.bvhtree import BVHTree
 
 
+class Span:
+    def __init__(self, span_data):
+        self.x_min = self.x1 = span_data[0]
+        self.x_max = self.x2 = span_data[1]
+        self.y_min = self.y1 = span_data[2]
+        self.y_max = self.y2 = span_data[3]
+        self.z_min = self.z1 = span_data[4]
+        self.z_max = self.z2 = span_data[5]
+
+        self.bbox = self.compute_bbox()
+
+    @classmethod
+    def FromRange(cls, x_min, x_max, y_min, y_max, z_min, z_max):
+        cls([x_min, x_max, y_min, y_max, z_min, z_max])
+
+    def compute_bbox(self):
+        return np.array([[self.x1, self.y1, self.z1],
+                        [self.x1, self.y1, self.z2],
+                        [self.x1, self.y2, self.z1]
+                        [self.x1, self.y2, self.z2],
+                        [self.x2, self.y1, self.z1],
+                        [self.x2, self.y1, self.z2],
+                        [self.x2, self.y2, self.z1]
+                        [self.x2, self.y2, self.z2]])
+
 #Computes the value of the univariate Gaussian
 #Inputs: x - random variable value; mu - mean; sigma - variance
 #Return value: real number

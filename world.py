@@ -137,7 +137,7 @@ class World(object):
 		#cam_ob.location = (-15.5, 0, 7)
 		lamp_obj.location = (0, -20, 10)
 		#cam_ob.location = (0, -9, 3)
-		cam_ob.location = (-9, 0, 3)
+		cam_ob.location = (0, -9, 3)
 		cam_ob.rotation_mode = 'XYZ'
 		cam_ob.rotation_euler = (1.1, 0, -1.57)
 		bpy.data.cameras['Camera'].lens = 20

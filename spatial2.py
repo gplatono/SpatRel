@@ -333,8 +333,8 @@ class Spatial:
 				# if "above" not in annotation[1] and "below" not in annotation[1]:
 				# 	continue
 				#if "in front of d" not in annotation[1]:
-				if "near" not in annotation[1]:
-					continue
+				# if "near" not in annotation[1]:
+				# 	continue
 
 				### postive test ###
 				# if "not" in annotation[1]:
@@ -841,7 +841,7 @@ class RightOf(Node):
 			extrinsic = connections['to_the_right_of_extrinsic'].compute(tr, lm)
 			intrinsic = connections['to_the_right_of_intrinsic'].compute(tr, lm)
 			# print(connections['to_the_right_of_deictic'].parameters)
-			# print ("RIGHT OF FACTORS: ", deictic, extrinsic, intrinsic)
+			#print ("RIGHT OF FACTORS: ", deictic, extrinsic, intrinsic)
 			#vals = torch.tensor([deictic, extrinsic, intrinsic], dtype=torch.float32, requires_grad=True)
 			#print ("VALS: ", vals)
 			return torch.max(deictic, torch.max(extrinsic, intrinsic))
