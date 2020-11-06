@@ -241,7 +241,8 @@ class Spatial:
 
 	def preproc(self):
 		self.parameters = None
-		self.vis_proj = self.cache_2d_projections()
+		self.cache_2d_projections()
+		self.cache_2d_bboxes()
 
 	def reload(self, world):
 		self.world = world
@@ -261,19 +262,26 @@ class Spatial:
 			return self.str_to_pred[relation].compute(trs[0], lms[0], lms[1])
 
 	def cache_2d_projections(self):
-		proj = {}
+		self.vis_proj = {}
 		for ent in self.world.entities:
-			proj[ent] = vp_project(ent, self.observer)
+			self.vis_proj[ent] = vp_project(ent, self.observer)
 			#print (ent, proj[ent])
-		return proj
+		#self.projections = proj
+		
+	def cache_2d_bboxes(self):
+		self.projection_bboxes = {}
+		for e in self.world.entities:
+			self.projection_bboxes[e] = get_2d_bbox(self.vis_proj[e])
 
 	def pairwise_axial_distances(self):
 		dist = {}
 		for e1 in self.world.entities:
 			for e2 in self.world.entities:
 				if e1 != e2 and (e1, e2) not in dist:
-					tr_bbox = get_2d_bbox(self.vis_proj[e1])
-					lm_bbox = get_2d_bbox(self.vis_proj[e2])
+					#tr_bbox = get_2d_bbox(self.vis_proj[e1])
+					#lm_bbox = get_2d_bbox(self.vis_proj[e2])
+					tr_bbox = self.projection_bboxes[e1]
+					lm_bbox = self.projection_bboxes[e2]					
 					axial_dist = scaled_axial_distance(tr_bbox, lm_bbox)
 					#print (e1.name, tr_bbox, e2.name, lm_bbox, axial_dist)
 					dist[(e1, e2)] = axial_dist
@@ -324,8 +332,8 @@ class Spatial:
 				annotation = [item.strip() for item in annotation]
 				# if "above" not in annotation[1] and "below" not in annotation[1]:
 				# 	continue
-				if "in front of d" not in annotation[1]:
-				#if "near" not in annotation[1]:
+				#if "in front of d" not in annotation[1]:
+				if "near" not in annotation[1]:
 					continue
 
 				### postive test ###
@@ -344,7 +352,7 @@ class Spatial:
 				#print (sample, label, relation)
 				output = relation(*sample)
 
-				# print("ANNOTATION: ", annotation, round(float(output), 2), round(float(label), 2))
+				print("ANNOTATION: ", annotation, round(float(output), 2), round(float(label), 2))
 				loss = torch.square(label - output)
 				scene_loss = scene_loss + loss
 
@@ -896,34 +904,44 @@ class InFrontOf_Deictic(Node):
 		self.network = network
 		self.parameters = {"observer_dist_factor_weight": torch.tensor(0.5, dtype=torch.float32, requires_grad=True),
 						   "projection_factor_weight": torch.tensor(0.5, dtype=torch.float32, requires_grad=True),
-						   "projection_factor_scale": torch.tensor(-0.5, dtype=torch.float32, requires_grad=True)}
+						   "projection_factor_scale": torch.tensor(0.5, dtype=torch.float32, requires_grad=True),
+						   "dist_decay": torch.tensor(0.5, dtype=torch.float32, requires_grad=True)}
 
 	def compute(self, tr, lm):
 		# def in_front_of_extr(a, b, observer):
-		bbox_tr = tr.bbox
-		max_dim_a = max(bbox_tr[7][0] - bbox_tr[0][0],
-						bbox_tr[7][1] - bbox_tr[0][1],
-						bbox_tr[7][2] - bbox_tr[0][2]) + 0.0001
-		dist = get_distance_from_line(self.network.world.get_observer().centroid, lm.centroid, tr.centroid)
-		a_bbox = get_2d_bbox(vp_project(tr, self.network.world.get_observer()))
-		b_bbox = get_2d_bbox(vp_project(lm, self.network.world.get_observer()))
-		a_center = projection_bbox_center(a_bbox)
-		b_center = projection_bbox_center(b_bbox)
-		dist = np.linalg.norm(a_center - b_center)
-		scaled_proj_dist = dist / (max(get_2d_size(a_bbox), get_2d_size(b_bbox)) + 0.001)
-		a_dist = np.linalg.norm(tr.location - self.network.world.observer.location)
-		b_dist = np.linalg.norm(lm.location - self.network.world.observer.location)
+		#bbox_tr = tr.bbox
+		# max_dim_a = max(bbox_tr[7][0] - bbox_tr[0][0],
+		# 				bbox_tr[7][1] - bbox_tr[0][1],
+		# 				bbox_tr[7][2] - bbox_tr[0][2]) + 0.0001
+		#dist = get_distance_from_line(self.network.world.get_observer().centroid, lm.centroid, tr.centroid)
+		tr_2d_bbox = self.network.projection_bboxes[tr]#get_2d_bbox(vp_project(tr, self.network.world.get_observer()))
+		lm_2d_bbox = self.network.projection_bboxes[lm]#get_2d_bbox(vp_project(lm, self.network.world.get_observer()))
+		tr_center = projection_bbox_center(tr_2d_bbox)
+		lm_center = projection_bbox_center(lm_2d_bbox)
+		dist = np.linalg.norm(tr_center - lm_center)
+		scaled_proj_dist = dist / (max(get_2d_size(tr_2d_bbox), get_2d_size(lm_2d_bbox)) + 0.001)
+		tr_dist = np.linalg.norm(tr.location - self.network.world.observer.location)
+		lm_dist = np.linalg.norm(lm.location - self.network.world.observer.location)
 
-		observer_dist_factor = sigmoid(b_dist - a_dist, 1, 0.5)
+		observer_dist_factor = sigmoid(lm_dist - tr_dist, 1, torch.abs(self.parameters["dist_decay"]))
 		# transfer to tensors
-		observer_dist_factor = torch.tensor([observer_dist_factor], dtype=torch.float32)
-		scaled_proj_dist = torch.tensor(scaled_proj_dist, dtype=torch.float32)
-		projection_factor = math.e ** (self.parameters["projection_factor_scale"] * scaled_proj_dist)
+		#observer_dist_factor = torch.tensor(observer_dist_factor, dtype=torch.float32)
+		#scaled_proj_dist = torch.tensor(scaled_proj_dist, dtype=torch.float32)
+		projection_factor = math.e ** (-torch.abs(self.parameters["projection_factor_scale"]) * scaled_proj_dist)
 
 		# print(self.parameters)
 
-		final_score = self.parameters["observer_dist_factor_weight"] * observer_dist_factor \
-			   + self.parameters["projection_factor_weight"] * projection_factor
+
+		# self.parameters["observer_dist_factor_weight"] = torch.abs(self.parameters["observer_dist_factor_weight"])
+		# self.parameters["projection_factor_weight"] = torch.abs(self.parameters["projection_factor_weight"])
+		# self.parameters["observer_dist_factor_weight"] = self.parameters["observer_dist_factor_weight"] / (0.001 + self.parameters["observer_dist_factor_weight"] + self.parameters["projection_factor_weight"])
+		# self.parameters["projection_factor_weight"] = self.parameters["projection_factor_weight"] / (0.001 + self.parameters["observer_dist_factor_weight"] + self.parameters["projection_factor_weight"])
+		#exp_dist_weight = torch.exp(self.parameters["observer_dist_factor_weight"])
+		#exp_proj_weight = torch.exp(self.parameters["projection_factor_weight"])
+		print ("IN FRONT OF FACTORS: ", observer_dist_factor, projection_factor)
+		print (self.network.world.observer.location)
+		final_score = torch.exp(-self.parameters["observer_dist_factor_weight"] * (1 - observer_dist_factor) \
+			   -self.parameters["projection_factor_weight"] * (1 - projection_factor))
 		# print(final_score)
 		return final_score
 
@@ -1178,9 +1196,9 @@ class Near(Node):
 		near_measure = raw_near_measure + (raw_near_measure - avg_near) * min(raw_near_measure, 1 - raw_near_measure)
 		#near_measure = torch.tensor(near_measure, dtype=torch.float32, requires_grad=True)  # transfer to tensor
 		if tr.compute_size() > lm.compute_size():
-			near_measure = near_measure - self.parameters["size_weight"]
+			near_measure = near_measure - torch.abs(self.parameters["size_weight"])
 		elif tr.compute_size() < lm.compute_size():
-			near_measure = near_measure + self.parameters["size_weight"]
+			near_measure = near_measure + torch.abs(self.parameters["size_weight"])
 		return near_measure
 
 	def str(self):

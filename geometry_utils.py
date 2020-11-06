@@ -246,6 +246,42 @@ def closest_mesh_distance_scaled(ent_a, ent_b):
     b_dims = ent_b.dimensions
     return closest_mesh_distance(ent_a, ent_b) / (max(a_dims) + max(b_dims) + 0.0001)
 
+def get_span_from_box(box):
+    """
+    Box vertices must be listed in the following order: [-x, -y, -z], [-x, -y, +z], [-x, +y, -z], [-x, +y, +z],
+    [+x, -y, -z], [+x, -y, +z], [+x, +y, -z], [+x, +y, +z].
+    """
+    return np.array([box[0][0], box[7][0], box[0][1], box[7][1], box[0][2], box[7][2]])
+
+def intersect_box(box, entity):
+    """
+    Box vertices must be listed in the following order: [-x, -y, -z], [-x, -y, +z], [-x, +y, -z], [-x, +y, +z],
+    [+x, -y, -z], [+x, -y, +z], [+x, +y, -z], [+x, +y, +z].
+    """
+
+    for v in entity.vertices:
+        if box[0][0] <= v[0] and v[0] <= box[7][0] and box[0][1] <= v[1] and v[1] <= box[7][1] and box[0][2] <= v[2] and v[2] <= box[7][2]:
+            return True
+
+    return False
+
+def box_intersection_volume(box_a, box_b):
+    span_a = get_span_from_box(box_a)
+    span_b = get_span_from_box(box_b)
+
+    x_overlap = min(span_a[1], span_b[1]) - max(span_a[0], span_b[0])
+    y_overlap = min(span_a[3], span_b[3]) - max(span_a[2], span_b[2])
+    z_overlap = min(span_a[5], span_b[5]) - max(span_a[4], span_b[4])
+
+    if x_overlap <= 0 or y_overlap <= 0 or z_overlap <= 0:
+        vol = 0
+    else:
+        vol = x_overlap * y_overlap * z_overlap
+    return vol
+
+def check_box_intersection(box_a, box_b):
+    return box_intersection_volume(box_a, box_b) > 0
+
 #Computes the shared volume of the bounding boxes of two entities
 #Input: ent_a, ent_b - entities
 #Return value: real number
