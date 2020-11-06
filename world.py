@@ -30,7 +30,7 @@ class World(object):
 
 		#Set the fundamental extrinsic axes
 		self.right_axis = np.array([0, -1, 0])
-		self.front_axis = np.array([0, -1.0, 0])
+		self.front_axis = np.array([-1.0, 0, 0])
 		self.up_axis = np.array([0, 0, 1.0])
 		#Sizes of BW objects in meters
 		self.block_edge = 1.0

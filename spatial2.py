@@ -20,7 +20,7 @@ class Spatial:
 		self.reload(world)
 		# self.world = world
 		# self.vis_proj = self.cache_2d_projections()
-		self.spat_rel = ['to_the_right_of_deictic.p', 'supported_by.p', 'touching.p', 'to_the_right_of.p', 'to_the_left_of.p', 'in_front_of.p', 'behind.p', 'above.p', 'below.p', 'near.p', 'over.p', 'on.p', 'under.p', 'between.p', 'inside.p', 'next_to.p']
+		self.spat_rel = ['to_the_right_of_deictic.p', 'in_front_of_deictic.p', 'supported_by.p', 'touching.p', 'to_the_right_of.p', 'to_the_left_of.p', 'in_front_of.p', 'behind.p', 'above.p', 'below.p', 'near.p', 'over.p', 'on.p', 'under.p', 'between.p', 'inside.p', 'next_to.p']
 
 
 		self.str_to_pred = {
@@ -92,6 +92,7 @@ class Spatial:
 			'in front of': self.in_front_of,
 			'front.a': self.in_front_of,
 			'frontmost.a': self.in_front_of,
+			'in front of d': self.in_front_of_deictic,
 
 			'behind.p': self.behind,
 			'behind': self.behind,
@@ -272,7 +273,7 @@ class Spatial:
 			for e2 in self.world.entities:
 				if e1 != e2 and (e1, e2) not in dist:
 					tr_bbox = get_2d_bbox(self.vis_proj[e1])
-					lm_bbox = get_2d_bbox(self.vis_proj[e2])					
+					lm_bbox = get_2d_bbox(self.vis_proj[e2])
 					axial_dist = scaled_axial_distance(tr_bbox, lm_bbox)
 					#print (e1.name, tr_bbox, e2.name, lm_bbox, axial_dist)
 					dist[(e1, e2)] = axial_dist
@@ -323,8 +324,8 @@ class Spatial:
 				annotation = [item.strip() for item in annotation]
 				# if "above" not in annotation[1] and "below" not in annotation[1]:
 				# 	continue
-				#if "right" not in annotation[1] and "left" not in annotation[1]:
-				if "touching" not in annotation[1]:
+				if "in front of d" not in annotation[1]:
+				#if "near" not in annotation[1]:
 					continue
 
 				### postive test ###
@@ -333,7 +334,7 @@ class Spatial:
 				### negative test ###
 				# if "not" not in annotation[1]:
 				# 	continue
-				# print("annotation: ", annotation)
+				#print("annotation: ", annotation)
 
 
 				sample, label, relation = self.process_sample(annotation)
@@ -343,7 +344,7 @@ class Spatial:
 				#print (sample, label, relation)
 				output = relation(*sample)
 
-				print("ANNOTATION: ", annotation, round(float(output), 2), round(float(label), 2))
+				# print("ANNOTATION: ", annotation, round(float(output), 2), round(float(label), 2))
 				loss = torch.square(label - output)
 				scene_loss = scene_loss + loss
 
@@ -633,7 +634,7 @@ class Supported(Node):
 class HorizontalDeicticComponent(Node):
 	def compute(self, tr, lm):
 		axial_dist = self.network.axial_distances[(tr, lm)]
-		print (tr.name, lm.name, axial_dist[0])
+		# print (tr.name, lm.name, axial_dist[0])
 		return asym_inv_exp(axial_dist[0], 1, 1, 0.05)
 
 
@@ -653,7 +654,7 @@ class Touching(Node):
 		self.arity = 2
 		self.network = network
 		self.parameters = {"touch_face_threshold": torch.tensor(0.95, dtype=torch.float32, requires_grad=True),
-						   "mesh_dist_threshold": torch.tensor(0.1, dtype=torch.float32, requires_grad=True), 
+						   "mesh_dist_threshold": torch.tensor(0.1, dtype=torch.float32, requires_grad=True),
 						   "mesh_vs_volume_weight": torch.tensor(0.3, dtype=torch.float32, requires_grad=True),
 						   "mesh_dist_scale": torch.tensor(1.0, dtype=torch.float32, requires_grad=True),
 						   "centroid_dist_threshold": torch.tensor(1.5, dtype=torch.float32, requires_grad=True)}
@@ -694,12 +695,12 @@ class Touching(Node):
 				ret_val = torch.exp(- mesh_dist)
 			else:
 				ret_val = mesh_dist_factor
-		else:			
+		else:
 			ret_val = self.parameters["mesh_vs_volume_weight"] * mesh_dist_factor
 			if shared_volume > 0:
 				ret_val += 1.0 - self.parameters["mesh_vs_volume_weight"]
 
-		#print (ret_val)		
+		#print (ret_val)
 		# print ("Touching " + a.name + ", " + b.name + ": " + str(ret_val))
 		return ret_val
 
@@ -714,8 +715,7 @@ class RightOf_Deictic(Node):
 		self.connections = connections
 		self.parameters = {"hor_weight": torch.tensor(0.4, dtype=torch.float32, requires_grad=True),
 						   "ver_weight": torch.tensor(0.6, dtype=torch.float32, requires_grad=True),
-						   "sigmoid_decay": torch.tensor(0.6, dtype=torch.float32, requires_grad=True),
-						   "exp_decay": torch.tensor(0.6, dtype=torch.float32, requires_grad=True)}
+						   "sigmoid_decay": torch.tensor(0.6, dtype=torch.float32, requires_grad=True)}
 
 	def compute(self, tr, lm):
 		if tr == lm:
@@ -726,7 +726,7 @@ class RightOf_Deictic(Node):
 		# math.exp(- math.fabs(axial_dist[1]))
 		#horizontal_component = torch.tensor(horizontal_component, dtype=torch.float32, requires_grad=True)
 		#vertical_component = torch.tensor(vertical_component, dtype=torch.float32, requires_grad=True)
-		factor_sum = self.parameters["hor_weight"] * horizontal_component + self.parameters["ver_weight"] * vertical_component		
+		factor_sum = self.parameters["hor_weight"] * horizontal_component + self.parameters["ver_weight"] * vertical_component
 		# hv_component = torch.tensor([horizontal_component, vertical_component],
 		#                             dtype=torch.float32)  # transferred tensor
 		# final_score = torch.dot(hv_component, self.parameters["weight"])
@@ -832,8 +832,8 @@ class RightOf(Node):
 			deictic = connections['to_the_right_of_deictic'].compute(tr, lm)
 			extrinsic = connections['to_the_right_of_extrinsic'].compute(tr, lm)
 			intrinsic = connections['to_the_right_of_intrinsic'].compute(tr, lm)
-
-			print ("RIGHT OF FACTORS: ", deictic, extrinsic, intrinsic)
+			# print(connections['to_the_right_of_deictic'].parameters)
+			# print ("RIGHT OF FACTORS: ", deictic, extrinsic, intrinsic)
 			#vals = torch.tensor([deictic, extrinsic, intrinsic], dtype=torch.float32, requires_grad=True)
 			#print ("VALS: ", vals)
 			return torch.max(deictic, torch.max(extrinsic, intrinsic))
@@ -854,10 +854,10 @@ class LeftOf_Deictic(Node):
 
 
 class LeftOf_Extrinsic(Node):
-	def compute(self, tr, lm):		
+	def compute(self, tr, lm):
 		return self.connections['to_the_right_of_extrinsic'].compute(tr=lm, lm=tr)
 
-	def str(self):		
+	def str(self):
 		return 'to_the_left_of_extrinsic.p'
 
 
@@ -878,7 +878,7 @@ class LeftOf(Node):
 			extrinsic = self.connections['to_the_left_of_extrinsic'].compute(tr, lm)
 			intrinsic = self.connections['to_the_left_of_intrinsic'].compute(tr, lm)
 
-			print ("LEFT OF FACTORS: ", deictic, extrinsic, intrinsic)			
+			# print ("LEFT OF FACTORS: ", deictic, extrinsic, intrinsic)
 			#vals = torch.tensor([deictic, extrinsic, intrinsic], dtype=torch.float32, requires_grad=True)
 			#print ("VALS: ", vals)
 			return torch.max(deictic, torch.max(intrinsic, extrinsic))
@@ -916,12 +916,16 @@ class InFrontOf_Deictic(Node):
 
 		observer_dist_factor = sigmoid(b_dist - a_dist, 1, 0.5)
 		# transfer to tensors
-		observer_dist_factor = torch.tensor(observer_dist_factor, dtype=torch.float32)
+		observer_dist_factor = torch.tensor([observer_dist_factor], dtype=torch.float32)
 		scaled_proj_dist = torch.tensor(scaled_proj_dist, dtype=torch.float32)
 		projection_factor = math.e ** (self.parameters["projection_factor_scale"] * scaled_proj_dist)
 
-		return self.parameters["observer_dist_factor_weight"] * observer_dist_factor \
+		# print(self.parameters)
+
+		final_score = self.parameters["observer_dist_factor_weight"] * observer_dist_factor \
 			   + self.parameters["projection_factor_weight"] * projection_factor
+		# print(final_score)
+		return final_score
 
 	def str(self):
 		return 'in_front_of_deictic.p'
@@ -932,17 +936,34 @@ class InFrontOf_Extrinsic(Node):
 		self.network = network
 		self.connections = connections
 		self.parameters = {"centroid_weight": torch.tensor(0.01, dtype=torch.float32, requires_grad=True),
-						   "within_cone_weight": torch.tensor(0.7, dtype=torch.float32, requires_grad=True)}
+						   "within_cone_weight": torch.tensor(0.7, dtype=torch.float32, requires_grad=True),
+						   "cone_width": torch.tensor(0.7, dtype=torch.float32, requires_grad=True),
+						   "dist_decay_param": torch.tensor(0.7, dtype=torch.float32, requires_grad=True)}
 
 	def compute(self, tr, lm):
 		# proj_dist = math.fabs(world.front_axis.dot(a.location)) - math.fabs(world.front_axis.dot(b.location))
 		# proj_dist_scaled = proj_dist / max(a.size, b.size)
 		# print ("PROJ_DISTANCE", proj_dist_scaled)
+		if tr == lm:
+			return torch.tensor(0.0, dtype=torch.float32, requires_grad=True)
+		disp_vec = np.array(tr.bbox_centroid - lm.bbox_centroid)
+		dist = np.linalg.norm(disp_vec)
+		disp_vec = disp_vec / (dist + 0.001)
 
-		final_score = math.e ** (- self.parameters["centroid_weight"] * get_centroid_distance_scaled(tr, lm)) \
-					  * self.connections['within_cone_region'].compute(lm.centroid - tr.centroid,
-																	   -self.network.world.front_axis,
-																	   self.parameters["within_cone_weight"])
+		extrinsic_front = self.network.world.front_axis
+		#cos = extrinsic_right.dot(disp_vec)
+
+		within_cone_factor = self.connections['within_cone_region'].compute(disp_vec, extrinsic_front, self.parameters['cone_width'])
+		scaled_dist_factor = dist / (max(tr.size, lm.size) + 0.001)
+		#print ("WITHIN CONE EXTR: ", within_cone_factor, "DIST: ", scaled_dist_factor)
+		final_score = within_cone_factor * math.e ** (- torch.abs(self.parameters['dist_decay_param']) * scaled_dist_factor)
+
+
+#		final_score = math.e ** (- self.parameters["centroid_weight"] * get_centroid_distance_scaled(tr, lm)) \
+#					  * self.connections['within_cone_region'].compute(lm.centroid - tr.centroid,
+#																	   -self.network.world.front_axis,
+#																	   self.parameters["within_cone_weight"])
+		# print(self.parameters)
 
 		return final_score
 
@@ -954,15 +975,34 @@ class InFrontOf_Intrinsic(Node):
 	def __init__(self, connections):
 		self.connections = connections
 		self.parameters = {"centroid_weight": torch.tensor(0.01, dtype=torch.float32, requires_grad=True),
-						   "within_cone_weight": torch.tensor(0.7, dtype=torch.float32, requires_grad=True)}
+						   "within_cone_weight": torch.tensor(0.7, dtype=torch.float32, requires_grad=True),
+						   "cone_width": torch.tensor(0.7, dtype=torch.float32, requires_grad=True),
+						   "dist_decay_param": torch.tensor(0.7, dtype=torch.float32, requires_grad=True)}
 
 	def compute(self, tr, lm):
-		if lm.front is not None:
-			final_score = math.e ** (- self.parameters["centroid_weight"] * get_centroid_distance_scaled(tr, lm)) \
-					  * self.connections['within_cone_region'].compute(lm.centroid - tr.centroid, -lm.front,
-																	   self.parameters["within_cone_weight"])
-		else:
-			final_score = torch.tensor(0.0, dtype=torch.float32, requires_grad=True)
+		# print(self.parameters)
+		if tr == lm or lm.front is None:
+			return torch.tensor(0.0, dtype=torch.float32, requires_grad=True)
+		disp_vec = np.array(tr.bbox_centroid - lm.bbox_centroid)
+		dist = np.linalg.norm(disp_vec)
+		disp_vec = disp_vec / (dist + 0.001)
+
+		intrinsic_front = lm.front
+		#cos = extrinsic_right.dot(disp_vec)
+
+		within_cone_factor = self.connections['within_cone_region'].compute(disp_vec, intrinsic_front, self.parameters['cone_width'])
+		scaled_dist_factor = dist / (max(tr.size, lm.size) + 0.001)
+		#print ("WITHIN CONE EXTR: ", within_cone_factor, "DIST: ", scaled_dist_factor)
+		final_score = within_cone_factor * math.e ** (- torch.abs(self.parameters['dist_decay_param']) * scaled_dist_factor)
+
+
+
+		# if lm.front is not None:
+		# 	final_score = math.e ** (- self.parameters["centroid_weight"] * get_centroid_distance_scaled(tr, lm)) \
+		# 			  * self.connections['within_cone_region'].compute(lm.centroid - tr.centroid, -lm.front,
+		# 															   self.parameters["within_cone_weight"])
+		# else:
+		# 	final_score = torch.tensor(0.0, dtype=torch.float32, requires_grad=True)
 
 		return final_score
 
@@ -979,8 +1019,8 @@ class InFrontOf(Node):
 			deictic = connections['in_front_of_deictic'].compute(tr, lm)
 			extrinsic = connections['in_front_of_extrinsic'].compute(tr, lm)
 			intrinsic = connections['in_front_of_intrinsic'].compute(tr, lm)
-
-			return torch.max(torch.tensor([deictic, extrinsic, intrinsic], dtype=torch.float32, requires_grad=True))
+			print ("IN FORNT OF: ", deictic, extrinsic, intrinsic)
+			return torch.max(deictic, torch.max(extrinsic, intrinsic))
 		elif lm is None:
 			ret_val = np.average([self.compute(tr, entity) for entity in world.active_context])
 		return ret_val
@@ -1050,8 +1090,8 @@ class Above(Node):
 		vertical_dist_scaled = (tr.centroid[2] - lm.centroid[2]) / (max(tr.dimensions[2], lm.dimensions[2]) + 0.01)
 		# print ("WITHIN CONE: ", a, within_cone(a.centroid - b.centroid, np.array([0, 0, 1.0]), 0.1), sigmoid(vertical_dist_scaled, 1, 3), vertical_dist_scaled)
 		ret_val = self.connections['within_cone_region'].compute(tr.centroid - lm.centroid, np.array([0, 0, 1.0]), self.parameters["cone_width"])
-		#print ("ABOVE FACTORS: ", tr.location, lm.location, ret_val, sigmoid(vertical_dist_scaled, 1, 3))
-		ret_val = ret_val * sigmoid(vertical_dist_scaled, 1, 3)  # math.e ** (- 0.01 * get_centroid_distance_scaled(a, b))		
+		print ("ABOVE FACTORS: ", tr.location, lm.location, ret_val, sigmoid(vertical_dist_scaled, 1, 3))
+		ret_val = ret_val * sigmoid(vertical_dist_scaled, 1, 3)  # math.e ** (- 0.01 * get_centroid_distance_scaled(a, b))
 		# print ("RET: ", ret_val, type(ret_val), ret_val.requires_grad)
 		#ret_val.retain_grad()
 		#self.val1 = ret_val

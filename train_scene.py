@@ -17,8 +17,8 @@ world = World(bpy.context.scene, simulation_mode=True)
 #spatial2.observer = world.get_observer()
 spatial = Spatial(world)
 
-from voxeltree import Voxel
-Voxel(scope = world.entities)
+#from voxeltree import Voxel
+#Voxel(scope = world.entities)
 
 with open(datapath, "r") as f:
 	lines = f.readlines()
