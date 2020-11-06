@@ -8,6 +8,7 @@ import os
 import sys
 import random
 from mathutils import Vector
+from mathutils.bvhtree import BVHTree
 from geometry_utils import *
 import enum
 import torch
@@ -32,6 +33,7 @@ class Entity(object):
 			components = [components]
 
 		self.components = components
+		self.full_mesh = []
 		
 		if name is not None:
 			self.name = name
@@ -43,10 +45,12 @@ class Entity(object):
 			queue = [item for item in self.components]
 			while len(queue) != 0:
 				parent = queue[0]
+				if type(parent) != Entity:
+					self.full_mesh.append(parent)
 				queue.pop(0)
 				for ob in Entity.scene.objects:                
 					if ob.parent == parent and ob.type == "MESH":
-						self.components.append(ob)
+						self.components.append(ob)												
 						queue.append(ob)
 
 		#print ("COMP: ", components, explore_children, type(self.components[0]))
@@ -91,6 +95,8 @@ class Entity(object):
 		self.vertex_set = self.compute_vertex_set()
 
 		self.faces = self.compute_faces()
+
+		self.bvh_trees = [BVHTree.FromObject(item, bpy.context.evaluated_depsgraph_get(), epsilon=1.0) for item in self.full_mesh]
 
 		#The coordiante span of the entity. In other words,
 		#the minimum and maximum coordinates of entity's points

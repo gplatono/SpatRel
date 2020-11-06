@@ -323,8 +323,8 @@ class Spatial:
 				annotation = [item.strip() for item in annotation]
 				# if "above" not in annotation[1] and "below" not in annotation[1]:
 				# 	continue
-				if "right" not in annotation[1] and "left" not in annotation[1]:
-				#if "near" not in annotation[1]:
+				#if "right" not in annotation[1] and "left" not in annotation[1]:
+				if "touching" not in annotation[1]:
 					continue
 
 				### postive test ###
@@ -458,7 +458,7 @@ class WithinConeRegion(Node):
 
 	def compute(self, vect, direction, width):
 		direction = direction / np.linalg.norm(direction)
-		vect = vect / np.linalg.norm(vect)
+		vect = vect / (np.linalg.norm(vect) + 0.001)
 		cos = direction.dot(vect)# / (np.linalg.norm(direction) * np.linalg.norm(vect))
 		angle = math.acos(cos)
 		within_measure = width - angle
@@ -655,19 +655,27 @@ class Touching(Node):
 		self.parameters = {"touch_face_threshold": torch.tensor(0.95, dtype=torch.float32, requires_grad=True),
 						   "mesh_dist_threshold": torch.tensor(0.1, dtype=torch.float32, requires_grad=True), 
 						   "mesh_vs_volume_weight": torch.tensor(0.3, dtype=torch.float32, requires_grad=True),
-						   "mesh_dist_scale": torch.tensor(1.0, dtype=torch.float32, requires_grad=True)}
+						   "mesh_dist_scale": torch.tensor(1.0, dtype=torch.float32, requires_grad=True),
+						   "centroid_dist_threshold": torch.tensor(1.5, dtype=torch.float32, requires_grad=True)}
 
 	def compute(self, tr, lm):
 		if tr == lm:
 			return torch.tensor(0.0)
 		mesh_dist = 1e9
 		planar_dist = 1e9
+		# from mathutils.bvhtree import BVHTree
+		# for a in tr.full_mesh:
+		# 	for b in lm.full_mesh
+		#inters = intersect_from_bmesh(tr, lm, bpy.context.evaluated_depsgraph_get(), eps_threshold=0.1)
+		# inters = intersect_from_bmesh(tr, lm)
+		# intersectBHV = torch.tensor(float(inters), dtype=torch.float32, requires_grad=True)
+		# return intersectBHV
 		shared_volume = shared_volume_scaled(tr, lm)
 		if lm.get("planar") is not None:
 			planar_dist = get_planar_distance_scaled(lm, tr)
 		elif tr.get("planar") is not None:
 			planar_dist = get_planar_distance_scaled(tr, lm)
-		if get_centroid_distance_scaled(tr, lm) <= 1.5:
+		if get_centroid_distance_scaled(tr, lm) <= self.parameters["centroid_dist_threshold"]:
 			mesh_dist = closest_mesh_distance(tr, lm) / (min(tr.size, lm.size) + 0.01)
 		mesh_dist = torch.tensor(min(mesh_dist, planar_dist), dtype=torch.float32, requires_grad=True)  # transfer to tensors
 		touch_face = torch.tensor(0.0, dtype=torch.float32, requires_grad=True)
@@ -710,6 +718,8 @@ class RightOf_Deictic(Node):
 						   "exp_decay": torch.tensor(0.6, dtype=torch.float32, requires_grad=True)}
 
 	def compute(self, tr, lm):
+		if tr == lm:
+			return torch.tensor(0.0, dtype=torch.float32, requires_grad=True)
 		horizontal_component = self.connections['horizontal_deictic_component'].compute(tr, lm)
 		# asym_inv_exp(axial_dist[0], 1, 1, 0.05)
 		vertical_component = self.connections['vertical_deictic_component'].compute(tr, lm)
@@ -749,16 +759,18 @@ class RightOf_Extrinsic(Node):
 						   "dist_factor_scale": torch.tensor(1.0, dtype=torch.float32, requires_grad=True)}
 
 	def compute(self, tr, lm):
+		if tr == lm:
+			return torch.tensor(0.0, dtype=torch.float32, requires_grad=True)
 		disp_vec = np.array(tr.bbox_centroid - lm.bbox_centroid)
 		dist = np.linalg.norm(disp_vec)
-		disp_vec = disp_vec / dist
+		disp_vec = disp_vec / (dist + 0.001)
 
 		extrinsic_right = self.network.world.right_axis
 		#cos = extrinsic_right.dot(disp_vec)
 
 		within_cone_factor = self.connections['within_cone_region'].compute(disp_vec, extrinsic_right, self.parameters['cone_width'])
 		scaled_dist_factor = dist / (max(tr.size, lm.size) + 0.001)
-		print ("WITHIN CONE: ", within_cone_factor, "DIST: ", scaled_dist_factor)
+		#print ("WITHIN CONE EXTR: ", within_cone_factor, "DIST: ", scaled_dist_factor)
 		final_score = within_cone_factor * math.e ** (- torch.abs(self.parameters['dist_factor_scale']) * scaled_dist_factor)
 
 		#final_score = math.e ** (- self.parameters["angle_weight"] * (1 - cos)) \
@@ -776,21 +788,29 @@ class RightOf_Intrinsic(Node):
 	def __init__(self, connections, network=None):
 		self.connections = connections
 		self.parameters = {"angle_weight": torch.tensor(0.1, dtype=torch.float32, requires_grad=True),
-						   "size_weight": torch.tensor(0.1, dtype=torch.float32, requires_grad=True)}
+						   "size_weight": torch.tensor(0.1, dtype=torch.float32, requires_grad=True),
+						   "cone_width": torch.tensor(1.0, dtype=torch.float32, requires_grad=True),
+						   "dist_factor_scale": torch.tensor(1.0, dtype=torch.float32, requires_grad=True)}
 
 	def compute(self, tr, lm):
-		if lm.right is None:
+		if lm.right is None or tr == lm:
 			return torch.tensor(0.0, dtype=torch.float32, requires_grad=True)
 		disp_vec = np.array(tr.bbox_centroid - lm.bbox_centroid)
 		dist = np.linalg.norm(disp_vec)
-		disp_vec = disp_vec / dist
+		disp_vec = disp_vec / (dist + 0.001)
 
 		intrinsic_right = np.array(lm.right)
 		# print('INTRINSIC: ', intrinsic_right, lm.right, disp_vec)
 		cos = intrinsic_right.dot(disp_vec)
 
-		final_score = math.e ** (- self.parameters["angle_weight"] * (1 - cos)) \
-					  * math.e ** (- self.parameters["size_weight"] * dist / max(tr.size, lm.size))
+		within_cone_factor = self.connections['within_cone_region'].compute(disp_vec, intrinsic_right, self.parameters['cone_width'])
+		scaled_dist_factor = dist / (max(tr.size, lm.size) + 0.001)
+		print ("WITHIN CONE EXTR: ", within_cone_factor, "DIST: ", scaled_dist_factor)
+		final_score = within_cone_factor * math.e ** (- torch.abs(self.parameters['dist_factor_scale']) * scaled_dist_factor)
+
+
+		#final_score = math.e ** (- self.parameters["angle_weight"] * (1 - cos)) \
+		#			  * math.e ** (- self.parameters["size_weight"] * dist / max(tr.size, lm.size))
 		#final_score = torch.tensor([final_score], dtype=torch.float32)
 		return final_score
 
@@ -1030,7 +1050,7 @@ class Above(Node):
 		vertical_dist_scaled = (tr.centroid[2] - lm.centroid[2]) / (max(tr.dimensions[2], lm.dimensions[2]) + 0.01)
 		# print ("WITHIN CONE: ", a, within_cone(a.centroid - b.centroid, np.array([0, 0, 1.0]), 0.1), sigmoid(vertical_dist_scaled, 1, 3), vertical_dist_scaled)
 		ret_val = self.connections['within_cone_region'].compute(tr.centroid - lm.centroid, np.array([0, 0, 1.0]), self.parameters["cone_width"])
-		print ("ABOVE FACTORS: ", tr.location, lm.location, ret_val, sigmoid(vertical_dist_scaled, 1, 3))
+		#print ("ABOVE FACTORS: ", tr.location, lm.location, ret_val, sigmoid(vertical_dist_scaled, 1, 3))
 		ret_val = ret_val * sigmoid(vertical_dist_scaled, 1, 3)  # math.e ** (- 0.01 * get_centroid_distance_scaled(a, b))		
 		# print ("RET: ", ret_val, type(ret_val), ret_val.requires_grad)
 		#ret_val.retain_grad()
@@ -1343,20 +1363,6 @@ class Apart(Node):
 # =======================================================================================================
 
 
-def dist_obj(a, b):
-	if type(a) is not Entity or type(b) is not Entity:
-		return -1
-	bbox_a = a.bbox
-	bbox_b = b.bbox
-	center_a = a.bbox_centroid
-	center_b = b.bbox_centroid
-	if a.get('extended') is not None:
-		return a.get_closest_face_distance(center_b)
-	if b.get('extended') is not None:
-		return b.get_closest_face_distance(center_a)
-	return point_distance(center_a, center_b)
-
-
 # # Returns the orientation of the entity relative to the coordinate axes
 # # Inputs: a - entity
 # # Return value: triple representing the coordinates of the orientation vector
@@ -1383,45 +1389,8 @@ def dist_obj(a, b):
 # 					(max(dim_a[0], dim_a[1]) + max(dim_b[0], dim_b[1])), 0, 1 / math.sqrt(2 * math.pi))
 
 
-# Computes the degree of vertical offset between two entities
-# The vertical offset measures how far apart are two entities one
-# of which is above the other. Takes the maximum value when one is
-# directly on top of another
-# Inputs: a, b - entities
-# Return value: real number from [0, 1]
-def v_offset(a, b):
-	dim_a = a.dimensions
-	dim_b = b.dimensions
-	center_a = a.bbox_centroid
-	center_b = b.bbox_centroid
-	h_dist = math.sqrt((center_a[0] - center_b[0]) ** 2 + (center_a[1] - center_b[1]) ** 2)
-	return gaussian(2 * (center_a[2] - center_b[2] - 0.5 * (dim_a[2] + dim_b[2])) / \
-					(1e-6 + dim_a[2] + dim_b[2]), 0, 1 / math.sqrt(2 * math.pi))
 
 
-def scaled_axial_distance(a_bbox, b_bbox):
-	a_span = (a_bbox[1] - a_bbox[0], a_bbox[3] - a_bbox[2])
-	b_span = (b_bbox[1] - b_bbox[0], b_bbox[3] - b_bbox[2])
-	a_center = ((a_bbox[0] + a_bbox[1]) / 2, (a_bbox[2] + a_bbox[3]) / 2)
-	b_center = ((b_bbox[0] + b_bbox[1]) / 2, (b_bbox[2] + b_bbox[3]) / 2)
-	axis_dist = (a_center[0] - b_center[0], a_center[1] - b_center[1])
-	# print ("SPANS:", a_span, b_span, a_center, b_center)
-	return (axis_dist[0] / (max(a_span[0], b_span[0]) + 0.001), axis_dist[1] / (max(a_span[1], b_span[1]) + 0.001))
-
-
-# Computes the projection of an entity onto the observer's visual plane
-# Inputs: entity - entity, observer - object, representing observer's position
-# and orientation
-# Return value: list of pixel coordinates in the observer's plane if vision
-def vp_project(entity, observer):
-	# points = reduce((lambda x,y: x + y), [[obj.matrix_world * v.co for v in obj.data.vertices] for obj in entity.constituents if (obj is not None and hasattr(obj.data, 'vertices') and hasattr(obj, 'matrix_world'))])
-	# co_2d = [bpy_extras.object_utils.world_to_camera_view(world.scene, observer.camera, point) for point in points]
-	# render_scale = world.scene.render.resolution_percentage / 100
-	# render_size = (int(world.scene.render.resolution_x * render_scale), int(world.scene.render.resolution_y * render_scale),)
-	# pixel_coords = [(round(point.x * render_size[0]),round(point.y * render_size[1]),) for point in co_2d]
-	pixel_coords = [(eye_projection(point, observer.up, observer.right, np.linalg.norm(observer.location), 2)) for point
-					in entity.vertex_set]
-	return pixel_coords
 
 
 # # Computes the nearness measure for two entities
@@ -1677,22 +1646,6 @@ def vp_project(entity, observer):
 # 	return ret_val
 
 
-# Computes a special function that takes a maximum value at cutoff point
-# and decreasing to zero with linear speed to the left, and with exponetial speed to the right
-# Inputs: x - position; cutoff - maximum point; left, right - degradation coeeficients for left and
-# right sides of the function
-# Return value: real number from [0, 1]
-def asym_inv_exp(x, cutoff, left, right):
-	return math.exp(- right * math.fabs(x - cutoff)) if x >= cutoff else max(0, left * (x / cutoff) ** 3)
-
-# # Symmetric to the asym_inv_exp.
-# # Computes a special function that takes a maximum value at cutoff point
-# # and decreasing to zero with linear speed to the RIGHT, and with exponetial speed to the LEFT
-# # Inputs: x - position; cutoff - maximum point; left, right - degradation coeeficients for left and
-# # right sides of the function
-# # Return value: real number from [0, 1]
-# def asym_inv_exp_left(x, cutoff, left, right):
-# 	return math.exp(- left * (x - cutoff) ** 2) if x < cutoff else max(0, right * (x / cutoff) ** 3)
 
 
 # def to_the_left_of(figure, ground=None):

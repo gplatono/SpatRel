@@ -33,8 +33,12 @@ def get_normal(a, b, c):
     c = np.array(c)
     u = b - a
     v = c - a
-    u_x_v = np.cross(u, v)    
-    return u_x_v / np.linalg.norm(u_x_v)
+    u_x_v = np.cross(u, v)
+    u_x_v_len = np.linalg.norm(u_x_v)
+    if u_x_v_len == 0:
+        return np.array([0, 0, 0])
+    else:
+        return u_x_v / u_x_v_len
     #return cross_product((a[0] - b[0], a[1] - b[1], a[2] - b[2]),
 #                         (c[0] - b[0], c[1] - b[1], c[2] - b[2]))
 
@@ -645,16 +649,100 @@ def intersection_check(a, b):
     bm2.transform(b.matrix_world) 
 
     #Create BVH trees based on bmeshes
+    # a_BVHtree = BVHTree.FromBMesh(bm1, epsilon=1.5)
+    # b_BVHtree = BVHTree.FromBMesh(bm2, epsilon=1.5)           
     a_BVHtree = BVHTree.FromBMesh(bm1)
     b_BVHtree = BVHTree.FromBMesh(bm2)           
 
     #Check if the overlap set is empty and return the result
     return a_BVHtree.overlap(b_BVHtree) != []
 
-def intersection_entities(a, b):
-    for acomp in a.components:
-        for bcomp in b.components:
+def intersect_from_bmesh(a, b):
+    print (a.full_mesh, b.full_mesh)
+    for acomp in a.full_mesh:
+        for bcomp in b.full_mesh:
             if intersection_check(acomp, bcomp):
                 return True
-            
     return False
+
+
+def intersect_from_objects(a, b, depsgraph, eps_threshold=0.01):
+    print (a.full_mesh, b.full_mesh)
+    for acomp in a.full_mesh:
+        acomp = BVHTree.FromObject(acomp, depsgraph, epsilon = eps_threshold)
+        for bcomp in b.full_mesh:
+            bcomp = BVHTree.FromObject(bcomp, depsgraph, epsilon = eps_threshold)
+            print (acomp.overlap(bcomp))
+            if acomp.overlap(bcomp) != []:
+                return True
+    return False
+
+# Computes the projection of an entity onto the observer's visual plane
+# Inputs: entity - entity, observer - object, representing observer's position
+# and orientation
+# Return value: list of pixel coordinates in the observer's plane if vision
+def vp_project(entity, observer):
+    # points = reduce((lambda x,y: x + y), [[obj.matrix_world * v.co for v in obj.data.vertices] for obj in entity.constituents if (obj is not None and hasattr(obj.data, 'vertices') and hasattr(obj, 'matrix_world'))])
+    # co_2d = [bpy_extras.object_utils.world_to_camera_view(world.scene, observer.camera, point) for point in points]
+    # render_scale = world.scene.render.resolution_percentage / 100
+    # render_size = (int(world.scene.render.resolution_x * render_scale), int(world.scene.render.resolution_y * render_scale),)
+    # pixel_coords = [(round(point.x * render_size[0]),round(point.y * render_size[1]),) for point in co_2d]
+    pixel_coords = [(eye_projection(point, observer.up, observer.right, np.linalg.norm(observer.location), 2)) for point
+                    in entity.vertex_set]
+    return pixel_coords
+
+# Computes a special function that takes a maximum value at cutoff point
+# and decreasing to zero with linear speed to the left, and with exponetial speed to the right
+# Inputs: x - position; cutoff - maximum point; left, right - degradation coeeficients for left and
+# right sides of the function
+# Return value: real number from [0, 1]
+def asym_inv_exp(x, cutoff, left, right):
+    return math.exp(- right * math.fabs(x - cutoff)) if x >= cutoff else max(0, left * (x / cutoff) ** 3)
+
+# Symmetric to the asym_inv_exp.
+# Computes a special function that takes a maximum value at cutoff point
+# and decreasing to zero with linear speed to the RIGHT, and with exponetial speed to the LEFT
+# Inputs: x - position; cutoff - maximum point; left, right - degradation coeeficients for left and
+# right sides of the function
+# Return value: real number from [0, 1]
+def asym_inv_exp_left(x, cutoff, left, right):
+    return math.exp(- left * (x - cutoff) ** 2) if x < cutoff else max(0, right * (x / cutoff) ** 3)
+
+
+# Computes the degree of vertical offset between two entities
+# The vertical offset measures how far apart are two entities one
+# of which is above the other. Takes the maximum value when one is
+# directly on top of another
+# Inputs: a, b - entities
+# Return value: real number from [0, 1]
+def v_offset(a, b):
+    dim_a = a.dimensions
+    dim_b = b.dimensions
+    center_a = a.bbox_centroid
+    center_b = b.bbox_centroid
+    h_dist = math.sqrt((center_a[0] - center_b[0]) ** 2 + (center_a[1] - center_b[1]) ** 2)
+    return gaussian(2 * (center_a[2] - center_b[2] - 0.5 * (dim_a[2] + dim_b[2])) / \
+                    (1e-6 + dim_a[2] + dim_b[2]), 0, 1 / math.sqrt(2 * math.pi))
+
+
+def scaled_axial_distance(a_bbox, b_bbox):
+    a_span = (a_bbox[1] - a_bbox[0], a_bbox[3] - a_bbox[2])
+    b_span = (b_bbox[1] - b_bbox[0], b_bbox[3] - b_bbox[2])
+    a_center = ((a_bbox[0] + a_bbox[1]) / 2, (a_bbox[2] + a_bbox[3]) / 2)
+    b_center = ((b_bbox[0] + b_bbox[1]) / 2, (b_bbox[2] + b_bbox[3]) / 2)
+    axis_dist = (a_center[0] - b_center[0], a_center[1] - b_center[1])
+    # print ("SPANS:", a_span, b_span, a_center, b_center)
+    return (axis_dist[0] / (max(a_span[0], b_span[0]) + 0.001), axis_dist[1] / (max(a_span[1], b_span[1]) + 0.001))
+
+def dist_obj(a, b):
+    if not hasattr(a, "bbox") or not hasattr(b, "bbox"):
+        return -1
+    bbox_a = a.bbox
+    bbox_b = b.bbox
+    center_a = a.bbox_centroid
+    center_b = b.bbox_centroid
+    if a.get('extended') is not None:
+        return a.get_closest_face_distance(center_b)
+    if b.get('extended') is not None:
+        return b.get_closest_face_distance(center_a)
+    return point_distance(center_a, center_b)
