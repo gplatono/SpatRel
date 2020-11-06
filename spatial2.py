@@ -324,20 +324,20 @@ class Spatial:
 				annotation = [item.strip() for item in annotation]
 				# if "above" not in annotation[1] and "below" not in annotation[1]:
 				# 	continue
-				if "behind" not in annotation[1]:
+				if "in front of" not in annotation[1]:
 				#if "near" not in annotation[1]:
 					continue
 
-				# if "d" in annotation[1]:
-				# 	continue
+				if "d" in annotation[1]:
+					continue
 
 				### postive test ###
 				# if "not" in annotation[1]:
 				# 	continue
 				### negative test ###
-				# if "not" not in annotation[1]:
-				# 	continue
-				print("annotation: ", annotation)
+				if "not" not in annotation[1]:
+					continue
+				# print("annotation: ", annotation)
 
 
 				sample, label, relation = self.process_sample(annotation)
@@ -968,8 +968,7 @@ class InFrontOf(Node):
 			deictic = connections['in_front_of_deictic'].compute(tr, lm)
 			extrinsic = connections['in_front_of_extrinsic'].compute(tr, lm)
 			intrinsic = connections['in_front_of_intrinsic'].compute(tr, lm)
-
-			return torch.max(torch.tensor([deictic, extrinsic, intrinsic], dtype=torch.float32, requires_grad=True))
+			return torch.max(deictic, torch.max(extrinsic, intrinsic))
 		elif lm is None:
 			ret_val = np.average([self.compute(tr, entity) for entity in world.active_context])
 		return ret_val
