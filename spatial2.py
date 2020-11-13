@@ -20,7 +20,7 @@ class Spatial:
 		self.reload(world)
 		# self.world = world
 		# self.vis_proj = self.cache_2d_projections()
-		self.spat_rel = ['to_the_right_of_deictic.p', 'in_front_of_deictic.p', 'supported_by.p', 'touching.p', 'to_the_right_of.p', 'to_the_left_of.p', 'in_front_of.p', 'behind.p', 'above.p', 'below.p', 'near.p', 'over.p', 'on.p', 'under.p', 'between.p', 'inside.p', 'next_to.p']
+		self.spat_rel = ['to_the_right_of_deictic.p', 'in_front_of_deictic.p', 'in_front_of_intrinsic.p' 'supported_by.p', 'touching.p', 'to_the_right_of.p', 'to_the_left_of.p', 'in_front_of.p', 'behind.p', 'above.p', 'below.p', 'near.p', 'over.p', 'on.p', 'under.p', 'between.p', 'inside.p', 'next_to.p']
 
 
 		self.str_to_pred = {
@@ -93,6 +93,7 @@ class Spatial:
 			'front.a': self.in_front_of,
 			'frontmost.a': self.in_front_of,
 			'in front of d': self.in_front_of_deictic,
+			'in front of i': self.in_front_of_intrinsic,
 
 			'behind.p': self.behind,
 			'behind': self.behind,
@@ -324,8 +325,11 @@ class Spatial:
 				annotation = [item.strip() for item in annotation]
 				# if "above" not in annotation[1] and "below" not in annotation[1]:
 				# 	continue
-				if "in front of d" not in annotation[1]:
+				if "to the right of" not in annotation[1]:
 				#if "near" not in annotation[1]:
+					continue
+
+				if "d" in annotation[1]:
 					continue
 
 				### postive test ###
@@ -334,7 +338,7 @@ class Spatial:
 				### negative test ###
 				# if "not" not in annotation[1]:
 				# 	continue
-				#print("annotation: ", annotation)
+				# print("annotation: ", annotation)
 
 
 				sample, label, relation = self.process_sample(annotation)
@@ -731,7 +735,9 @@ class RightOf_Deictic(Node):
 		#                             dtype=torch.float32)  # transferred tensor
 		# final_score = torch.dot(hv_component, self.parameters["weight"])
 		# print(final_score)
+		# print("params: ", self.parameters)
 		final_score = 1 / (1 + math.e ** (- torch.abs(self.parameters['sigmoid_decay']) * factor_sum))
+		# print("score: ", final_score)
 		#final_score = torch.exp(- torch.abs(self.parameters['exp_decay']) * factor_sum)
 		# hor_weight = torch.abs(self.parameters["hor_weight"])
 		# ver_weight = torch.abs(self.parameters["ver_weight"])
@@ -772,7 +778,7 @@ class RightOf_Extrinsic(Node):
 		scaled_dist_factor = dist / (max(tr.size, lm.size) + 0.001)
 		#print ("WITHIN CONE EXTR: ", within_cone_factor, "DIST: ", scaled_dist_factor)
 		final_score = within_cone_factor * math.e ** (- torch.abs(self.parameters['dist_factor_scale']) * scaled_dist_factor)
-
+		# print("params: ", self.parameters)
 		#final_score = math.e ** (- self.parameters["angle_weight"] * (1 - cos)) \
 					  #* math.e ** (- self.parameters["size_weight"] * dist / max(tr.size, lm.size))
 		#final_score = torch.tensor([final_score], dtype=torch.float32)
@@ -805,9 +811,9 @@ class RightOf_Intrinsic(Node):
 
 		within_cone_factor = self.connections['within_cone_region'].compute(disp_vec, intrinsic_right, self.parameters['cone_width'])
 		scaled_dist_factor = dist / (max(tr.size, lm.size) + 0.001)
-		print ("WITHIN CONE EXTR: ", within_cone_factor, "DIST: ", scaled_dist_factor)
+		# print ("WITHIN CONE EXTR: ", within_cone_factor, "DIST: ", scaled_dist_factor)
+		print(self.parameters)
 		final_score = within_cone_factor * math.e ** (- torch.abs(self.parameters['dist_factor_scale']) * scaled_dist_factor)
-
 
 		#final_score = math.e ** (- self.parameters["angle_weight"] * (1 - cos)) \
 		#			  * math.e ** (- self.parameters["size_weight"] * dist / max(tr.size, lm.size))
@@ -920,11 +926,11 @@ class InFrontOf_Deictic(Node):
 		scaled_proj_dist = torch.tensor(scaled_proj_dist, dtype=torch.float32)
 		projection_factor = math.e ** (self.parameters["projection_factor_scale"] * scaled_proj_dist)
 
-		# print(self.parameters)
+		print("params: ", self.parameters)
 
 		final_score = self.parameters["observer_dist_factor_weight"] * observer_dist_factor \
 			   + self.parameters["projection_factor_weight"] * projection_factor
-		# print(final_score)
+		print(final_score)
 		return final_score
 
 	def str(self):
@@ -1062,9 +1068,10 @@ class Behind(Node):
 		ret_val = 0
 		if type(tr) == Entity and type(lm) == Entity:
 			connections = self.get_connections()
-			return torch.max(torch.tensor([connections['behind_deictic'].compute(tr, lm),
-										   connections['behind_intrinsic'].compute(tr, lm),
-										   connections['behind_extrinsic'].compute(tr, lm)], requires_grad=True))
+			deictic = connections['behind_deictic'].compute(tr, lm)
+			intrinsic = connections['behind_intrinsic'].compute(tr, lm)
+			extrinsic = connections['behind_extrinsic'].compute(tr, lm)
+			return torch.max(deictic, torch.max(intrinsic, extrinsic))
 		elif lm is None:
 			ret_val = np.average([self.compute(tr, entity) for entity in self.network.world.active_context])
 		return ret_val
