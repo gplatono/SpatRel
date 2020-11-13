@@ -22,11 +22,11 @@ class Span:
     def compute_bbox(self):
         return np.array([[self.x1, self.y1, self.z1],
                         [self.x1, self.y1, self.z2],
-                        [self.x1, self.y2, self.z1]
+                        [self.x1, self.y2, self.z1],
                         [self.x1, self.y2, self.z2],
                         [self.x2, self.y1, self.z1],
                         [self.x2, self.y1, self.z2],
-                        [self.x2, self.y2, self.z1]
+                        [self.x2, self.y2, self.z1],
                         [self.x2, self.y2, self.z2]])
 
 #Computes the value of the univariate Gaussian
@@ -278,14 +278,26 @@ def get_span_from_box(box):
     """
     return np.array([box[0][0], box[7][0], box[0][1], box[7][1], box[0][2], box[7][2]])
 
-def intersect_box(box, entity):
+def box_point_containment(box, point):
     """
+    Return True iff the given point is inside the box.
+
     Box vertices must be listed in the following order: [-x, -y, -z], [-x, -y, +z], [-x, +y, -z], [-x, +y, +z],
     [+x, -y, -z], [+x, -y, +z], [+x, +y, -z], [+x, +y, +z].
     """
 
-    for v in entity.vertices:
-        if box[0][0] <= v[0] and v[0] <= box[7][0] and box[0][1] <= v[1] and v[1] <= box[7][1] and box[0][2] <= v[2] and v[2] <= box[7][2]:
+    return box[0][0] <= point[0] and point[0] <= box[7][0] and box[0][1] <= point[1] and point[1] <= box[7][1] and box[0][2] <= point[2] and point[2] <= box[7][2]
+
+def box_entity_vertex_containment(box, entity):
+    """
+    Return True iff any of the entity's vertices are inside the box.
+
+    Box vertices must be listed in the following order: [-x, -y, -z], [-x, -y, +z], [-x, +y, -z], [-x, +y, +z],
+    [+x, -y, -z], [+x, -y, +z], [+x, +y, -z], [+x, +y, +z].
+    """
+
+    for v in entity.vertex_set:
+        if box_point_containment(box, v):
             return True
 
     return False
