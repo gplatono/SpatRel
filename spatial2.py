@@ -20,7 +20,7 @@ class Spatial:
 		self.reload(world)
 		# self.world = world
 		# self.vis_proj = self.cache_2d_projections()
-		self.spat_rel = ['to_the_right_of_deictic.p', 'in_front_of_deictic.p', 'in_front_of_intrinsic.p' 'supported_by.p', 'touching.p', 'to_the_right_of.p', 'to_the_left_of.p', 'in_front_of.p', 'behind.p', 'above.p', 'below.p', 'near.p', 'over.p', 'on.p', 'under.p', 'between.p', 'inside.p', 'next_to.p']
+		self.spat_rel = ['to_the_right_of_deictic.p', 'in_front_of_deictic.p', 'in_front_of_intrinsic.p', 'supported_by.p', 'touching.p', 'to_the_right_of.p', 'to_the_left_of.p', 'in_front_of.p', 'behind.p', 'above.p', 'below.p', 'near.p', 'over.p', 'on.p', 'under.p', 'between.p', 'inside.p', 'next_to.p']
 
 
 		self.str_to_pred = {
@@ -325,12 +325,12 @@ class Spatial:
 				annotation = [item.strip() for item in annotation]
 				# if "above" not in annotation[1] and "below" not in annotation[1]:
 				# 	continue
-				if "to the right of" not in annotation[1]:
+				if "in front of i" not in annotation[1]:
 				#if "near" not in annotation[1]:
 					continue
 
-				if "d" in annotation[1]:
-					continue
+				# if "d" in annotation[1]:
+				# 	continue
 
 				### postive test ###
 				# if "not" in annotation[1]:
@@ -348,7 +348,7 @@ class Spatial:
 				#print (sample, label, relation)
 				output = relation(*sample)
 
-				# print("ANNOTATION: ", annotation, round(float(output), 2), round(float(label), 2))
+				print("ANNOTATION: ", annotation, round(float(output), 2), round(float(label), 2))
 				loss = torch.square(label - output)
 				scene_loss = scene_loss + loss
 
@@ -987,6 +987,7 @@ class InFrontOf_Intrinsic(Node):
 
 	def compute(self, tr, lm):
 		# print(self.parameters)
+		print (lm.front)
 		if tr == lm or lm.front is None:
 			return torch.tensor(0.0, dtype=torch.float32, requires_grad=True)
 		disp_vec = np.array(tr.bbox_centroid - lm.bbox_centroid)
@@ -996,11 +997,14 @@ class InFrontOf_Intrinsic(Node):
 		intrinsic_front = lm.front
 		#cos = extrinsic_right.dot(disp_vec)
 
+		#print (intrinsic_front, disp_vec, self.parameters['cone_width'])
+
 		within_cone_factor = self.connections['within_cone_region'].compute(disp_vec, intrinsic_front, self.parameters['cone_width'])
 		scaled_dist_factor = dist / (max(tr.size, lm.size) + 0.001)
+
+		#print (within_cone_factor, scaled_dist_factor)
 		#print ("WITHIN CONE EXTR: ", within_cone_factor, "DIST: ", scaled_dist_factor)
 		final_score = within_cone_factor * math.e ** (- torch.abs(self.parameters['dist_decay_param']) * scaled_dist_factor)
-
 
 
 		# if lm.front is not None:

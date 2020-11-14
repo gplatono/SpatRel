@@ -4,6 +4,31 @@ import bpy, bmesh
 from mathutils.bvhtree import BVHTree
 
 
+class Span:
+    def __init__(self, span_data):
+        self.x_min = self.x1 = span_data[0]
+        self.x_max = self.x2 = span_data[1]
+        self.y_min = self.y1 = span_data[2]
+        self.y_max = self.y2 = span_data[3]
+        self.z_min = self.z1 = span_data[4]
+        self.z_max = self.z2 = span_data[5]
+
+        self.bbox = self.compute_bbox()
+
+    @classmethod
+    def FromRange(cls, x_min, x_max, y_min, y_max, z_min, z_max):
+        cls([x_min, x_max, y_min, y_max, z_min, z_max])
+
+    def compute_bbox(self):
+        return np.array([[self.x1, self.y1, self.z1],
+                        [self.x1, self.y1, self.z2],
+                        [self.x1, self.y2, self.z1],
+                        [self.x1, self.y2, self.z2],
+                        [self.x2, self.y1, self.z1],
+                        [self.x2, self.y1, self.z2],
+                        [self.x2, self.y2, self.z1],
+                        [self.x2, self.y2, self.z2]])
+
 #Computes the value of the univariate Gaussian
 #Inputs: x - random variable value; mu - mean; sigma - variance
 #Return value: real number
@@ -245,6 +270,54 @@ def closest_mesh_distance_scaled(ent_a, ent_b):
     a_dims = ent_a.dimensions
     b_dims = ent_b.dimensions
     return closest_mesh_distance(ent_a, ent_b) / (max(a_dims) + max(b_dims) + 0.0001)
+
+def get_span_from_box(box):
+    """
+    Box vertices must be listed in the following order: [-x, -y, -z], [-x, -y, +z], [-x, +y, -z], [-x, +y, +z],
+    [+x, -y, -z], [+x, -y, +z], [+x, +y, -z], [+x, +y, +z].
+    """
+    return np.array([box[0][0], box[7][0], box[0][1], box[7][1], box[0][2], box[7][2]])
+
+def box_point_containment(box, point):
+    """
+    Return True iff the given point is inside the box.
+
+    Box vertices must be listed in the following order: [-x, -y, -z], [-x, -y, +z], [-x, +y, -z], [-x, +y, +z],
+    [+x, -y, -z], [+x, -y, +z], [+x, +y, -z], [+x, +y, +z].
+    """
+
+    return box[0][0] <= point[0] and point[0] <= box[7][0] and box[0][1] <= point[1] and point[1] <= box[7][1] and box[0][2] <= point[2] and point[2] <= box[7][2]
+
+def box_entity_vertex_containment(box, entity):
+    """
+    Return True iff any of the entity's vertices are inside the box.
+
+    Box vertices must be listed in the following order: [-x, -y, -z], [-x, -y, +z], [-x, +y, -z], [-x, +y, +z],
+    [+x, -y, -z], [+x, -y, +z], [+x, +y, -z], [+x, +y, +z].
+    """
+
+    for v in entity.vertex_set:
+        if box_point_containment(box, v):
+            return True
+
+    return False
+
+def box_intersection_volume(box_a, box_b):
+    span_a = get_span_from_box(box_a)
+    span_b = get_span_from_box(box_b)
+
+    x_overlap = min(span_a[1], span_b[1]) - max(span_a[0], span_b[0])
+    y_overlap = min(span_a[3], span_b[3]) - max(span_a[2], span_b[2])
+    z_overlap = min(span_a[5], span_b[5]) - max(span_a[4], span_b[4])
+
+    if x_overlap <= 0 or y_overlap <= 0 or z_overlap <= 0:
+        vol = 0
+    else:
+        vol = x_overlap * y_overlap * z_overlap
+    return vol
+
+def check_box_intersection(box_a, box_b):
+    return box_intersection_volume(box_a, box_b) > 0
 
 #Computes the shared volume of the bounding boxes of two entities
 #Input: ent_a, ent_b - entities

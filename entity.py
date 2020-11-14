@@ -96,7 +96,7 @@ class Entity(object):
 
 		self.faces = self.compute_faces()
 
-		self.bvh_trees = [BVHTree.FromObject(item, bpy.context.evaluated_depsgraph_get(), epsilon=1.0) for item in self.full_mesh]
+		self.bvh_trees = [BVHTree.FromObject(item, bpy.context.evaluated_depsgraph_get()) for item in self.full_mesh]
 
 		#The coordiante span of the entity. In other words,
 		#the minimum and maximum coordinates of entity's points
