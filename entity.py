@@ -93,8 +93,17 @@ class Entity(object):
 	def compute_geometry(self):
 		#Compute mesh-related data
 		self.vertex_set = self.compute_vertex_set()
-
 		self.faces = self.compute_faces()
+
+		'''
+		print("\n" + self.name)
+		for face in self.faces:
+			if (len(face) == 4):
+				v = get_distance_from_plane(face[3], face[0], face[1], face[2])
+				if v>0.001:
+					print(v)
+		'''
+
 
 		self.bvh_trees = [BVHTree.FromObject(item, bpy.context.evaluated_depsgraph_get()) for item in self.full_mesh]
 

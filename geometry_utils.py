@@ -67,6 +67,79 @@ def get_normal(a, b, c):
     #return cross_product((a[0] - b[0], a[1] - b[1], a[2] - b[2]),
 #                         (c[0] - b[0], c[1] - b[1], c[2] - b[2]))
 
+#Given point a, b, c, d. return the projection of vector a to d on the plane of a,b c.
+def plane_projection(d, a, b, c):
+    ad = np.array(d) - np.array(a)
+    normal = get_normal(a, b, c)
+    return ad-ad.dot(normal)*normal
+
+#given point c, a ,b, return the shortest vector from c to the line segment ab
+def shortest_to_line_seg(c, a, b):
+    a = np.array(a)
+    b = np.array(b)
+    c = np.array(c)
+    ac = c - a
+    ab = b - a
+    bc = c - b
+    ba = a - b
+    ca = a - c
+    cb = b - c
+    try:
+        if (np.dot(ac, ab) < 0).all():
+            return ca
+        elif (np.dot(bc, ba) < 0).all():
+            return cb
+        else:
+            if np.linalg.norm(a-b) <= 0.001:
+                return point_distance(c, a)
+            ab_unit = ab/np.linalg.norm(ab)
+            proj_on_ab = np.dot(ac, ab_unit)*ab_unit
+            normal_vector = -(ac - proj_on_ab)
+            return normal_vector
+    except:
+        print(a)
+        print(b)
+        print(c)
+        raise
+
+#Given point d, a, b, c. Return the shortest vector from d to the triangle abc
+def shortest_to_triangle(d, a, b, c):
+    if in_triangle(d, a, b, c):
+        ad_proj = plane_projection(d, a, b, c)
+        ad = np.array(d) - np.array(a)
+        return -(ad - ad_proj)
+    else:
+        to_ab = shortest_to_line_seg(d, a, b)
+        to_ac = shortest_to_line_seg(d, a, c)
+        to_bc = shortest_to_line_seg(d, b, c)
+        ab = np.linalg.norm(to_ab)
+        ac = np.linalg.norm(to_ac)
+        bc = np.linalg.norm(to_bc)
+        if  ab < ac:
+            if ab < bc:
+                return to_ab
+            else:
+                return to_bc
+        else:
+            if ac < bc:
+                return to_ac
+            else:
+                return to_bc
+
+#given point a, b, c, d, return if the projection of ad to the plane abc is in the triangle abc
+def in_triangle(d, a, b, c):
+    a = np.array(a)
+    b = np.array(b)
+    c = np.array(c)
+    d = np.array(d)
+    proj = np.array(plane_projection(d, a, b, c))
+    diff_ab = proj - (b - a)
+    diff_ac = proj - (c - a)
+    temp = np.multiply(diff_ab,diff_ac)
+    if (temp <= 0).all():
+        return True
+    return False
+
 #Given a point and a plane defined by a, b and c
 #computes the orthogonal distance from the point to that plane
 #Inputs: point,a,b,c - point coordinates as tuples or lists
@@ -301,6 +374,14 @@ def box_entity_vertex_containment(box, entity):
             return True
 
     return False
+
+#return the set of vertex contained in the box and filtered out the rest
+def box_vertex_filter(box, vertex):
+    output = []
+    for v in vertex:
+        if box_point_containment(box, v):
+            output.append(v)
+    return output
 
 def box_intersection_volume(box_a, box_b):
     span_a = get_span_from_box(box_a)
