@@ -4,16 +4,17 @@ from mathutils.bvhtree import BVHTree
 from random import sample
 import os
 import sys
+import time
 
 filepath = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, filepath)
 
 from geometry_utils import *
+from world import World
 
 
 class Voxel:
     def __init__(self, scope, location=None, size=None, parent=None, depth=0, child_idx=[None, None, None]):
-        print(depth)
         if location is None:
             x_min = y_min = z_min = 1e9
             x_max = y_max = z_max = -1e9
@@ -260,16 +261,32 @@ class Voxel:
             faces = []
             for f in ent[2]:
                 if len(f) == 3:
-                    closest_point = self.location + shortest_to_triangle(self.location, f[0], f[1], f[2]).tolist()
-                    if box_point_containment(self.bbox_verts, closest_point):
+                    if box_point_containment(self.bbox_verts, f[0]) or box_point_containment(self.bbox_verts, f[1]) or box_point_containment(self.bbox_verts, f[2]):
                         faces.append(f)
+                    else:
+                        closest_point = self.location + shortest_to_triangle(self.location, f[0], f[1], f[2]).tolist()
+                        if box_point_containment(self.bbox_verts, closest_point):
+                            faces.append(f)
                 elif len(f) == 4:
-                    closest_point1 = self.location + shortest_to_triangle(self.location, f[0], f[1], f[2]).tolist()
-                    closest_point2 = self.location + shortest_to_triangle(self.location, f[3], f[1], f[2]).tolist()
-                    if box_point_containment(self.bbox_verts, closest_point1) or box_point_containment(self.bbox_verts, closest_point2):
+                    if box_point_containment(self.bbox_verts, f[0]) or box_point_containment(self.bbox_verts, f[1]) or \
+                            box_point_containment(self.bbox_verts, f[2]) or box_point_containment(self.bbox_verts, f[3]):
                         faces.append(f)
+                    else:
+                        closest_point1 = self.location + shortest_to_triangle(self.location, f[0], f[1], f[2]).tolist()
+                        closest_point2 = self.location + shortest_to_triangle(self.location, f[3], f[1], f[2]).tolist()
+                        if box_point_containment(self.bbox_verts, closest_point1) or box_point_containment(self.bbox_verts, closest_point2):
+                            faces.append(f)
             if not (len(vertex) == 0 and len(faces) == 0):
                 output.append([ent[0], vertex, faces])
+
+        #if there are only faces in the box or there is only 1 entity in the box, the box is filtered out.
+        count_vertex = 0
+        for ent in output:
+            if len(ent[1]) > 0:
+                count_vertex += 1
+        if count_vertex == 0 or len(output) < 2:
+            return []
+
         return output
 
 
@@ -285,51 +302,22 @@ def entitymap(entities, c):
         output.append([entity, vertex, faces])
     return output
 
+def test(vox):
+    i = input('enter lm, tr, depth: ')
+    while i != 'q':
+        tr, lm, d = i.split(":")
+        tr = world.find_entity_by_name(tr)
+        lm = world.find_entity_by_name(lm)
+        print(vox.contains([tr, lm], depth=int(d)))
+        i = input('enter lm, tr, depth: ')
+    print("test end")
 
-# class VoxelTree:
-# 	def __init__(self, scene):
-# 		self.scene = scene
 
-# 	def build(self, levels):
-# 		pass
-
-
-from world import World
-
+start = time.time()
 world = World(bpy.context.scene, simulation_mode=True)
 
-vox = Voxel(scope=entitymap(world.entities, 50), depth=6)
-# vox.fillNeighbors()
-vox.print_self()
+vox = Voxel(scope=entitymap(world.entities, 50), depth=8)
+end = time.time()
+print(end - start)
 
-'''
-print("\n\n")
-laptop = world.find_entity_by_name('laptop')
-table = world.find_entity_by_name('table')
-cardbox1 = world.find_entity_by_name('Cardbox 1')
-cardbox2 = world.find_entity_by_name('Cardbox 2')
-print(vox.contains([laptop, table], depth=5))
-print(vox.contains([cardbox1, table], depth=5))
-print(vox.contains([cardbox2, table], depth=5))
-exit(0)
-'''
-
-dep = 3
-
-bchair = world.find_entity_by_name('Blue Chair 1')
-bed2 = world.find_entity_by_name('bed2')
-p1 = world.find_entity_by_name('picture1')
-d1 = world.find_entity_by_name("Desk 1")
-bed1 = world.find_entity_by_name('bed1')
-print(vox.contains([p1, bed2], depth=dep))
-print(vox.contains([p1, bchair], depth=dep))
-print(vox.contains([bchair, bed2], depth=dep))
-print(vox.contains([p1, bed1], depth=dep))
-print(vox.contains([bchair, bed1], depth=dep))
-print(vox.contains([bchair, d1], depth=dep))
-
-
-y2 = world.find_entity_by_name('Yellow Book 2')
-ph = world.find_entity_by_name("Pencil Holder")
-print(vox.contains([y2, d1], depth=dep))
-print(vox.contains([ph, d1], depth=dep))
+test(vox)
