@@ -94,6 +94,10 @@ class Entity(object):
 		#Compute mesh-related data
 		self.vertex_set = self.compute_vertex_set()
 		self.faces = self.compute_faces()
+		self.vertices, self.polygons = self.compute_mesh_geometry()
+		#print (self.name)
+		#print (self.vertices)
+		#print (self.polygons, "\n")
 
 		'''
 		print("\n" + self.name)
@@ -105,7 +109,8 @@ class Entity(object):
 		'''
 
 
-		self.bvh_trees = [BVHTree.FromObject(item, bpy.context.evaluated_depsgraph_get()) for item in self.full_mesh]
+		#self.bvh_trees = [BVHTree.FromObject(item, bpy.context.evaluated_depsgraph_get()) for item in self.full_mesh]
+		self.bvh_tree = BVHTree.FromPolygons(self.vertices, self.polygons, epsilon=0.0)
 
 		#The coordiante span of the entity. In other words,
 		#the minimum and maximum coordinates of entity's points
@@ -190,6 +195,23 @@ class Entity(object):
 			else:
 				self.type_structure = None
 		return self.type_structure
+
+	def compute_mesh_geometry(self):
+		offset = 0
+		vertices = []
+		faces = []		
+		for component in self.components:
+			if type(component) == bpy_types.Object:
+				world_matrix = self.components[0].matrix_world
+				current_vert = [world_matrix @ v.co for v in component.data.vertices]
+				current_faces = [[idx + offset for idx in face.vertices] for face in component.data.polygons]
+			else:
+				current_vert = component.vertices
+				current_faces = [[idx + offset for idx in poly] for poly in component.polygons]
+			vertices += current_vert
+			faces += current_faces
+			offset += len(current_vert)
+		return vertices, faces
 
 	def compute_vertex_set(self):
 		"""
