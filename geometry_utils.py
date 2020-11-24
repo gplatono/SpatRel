@@ -71,7 +71,11 @@ def get_normal(a, b, c):
 def plane_projection(d, a, b, c):
     ad = np.array(d) - np.array(a)
     normal = get_normal(a, b, c)
-    return ad-ad.dot(normal)*normal
+    v1 = ad-ad.dot(normal)*normal
+    v2 = ad+ad.dot(normal)*normal
+    if np.linalg.norm(v1) > np.linalg.norm(v2):
+        return v2
+    return v1
 
 #given point c, a ,b, return the shortest vector from c to the line segment ab
 def shortest_to_line_seg(c, a, b):
@@ -84,23 +88,17 @@ def shortest_to_line_seg(c, a, b):
     ba = a - b
     ca = a - c
     cb = b - c
-    try:
-        if (np.dot(ac, ab) < 0).all():
+    if np.dot(ac, ab) < 0:
+        return ca
+    elif np.dot(bc, ba) < 0:
+        return cb
+    else:
+        if np.linalg.norm(a-b) <= 0.001:
             return ca
-        elif (np.dot(bc, ba) < 0).all():
-            return cb
-        else:
-            if np.linalg.norm(a-b) <= 0.001:
-                return point_distance(c, a)
-            ab_unit = ab/np.linalg.norm(ab)
-            proj_on_ab = np.dot(ac, ab_unit)*ab_unit
-            normal_vector = -(ac - proj_on_ab)
-            return normal_vector
-    except:
-        print(a)
-        print(b)
-        print(c)
-        raise
+        ab_unit = ab/np.linalg.norm(ab)
+        proj_on_ab = np.dot(ac, ab_unit)*ab_unit
+        normal_vector = -(ac - proj_on_ab)
+        return normal_vector
 
 #Given point d, a, b, c. Return the shortest vector from d to the triangle abc
 def shortest_to_triangle(d, a, b, c):
@@ -133,10 +131,12 @@ def in_triangle(d, a, b, c):
     c = np.array(c)
     d = np.array(d)
     proj = np.array(plane_projection(d, a, b, c))
-    diff_ab = proj - (b - a)
-    diff_ac = proj - (c - a)
-    temp = np.multiply(diff_ab,diff_ac)
-    if (temp <= 0).all():
+    pt_in_tri = proj+a
+    toA = a - pt_in_tri
+    toB = b - pt_in_tri
+    toC = c - pt_in_tri
+
+    if np.dot(toA, toB) <= 0 and np.dot(toA, toC) <= 0 and np.dot(toC, toB) <= 0:
         return True
     return False
 

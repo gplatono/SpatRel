@@ -14,7 +14,7 @@ from world import World
 
 
 class Voxel:
-    def __init__(self, scope, location=None, size=None, parent=None, depth=0, child_idx=[None, None, None]):
+    def __init__(self, scope, location=None, size=None, parent=None, depth=0, child_idx=[None, None, None], debug=False):
         if location is None:
             x_min = y_min = z_min = 1e9
             x_max = y_max = z_max = -1e9
@@ -30,10 +30,12 @@ class Voxel:
 
         self.location = location
         self.size = size
+        #print("size: " + str(self.size))
         self.depth = depth
+        #print("depth: " + str(self.depth))
         self.child_idx = child_idx
         self.compute_bbox()
-        self.intersect_list = self.filter_entity(scope)
+        self.intersect_list = self.filter_entity(scope, debug)
 
         
 
@@ -86,6 +88,13 @@ class Voxel:
         self.run_on_children("printStructure")
 
     def subdivide(self):
+        debug = False
+        for ent in self.intersect_list:
+            for v in ent[1]:
+                if (np.array(world.entities[0].vertices[0]) == v).all() and self.size < 1:
+                    #debug = True
+                    debug = False
+
         quart = self.size / 4
         if self.depth > 0 and self.intersect_list != []:
             child_locations = np.array([(self.location[0] - quart, self.location[1] - quart, self.location[2] - quart),
@@ -97,21 +106,21 @@ class Voxel:
                                         (self.location[0] + quart, self.location[1] + quart, self.location[2] - quart),
                                         (self.location[0] + quart, self.location[1] + quart, self.location[2] + quart)])
             self.children[0][0][0] = Voxel(self.intersect_list, child_locations[0], self.size / 2, self, self.depth - 1,
-                                           [0, 0, 0])
+                                           [0, 0, 0], debug)
             self.children[0][0][1] = Voxel(self.intersect_list, child_locations[1], self.size / 2, self, self.depth - 1,
-                                           [0, 0, 1])
+                                           [0, 0, 1], debug)
             self.children[0][1][0] = Voxel(self.intersect_list, child_locations[2], self.size / 2, self, self.depth - 1,
-                                           [0, 1, 0])
+                                           [0, 1, 0], debug)
             self.children[0][1][1] = Voxel(self.intersect_list, child_locations[3], self.size / 2, self, self.depth - 1,
-                                           [0, 1, 1])
+                                           [0, 1, 1], debug)
             self.children[1][0][0] = Voxel(self.intersect_list, child_locations[4], self.size / 2, self, self.depth - 1,
-                                           [1, 0, 0])
+                                           [1, 0, 0], debug)
             self.children[1][0][1] = Voxel(self.intersect_list, child_locations[5], self.size / 2, self, self.depth - 1,
-                                           [1, 0, 1])
+                                           [1, 0, 1], debug)
             self.children[1][1][0] = Voxel(self.intersect_list, child_locations[6], self.size / 2, self, self.depth - 1,
-                                           [1, 1, 0])
+                                           [1, 1, 0], debug)
             self.children[1][1][1] = Voxel(self.intersect_list, child_locations[7], self.size / 2, self, self.depth - 1,
-                                           [1, 1, 1])
+                                           [1, 1, 1], debug)
 
     def compute_bbox(self):
         self.bbox_verts = np.array(
@@ -258,7 +267,7 @@ class Voxel:
 
         return child_res
 
-    def filter_entity(self, scope):
+    def filter_entity(self, scope, debug):
         output = []
         for ent in scope:
             vertex = box_vertex_filter(self.bbox_verts, ent[1])
@@ -276,8 +285,14 @@ class Voxel:
                             box_point_containment(self.bbox_verts, f[2]) or box_point_containment(self.bbox_verts, f[3]):
                         faces.append(f)
                     else:
-                        closest_point1 = self.location + shortest_to_triangle(self.location, f[0], f[1], f[2]).tolist()
-                        closest_point2 = self.location + shortest_to_triangle(self.location, f[3], f[1], f[2]).tolist()
+                        closest_point1 = (np.array(self.location) + shortest_to_triangle(self.location, f[0], f[1], f[2])).tolist()
+                        closest_point2 = (np.array(self.location) + shortest_to_triangle(self.location, f[3], f[1], f[2])).tolist()
+                        if output != [] and debug:
+                            print(closest_point1)
+                            print(closest_point2)
+                            print(self.location)
+                            print(self.size)
+                            print('\n')
                         if box_point_containment(self.bbox_verts, closest_point1) or box_point_containment(self.bbox_verts, closest_point2):
                             faces.append(f)
             if not (len(vertex) == 0 and len(faces) == 0):
@@ -290,7 +305,6 @@ class Voxel:
                 count_vertex += 1
         if count_vertex == 0 or len(output) < 2:
             return []
-
         return output
 
 def entitymap(entities, c):
@@ -321,10 +335,10 @@ world = World(bpy.context.scene, simulation_mode=True)
 vox = Voxel(scope=entitymap(world.entities, 50), depth=8)
 end = time.time()
 print(end - start)
-vox.print_self()
 
 for idx1 in range(len(world.entities)):
     for idx2 in range(idx1+1, len(world.entities)):
-        print (world.entities[idx1], world.entities[idx2], vox.contains([world.entities[idx1], world.entities[idx2]], depth=5))
+        print (world.entities[idx1], world.entities[idx2], vox.contains([world.entities[idx1], world.entities[idx2]], depth=7))
+
 
 #test(vox)
