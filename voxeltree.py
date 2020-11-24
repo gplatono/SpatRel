@@ -31,7 +31,7 @@ class Voxel:
 		self.compute_bbox()     
 		self.intersect_list = []
 		for entity in scope:
-			if box_entity_vertex_containment(self.bbox_verts, entity):# or self.bvh_tree.overlap(entity.bvh_tree) != []:
+			if box_entity_vertex_containment(self.bbox_verts, entity) or self.bvh_tree.overlap(entity.bvh_tree) != []:
 				# if self.bvh_tree.overlap(entity.bvh_tree) != []:
 				# 	print (self.location, self.size, entity, self.bvh_tree.overlap(entity.bvh_tree))
 				self.intersect_list.append(entity)
@@ -247,10 +247,11 @@ class Voxel:
 from world import World
 world = World(bpy.context.scene, simulation_mode=True)
 vox = Voxel(scope = world.entities, depth=5)
+vox.print_self()
 
 for idx1 in range(len(world.entities)):
-	for idx2 in range(idx1, len(world.entities)):
-		print (world.entities[idx1], world.entities[idx2], vox.contains([world.entities[idx1], world.entities[idx2]], depth=4))
+	for idx2 in range(idx1+1, len(world.entities)):
+		print (world.entities[idx1], world.entities[idx2], vox.contains([world.entities[idx1], world.entities[idx2]], depth=3))
 
 # laptop = world.find_entity_by_name('laptop')
 # table = world.find_entity_by_name('table')
@@ -262,10 +263,7 @@ for idx1 in range(len(world.entities)):
 #cube1 = world.find_entity_by_name('cube 1')
 #cube2 = world.find_entity_by_name('cube 2')
 #vox.fillNeighbors()
-vox.print_self()
-
-print ("\n\n")
-print (cube1.bvh_tree.overlap(cube2.bvh_tree))
+#print (cube1.bvh_tree.overlap(cube2.bvh_tree))
 # print (vox.contains([laptop, table], depth=6))
 # print (vox.contains([cardbox1, table], depth=6))
 # print (vox.contains([cardbox2, table], depth=6))

@@ -321,11 +321,10 @@ world = World(bpy.context.scene, simulation_mode=True)
 vox = Voxel(scope=entitymap(world.entities, 50), depth=8)
 end = time.time()
 print(end - start)
-
-cube1 = world.find_entity_by_name('cube 1')
-cube2 = world.find_entity_by_name('cube 2')
 vox.print_self()
-print ("\n\n")
-print (vox.contains([cube1, cube2], depth=2))
+
+for idx1 in range(len(world.entities)):
+    for idx2 in range(idx1+1, len(world.entities)):
+        print (world.entities[idx1], world.entities[idx2], vox.contains([world.entities[idx1], world.entities[idx2]], depth=5))
 
 #test(vox)
