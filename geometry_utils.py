@@ -126,20 +126,31 @@ def shortest_to_triangle(d, a, b, c):
 
 #given point a, b, c, d, return if the projection of ad to the plane abc is in the triangle abc
 def in_triangle(d, a, b, c):
-    a = np.array(a)
-    b = np.array(b)
-    c = np.array(c)
-    d = np.array(d)
-    proj = np.array(plane_projection(d, a, b, c))
-    pt_in_tri = proj+a
-    toA = a - pt_in_tri
-    toB = b - pt_in_tri
-    toC = c - pt_in_tri
-
-    if np.dot(toA, toB) <= 0 and np.dot(toA, toC) <= 0 and np.dot(toC, toB) <= 0:
-        return True
-    return False
-
+    try:
+        param = np.array([[a[0],b[0],c[0]], [a[1],b[1],c[1]],[1,1,1]])
+        val = np.array([d[0],d[1],1])
+        var = np.linalg.solve(param,val)
+        if (var > 0).all():
+            return True
+        return False
+    except np.linalg.LinAlgError:
+        try:
+            param = np.array([[a[0], b[0], c[0]], [a[2], b[2], c[2]], [1, 1, 1]])
+            val = np.array([d[0], d[2], 1])
+            var = np.linalg.solve(param, val)
+            if (var > 0).all():
+                return True
+            return False
+        except np.linalg.LinAlgError:
+            try:
+                param = np.array([[a[1], b[1], c[1]], [a[2], b[2], c[2]], [1, 1, 1]])
+                val = np.array([d[1], d[2], 1])
+                var = np.linalg.solve(param, val)
+                if (var > 0).all():
+                    return True
+                return False
+            except np.linalg.LinAlgError:
+                return False
 #Given a point and a plane defined by a, b and c
 #computes the orthogonal distance from the point to that plane
 #Inputs: point,a,b,c - point coordinates as tuples or lists
