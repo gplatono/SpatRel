@@ -244,14 +244,50 @@ class Voxel:
 
 		return child_res
 
-from world import World
-world = World(bpy.context.scene, simulation_mode=True)
-vox = Voxel(scope = world.entities, depth=5)
-vox.print_self()
+	def is_boundary(self):
+		return self.neighbors[0][0] is None or \
+				self.neighbors[0][1] is None or \
+				self.neighbors[1][0] is None or \
+				self.neighbors[1][1] is None or \
+				self.neighbors[2][0] is None or \
+				self.neighbors[2][1] is None
 
-for idx1 in range(len(world.entities)):
-	for idx2 in range(idx1+1, len(world.entities)):
-		print (world.entities[idx1], world.entities[idx2], vox.contains([world.entities[idx1], world.entities[idx2]], depth=3))
+	def cut(self, voxel):		
+		#dist = {}
+		voxel.distance = 0
+		queue = [voxel]
+
+		while len(queue) != 0:
+			v = queue[0]
+			queue.pop(0)			
+			if v.neighbors[0][0] is not None and not hasattr(v.neighbors[0][0], 'distance'):
+				queue.append((v.neighbors[0][0], dist+1))
+			if v.neighbors[0][1] is not None:
+				queue.append((v.neighbors[0][1], dist+1))
+			if v.neighbors[1][0] is not None:
+				queue.append((v.neighbors[1][0], dist+1))
+			if v.neighbors[1][1] is not None:
+				queue.append((v.neighbors[1][1], dist+1))
+			if v.neighbors[2][0] is not None:
+				queue.append((v.neighbors[2][0], dist+1))
+			if v.neighbors[2][1] is not None:
+				queue.append((v.neighbors[2][1], dist+1))
+
+
+
+	#def return_cut(self, point):
+
+
+
+if __name__ == "__main__":
+	from world import World
+	world = World(bpy.context.scene, simulation_mode=True)
+	vox = Voxel(scope = world.entities, depth=6)
+	vox.print_self()
+
+	for idx1 in range(len(world.entities)):
+		for idx2 in range(idx1+1, len(world.entities)):
+			print (world.entities[idx1], world.entities[idx2], vox.contains([world.entities[idx1], world.entities[idx2]], depth=6))
 
 # laptop = world.find_entity_by_name('laptop')
 # table = world.find_entity_by_name('table')

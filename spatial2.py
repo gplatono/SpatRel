@@ -14,6 +14,9 @@ import os
 world = None
 observer = None
 
+#from voxeltree1 import Voxel, entitymap
+from voxeltree import Voxel
+
 
 class Spatial:
 	def __init__(self, world):
@@ -22,7 +25,8 @@ class Spatial:
 		# self.vis_proj = self.cache_2d_projections()
 		self.spat_rel = ['to_the_right_of_deictic.p', 'in_front_of_deictic.p', 'in_front_of_intrinsic.p', 'supported_by.p', 'touching.p', 'to_the_right_of.p', 'to_the_left_of.p', 'in_front_of.p', 'behind.p', 'above.p', 'below.p', 'near.p', 'over.p', 'on.p', 'under.p', 'between.p', 'inside.p', 'next_to.p']
 
-
+		#self.vox = Voxel(scope=entitymap(self.world.entities, 60), depth=8)
+		self.vox = Voxel(scope=self.world.entities, depth=6)
 		self.str_to_pred = {
 			'on.p': self.on,
 			'on': self.on,
@@ -140,7 +144,7 @@ class Spatial:
 		self.central = Central()
 		self.horizontal_deictic_component = HorizontalDeicticComponent(network=self)
 		self.vertical_deictic_component = VerticalDeicticComponent(network=self)
-		self.touching = Touching()
+		self.touching = Touching(network=self)
 
 		self.to_the_right_of_deictic = RightOf_Deictic(
 			connections={'horizontal_deictic_component': self.horizontal_deictic_component,
@@ -325,7 +329,7 @@ class Spatial:
 				annotation = [item.strip() for item in annotation]
 				# if "above" not in annotation[1] and "below" not in annotation[1]:
 				# 	continue
-				if "in front of i" not in annotation[1]:
+				if "touching" not in annotation[1]:
 				#if "near" not in annotation[1]:
 					continue
 
@@ -668,6 +672,7 @@ class Touching(Node):
 			return torch.tensor(0.0)
 		mesh_dist = 1e9
 		planar_dist = 1e9
+		return torch.tensor(float(self.network.vox.contains([tr, lm], depth=5)), dtype=torch.float32, requires_grad=True)
 		# from mathutils.bvhtree import BVHTree
 		# for a in tr.full_mesh:
 		# 	for b in lm.full_mesh
