@@ -325,19 +325,18 @@ class Spatial:
 				annotation = [item.strip() for item in annotation]
 				# if "above" not in annotation[1] and "below" not in annotation[1]:
 				# 	continue
-				if "in front of i" not in annotation[1]:
-				#if "near" not in annotation[1]:
+				if "near" not in annotation[1]:
 					continue
 
 				# if "d" in annotation[1]:
 				# 	continue
 
-				### postive test ###
+				# ## postive test ###
 				# if "not" in annotation[1]:
 				# 	continue
-				### negative test ###
-				# if "not" not in annotation[1]:
-				# 	continue
+				## negative test ###
+				if "not" not in annotation[1]:
+					continue
 				# print("annotation: ", annotation)
 
 
@@ -1139,6 +1138,7 @@ class Near_Raw(Node):
 		bbox_tr = tr.bbox
 		bbox_lm = lm.bbox
 		dist = dist_obj(tr, lm)
+
 		max_dim_a = max(bbox_tr[7][0] - bbox_tr[0][0],
 						bbox_tr[7][1] - bbox_tr[0][1],
 						bbox_tr[7][2] - bbox_tr[0][2])
@@ -1147,24 +1147,73 @@ class Near_Raw(Node):
 						bbox_lm[7][2] - bbox_lm[0][2])
 		if tr.get('planar') is not None:
 			# print ("TEST", a.name, b.name)
-			dist = min(dist, get_planar_distance_scaled(tr, lm))
+			p_dist = get_planar_distance_scaled(tr, lm)
+			dist = min(dist, p_dist)
+			# print("pla: ", p_dist)
 		elif lm.get('planar') is not None:
-			dist = min(dist, get_planar_distance_scaled(tr, lm))
+			p_dist = get_planar_distance_scaled(tr, lm)
+			dist = min(dist, get_planar_distance_scaled(lm, tr))
+			# print("dist ", dist)
 		elif tr.get('vertical_rod') is not None or tr.get('horizontal_rod') is not None or tr.get('rod') is not None:
 			dist = min(dist, get_line_distance_scaled(tr, lm))
 		elif lm.get('vertical_rod') is not None or lm.get('horizontal_rod') is not None or lm.get('rod') is not None:
 			dist = min(dist, get_line_distance_scaled(lm, tr))
 		elif tr.get('concave') is not None or lm.get('concave') is not None:
 			dist = min(dist, closest_mesh_distance_scaled(tr, lm))
-
+		print("dist ", dist)
 		fr_size = self.connections['frame_size'].compute()
-		raw_metric = math.e ** (- self.parameters["raw_metric_weight"] * dist)
+
+		raw_metric = math.e ** (-self.parameters["raw_metric_weight"] * dist)
 		'''0.5 * (1 - min(1, dist / avg_dist + 0.01) +'''
 		# print("RAW NEAR: ", tr, lm, raw_metric * (1 - raw_metric / fr_size))
-		return raw_metric * (1 - raw_metric / fr_size)
+		# if raw>fr
+		# negative exponent/ sigmoid
+		# raw_metric
+		final_score = raw_metric * (1 - dist / fr_size)  # dist larger, scale smaller
+		# print("raw: ", raw_metric)
+		# print("fr_size ", fr_size)
+		# print("final: ", final_score)
+		# print("param:", self.parameters)
+		return final_score
 
 	def str(self):
 		return 'near_raw.p'
+
+# class Near_Raw(Node):
+# 	def __init__(self, connections):
+# 		self.connections = connections
+# 		self.parameters = {"raw_metric_weight": torch.tensor(0.1, dtype=torch.float32, requires_grad=True)}
+#
+# 	def compute(self, tr, lm):
+# 		bbox_tr = tr.bbox
+# 		bbox_lm = lm.bbox
+# 		dist = dist_obj(tr, lm)
+# 		if tr.get('planar') is not None:
+# 			# print ("TEST", a.name, b.name)
+# 			dist = min(dist, get_planar_distance_scaled(tr, lm))
+# 		elif lm.get('planar') is not None:
+# 			dist = min(dist, get_planar_distance_scaled(tr, lm))
+# 		elif tr.get('vertical_rod') is not None or tr.get('horizontal_rod') is not None or tr.get(
+# 				'rod') is not None:
+# 			dist = min(dist, get_line_distance_scaled(tr, lm))
+# 		elif lm.get('vertical_rod') is not None or lm.get('horizontal_rod') is not None or lm.get(
+# 				'rod') is not None:
+# 			dist = min(dist, get_line_distance_scaled(lm, tr))
+# 		elif tr.get('concave') is not None or lm.get('concave') is not None:
+# 			dist = min(dist, closest_mesh_distance_scaled(tr, lm))
+#
+# 		fr_size = self.connections['frame_size'].compute()
+# 		raw_metric = math.e ** (-0.1 * dist)
+# 		'''0.5 * (1 - min(1, dist / avg_dist + 0.01) +'''
+# 		# print("RAW NEAR: ", tr, lm, raw_metric * (1 - raw_metric / fr_size))
+# 		final_score = raw_metric * (1 - raw_metric / fr_size)
+# 		# print("raw: ", final_score)
+# 		# print("param:", self.parameters)
+# 		final_score = torch.tensor(final_score, dtype=torch.float32)
+# 		return final_score
+#
+# 	def str(self):
+# 		return 'near_raw.p'
 
 
 class Near(Node):
@@ -1179,19 +1228,23 @@ class Near(Node):
 			return 0
 		connections = self.get_connections()
 		raw_near_measure = connections['near_raw'].compute(tr, lm)
+		print("raw: ", raw_near_measure)
+
 		raw_near_tr = torch.tensor(
 			[connections['near_raw'].compute(tr, entity) for entity in self.network.world.entities if entity != tr],
 			dtype=torch.float32, requires_grad=True)
 		raw_near_lm = torch.tensor(
 			[connections['near_raw'].compute(lm, entity) for entity in self.network.world.entities if entity != lm],
 			dtype=torch.float32, requires_grad=True)
+		# print(raw_near_lm)
+		# print(raw_near_tr)
 		avg_near = 0.5 * (torch.mean(raw_near_tr) + torch.mean(raw_near_lm))
-		near_measure = raw_near_measure + (raw_near_measure - avg_near) * min(raw_near_measure, 1 - raw_near_measure)
-		#near_measure = torch.tensor(near_measure, dtype=torch.float32, requires_grad=True)  # transfer to tensor
-		if tr.compute_size() > lm.compute_size():
-			near_measure = near_measure - self.parameters["size_weight"]
-		elif tr.compute_size() < lm.compute_size():
-			near_measure = near_measure + self.parameters["size_weight"]
+		near_measure = raw_near_measure + (raw_near_measure - avg_near) * torch.min(raw_near_measure, 1 - raw_near_measure)
+		# print("final: ", near_measure)
+		# if tr.compute_size() > lm.compute_size():
+		# 	near_measure = near_measure - self.parameters["size_weight"]
+		# elif tr.compute_size() < lm.compute_size():
+		# 	near_measure = near_measure + self.parameters["size_weight"]
 		return near_measure
 
 	def str(self):
