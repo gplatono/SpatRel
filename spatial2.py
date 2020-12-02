@@ -181,7 +181,7 @@ class Spatial:
 										  'behind_extrinsic': self.behind_extrinsic}, network=self)
 		self.above = Above(connections={'within_cone_region': self.within_cone_region})
 		self.below = Below(connections={'above': self.above})
-		self.near_raw = Near_Raw(connections={'frame_size': self.frame_size})
+		self.near_raw = Near_Raw(connections={'frame_size': self.frame_size, 'raw_distance': self.raw_distance}, network=self)
 		self.near = Near(connections={'near_raw': self.near_raw}, network=self)
 		self.over = Over(connections={'above': self.above, 'projection_intersection': self.projection_intersection,
 									  'near': self.near})
@@ -252,10 +252,9 @@ class Spatial:
 		self.world = world
 		self.observer = self.world.get_observer()
 		self.preproc()
-		self.init_relations()
+		self.init_relations()		
 		self.load_parameters()
-
-	# print("OBS: ", self.observer)
+		self.distances = self.cache_distances()
 
 	def compute(self, relation, trs, lms):
 		if relation not in self.str_to_pred:
@@ -271,6 +270,19 @@ class Spatial:
 			proj[ent] = vp_project(ent, self.observer)
 			#print (ent, proj[ent])
 		return proj
+
+	def cache_distances(self):
+		distances = {}
+		for e1 in self.world.entities:
+			for e2 in self.world.entities:
+				if (e1, e2) not in distances:
+					if e1 != e2:
+						distances[(e1, e2)] = self.raw_distance.compute(e1, e2)
+						distances[(e2, e1)] = distances[(e1, e2)]
+					else:
+						distances[(e1, e2)] = 0
+						distances[(e2, e1)] = 0
+		return distances
 
 	def pairwise_axial_distances(self):
 		dist = {}
@@ -329,7 +341,7 @@ class Spatial:
 				annotation = [item.strip() for item in annotation]
 				# if "above" not in annotation[1] and "below" not in annotation[1]:
 				# 	continue
-				if "touching" not in annotation[1]:
+				if "near" not in annotation[1]:
 				#if "near" not in annotation[1]:
 					continue
 
@@ -340,8 +352,6 @@ class Spatial:
 				# if "not" in annotation[1]:
 				# 	continue
 				## negative test ###
-				if "not" not in annotation[1]:
-					continue
 				# print("annotation: ", annotation)
 
 
@@ -1136,37 +1146,43 @@ class Below(Node):
 
 
 class Near_Raw(Node):
-	def __init__(self, connections):
+	def __init__(self, connections, network):
+		self.network = network
 		self.connections = connections
 		self.parameters = {"raw_metric_weight": torch.tensor(0.1, dtype=torch.float32, requires_grad=True)}
 
 	def compute(self, tr, lm):
-		bbox_tr = tr.bbox
-		bbox_lm = lm.bbox
-		dist = dist_obj(tr, lm)
+		dist = self.network.distances[(tr, lm)]
+		# bbox_tr = tr.bbox
+		# bbox_lm = lm.bbox
+		# if tr == lm:
+		# 	return torch.tensor(0, dtype=torch.float32, requires_grad=True)
+		# else:
+		# 	dist = self.network.distanceconnections['raw_distance'].compute(tr, lm)
+		#dist = dist_obj(tr, lm)
 
-		max_dim_a = max(bbox_tr[7][0] - bbox_tr[0][0],
-						bbox_tr[7][1] - bbox_tr[0][1],
-						bbox_tr[7][2] - bbox_tr[0][2])
-		max_dim_b = max(bbox_lm[7][0] - bbox_lm[0][0],
-						bbox_lm[7][1] - bbox_lm[0][1],
-						bbox_lm[7][2] - bbox_lm[0][2])
-		if tr.get('planar') is not None:
-			# print ("TEST", a.name, b.name)
-			p_dist = get_planar_distance_scaled(tr, lm)
-			dist = min(dist, p_dist)
-			# print("pla: ", p_dist)
-		elif lm.get('planar') is not None:
-			p_dist = get_planar_distance_scaled(tr, lm)
-			dist = min(dist, get_planar_distance_scaled(lm, tr))
-			# print("dist ", dist)
-		elif tr.get('vertical_rod') is not None or tr.get('horizontal_rod') is not None or tr.get('rod') is not None:
-			dist = min(dist, get_line_distance_scaled(tr, lm))
-		elif lm.get('vertical_rod') is not None or lm.get('horizontal_rod') is not None or lm.get('rod') is not None:
-			dist = min(dist, get_line_distance_scaled(lm, tr))
-		elif tr.get('concave') is not None or lm.get('concave') is not None:
-			dist = min(dist, closest_mesh_distance_scaled(tr, lm))
-		print("dist ", dist)
+		# max_dim_a = max(bbox_tr[7][0] - bbox_tr[0][0],
+		# 				bbox_tr[7][1] - bbox_tr[0][1],
+		# 				bbox_tr[7][2] - bbox_tr[0][2])
+		# max_dim_b = max(bbox_lm[7][0] - bbox_lm[0][0],
+		# 				bbox_lm[7][1] - bbox_lm[0][1],
+		# 				bbox_lm[7][2] - bbox_lm[0][2])		
+		# if tr.get('planar') is not None:
+		# 	# print ("TEST", a.name, b.name)
+		# 	p_dist = get_planar_distance_scaled(tr, lm)
+		# 	dist = min(dist, p_dist)
+		# 	# print("pla: ", p_dist)
+		# elif lm.get('planar') is not None:
+		# 	p_dist = get_planar_distance_scaled(tr, lm)
+		# 	dist = min(dist, get_planar_distance_scaled(lm, tr))
+		# 	# print("dist ", dist)
+		# elif tr.get('vertical_rod') is not None or tr.get('horizontal_rod') is not None or tr.get('rod') is not None:
+		# 	dist = min(dist, get_line_distance_scaled(tr, lm))
+		# elif lm.get('vertical_rod') is not None or lm.get('horizontal_rod') is not None or lm.get('rod') is not None:
+		# 	dist = min(dist, get_line_distance_scaled(lm, tr))
+		# elif tr.get('concave') is not None or lm.get('concave') is not None:
+		# 	dist = min(dist, closest_mesh_distance_scaled(tr, lm))
+		# print("dist ", dist)
 		fr_size = self.connections['frame_size'].compute()
 
 		raw_metric = math.e ** (-self.parameters["raw_metric_weight"] * dist)
