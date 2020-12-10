@@ -254,16 +254,22 @@ class Voxel:
 
 	def cut(self, voxel):		
 		#dist = {}
+		vox_dict = {}
 		voxel.distance = 0
+		vox_dict[voxel] = 0
 		queue = [voxel]
 
 		while len(queue) != 0:
 			v = queue[0]
 			queue.pop(0)			
-			if v.neighbors[0][0] is not None and not hasattr(v.neighbors[0][0], 'distance'):
-				queue.append((v.neighbors[0][0], dist+1))
-			if v.neighbors[0][1] is not None:
-				queue.append((v.neighbors[0][1], dist+1))
+			if v.neighbors[0][0] is not None and v.neighbors[0][0] not in vox_dict:# and not hasattr(v.neighbors[0][0], 'distance'):
+				vox_dict[v.neighbors[0][0]] = vox_dict[v] + 1
+				queue.append(v.neighbors[0][0])
+
+			if v.neighbors[0][1] is not None and v.neighbors[0][1] not in vox_dict:# and not hasattr(v.neighbors[0][0], 'distance'):
+				vox_dict[v.neighbors[0][1]] = vox_dict[v] + 1
+				queue.append(v.neighbors[0][1])
+				#queue.append((v.neighbors[0][1], dist+1))
 			if v.neighbors[1][0] is not None:
 				queue.append((v.neighbors[1][0], dist+1))
 			if v.neighbors[1][1] is not None:
