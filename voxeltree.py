@@ -42,6 +42,7 @@ class Voxel:
 		self.parent = parent
 		self.children = [[[None, None], [None, None]], [[None, None], [None, None]]]
 		self.neighbors = [[None, None], [None, None], [None, None]]
+		self.neighbors_linear = [None, None, None, None, None, None]
 
 		self.subdivide()
 		self.node_count = self.get_node_count()
@@ -160,8 +161,10 @@ class Voxel:
 				LCA = LCA.parent            
 			adjacent = LCA.findContainingVoxel(self.location - np.array([self.size, 0, 0]))
 		if adjacent is not None and adjacent.size == self.size:
-			self.neighbors[0][0] = adjacent
-			adjacent.neighbors[0][1] = self     
+			self.neighbors[0][0] = adjacent			
+			adjacent.neighbors[0][1] = self
+			self.neighbors_linear[0] = adjacent
+			adjacent.neighbors_linear[1] = self
 
 	def XUpAdjacent(self):
 		if self.child_idx[0] == 0:
@@ -174,6 +177,8 @@ class Voxel:
 		if adjacent is not None and adjacent.size == self.size:
 			self.neighbors[0][1] = adjacent
 			adjacent.neighbors[0][0] = self     
+			self.neighbors_linear[1] = adjacent
+			adjacent.neighbors_linear[0] = self
 
 	def YDownAdjacent(self):
 		if self.child_idx[1] == 1:
@@ -184,8 +189,10 @@ class Voxel:
 				LCA = LCA.parent
 			adjacent = LCA.findContainingVoxel(self.location - np.array([0, self.size, 0]))
 		if adjacent is not None and adjacent.size == self.size:
-			self.neighbors[1][0] = adjacent
+			self.neighbors[1][0] = adjacent			
 			adjacent.neighbors[1][1] = self     
+			self.neighbors_linear[2] = adjacent
+			adjacent.neighbors_linear[3] = self
 
 	def YUpAdjacent(self):
 		if self.child_idx[1] == 0:
@@ -198,6 +205,8 @@ class Voxel:
 		if adjacent is not None and adjacent.size == self.size:
 			self.neighbors[1][1] = adjacent
 			adjacent.neighbors[1][0] = self     
+			self.neighbors_linear[3] = adjacent
+			adjacent.neighbors_linear[2] = self
 
 	def ZDownAdjacent(self):
 		if self.child_idx[2] == 1:
@@ -210,6 +219,8 @@ class Voxel:
 		if adjacent is not None and adjacent.size == self.size:
 			self.neighbors[2][0] = adjacent
 			adjacent.neighbors[2][1] = self
+			self.neighbors_linear[4] = adjacent
+			adjacent.neighbors_linear[5] = self
 
 	def ZUpAdjacent(self):
 		if self.child_idx[2] == 0:
@@ -222,8 +233,10 @@ class Voxel:
 		if adjacent is not None and adjacent.size == self.size:
 			self.neighbors[2][1] = adjacent
 			adjacent.neighbors[2][0] = self
+			self.neighbors_linear[5] = adjacent
+			adjacent.neighbors_linear[4] = self
 
-	def contains(self, entities, depth=-1):     
+	def contains(self, entities, depth=-1):
 		#print (self.location, self.size, self.intersect_list)
 		for ent in entities:
 			if ent not in self.intersect_list:
@@ -244,6 +257,35 @@ class Voxel:
 
 		return child_res
 
+	def find_container(self, point, depth=-1):
+		if depth == 0:
+			if box_point_containment(self.bbox_verts, point):
+				return self
+			else:
+				return None
+		elif self.children[0][0][0] is None:
+			if depth == -1:
+				return self
+			else:
+				return None
+		else:
+			res = self.children[0][0][0].find_container(point, depth-1)
+			if res is None:
+				res = self.children[0][0][1].find_container(point, depth-1)
+			if res is None:
+				res = self.children[0][1][0].find_container(point, depth-1)
+			if res is None:
+				res = self.children[0][1][1].find_container(point, depth-1)
+			if res is None:
+				res = self.children[1][0][0].find_container(point, depth-1)
+			if res is None:
+				res = self.children[1][0][1].find_container(point, depth-1)
+			if res is None:
+				res = self.children[1][1][0].find_container(point, depth-1)
+			if res is None:
+				res = self.children[1][1][1].find_container(point, depth-1)
+			return res
+
 	def is_boundary(self):
 		return self.neighbors[0][0] is None or \
 				self.neighbors[0][1] is None or \
@@ -256,34 +298,48 @@ class Voxel:
 		#dist = {}
 		vox_dict = {}
 		voxel.distance = 0
-		vox_dict[voxel] = 0
+
+		#Put None to speed up checks in the BFS, i.e., avoid checking for non-None-ness of a neighbor
+		vox_dict[None] = -1
+
+		vox_dict[voxel] = 0		
 		queue = [voxel]
 
 		while len(queue) != 0:
 			v = queue[0]
 			queue.pop(0)			
-			if v.neighbors[0][0] is not None and v.neighbors[0][0] not in vox_dict:# and not hasattr(v.neighbors[0][0], 'distance'):
+			if v.neighbors[0][0] not in vox_dict:
 				vox_dict[v.neighbors[0][0]] = vox_dict[v] + 1
 				queue.append(v.neighbors[0][0])
-
-			if v.neighbors[0][1] is not None and v.neighbors[0][1] not in vox_dict:# and not hasattr(v.neighbors[0][0], 'distance'):
+			if v.neighbors[0][1] not in vox_dict:# and not hasattr(v.neighbors[0][0], 'distance'):
 				vox_dict[v.neighbors[0][1]] = vox_dict[v] + 1
-				queue.append(v.neighbors[0][1])
-				#queue.append((v.neighbors[0][1], dist+1))
-			if v.neighbors[1][0] is not None:
-				queue.append((v.neighbors[1][0], dist+1))
-			if v.neighbors[1][1] is not None:
-				queue.append((v.neighbors[1][1], dist+1))
-			if v.neighbors[2][0] is not None:
-				queue.append((v.neighbors[2][0], dist+1))
-			if v.neighbors[2][1] is not None:
-				queue.append((v.neighbors[2][1], dist+1))
+				queue.append(v.neighbors[0][1])				
+			if v.neighbors[1][0] not in vox_dict:# and not hasattr(v.neighbors[0][0], 'distance'):
+				vox_dict[v.neighbors[1][0]] = vox_dict[v] + 1
+				queue.append(v.neighbors[1][0])
+			if v.neighbors[1][1] not in vox_dict:
+				vox_dict[v.neighbors[1][1]] = vox_dict[v] + 1
+				queue.append(v.neighbors[1][1])
+			if v.neighbors[2][0] not in vox_dict:
+				vox_dict[v.neighbors[2][0]] = vox_dict[v] + 1
+				queue.append(v.neighbors[2][0])
+			if v.neighbors[2][1] not in vox_dict:
+				vox_dict[v.neighbors[2][1]] = vox_dict[v] + 1
+				queue.append(v.neighbors[2][1])
 
+			if v.is_boundary():
+				cut_flag = True
+				for neighbor in v.neighbors_linear:
+					if neighbor is not None and neighbor.is_boundary() and vox_dict[neighbor] <= vox_dict[v]:
+						flag = False
+						break
+				if cut_flag:
+					return v
 
-
-	#def return_cut(self, point):
-
-
+	def find_cut(self, point):
+		origin = self.find_container(point)
+		target = self.cut(origin)
+		return origin, target
 
 if __name__ == "__main__":
 	from world import World
@@ -294,6 +350,8 @@ if __name__ == "__main__":
 	for idx1 in range(len(world.entities)):
 		for idx2 in range(idx1+1, len(world.entities)):
 			print (world.entities[idx1], world.entities[idx2], vox.contains([world.entities[idx1], world.entities[idx2]], depth=6))
+
+
 
 # laptop = world.find_entity_by_name('laptop')
 # table = world.find_entity_by_name('table')

@@ -20,111 +20,64 @@ from voxeltree import Voxel
 
 class Spatial:
 	def __init__(self, world):
-		self.reload(world)
-		# self.world = world
-		# self.vis_proj = self.cache_2d_projections()
+		self.update(world)
 		self.spat_rel = ['to_the_right_of_deictic.p', 'in_front_of_deictic.p', 'in_front_of_intrinsic.p', 'supported_by.p', 'touching.p', 'to_the_right_of.p', 'to_the_left_of.p', 'in_front_of.p', 'behind.p', 'above.p', 'below.p', 'near.p', 'over.p', 'on.p', 'under.p', 'between.p', 'inside.p', 'next_to.p']
 
 		#self.vox = Voxel(scope=entitymap(self.world.entities, 60), depth=8)
 		self.vox = Voxel(scope=self.world.entities, depth=6)
 		self.str_to_pred = {
-			'on.p': self.on,
-			'on': self.on,
+			'on.p': self.on, 'on_top_of.p': self.on, 'on top of': self.on, 'on': self.on,
 
-			'to_the_left_of.p': self.to_the_left_of,
-			'to the left of': self.to_the_left_of,
-			'left of': self.to_the_left_of,
-			'left.a': self.to_the_left_of,
-			'leftmost.a': self.to_the_left_of,
-			'to_the_right_of.p': self.to_the_right_of,
-			'to the right of': self.to_the_right_of,
-			'to the right of d': self.to_the_right_of_deictic,
-			'right of': self.to_the_right_of,
-			'right.a': self.to_the_right_of,
-			'rightmost.a': self.to_the_right_of,
-			'right.p': self.to_the_right_of,
-			'left.p': self.to_the_left_of,
+			'to_the_left_of.p': self.to_the_left_of, 'to the left of': self.to_the_left_of, 'left of': self.to_the_left_of,	
+			'left.a': self.to_the_left_of, 'leftmost.a': self.to_the_left_of, 'left.p': self.to_the_left_of,
 
+			'to_the_right_of.p': self.to_the_right_of, 'to the right of': self.to_the_right_of, 
+			'right of': self.to_the_right_of, 'right.a': self.to_the_right_of, 'rightmost.a': self.to_the_right_of, 'right.p': self.to_the_right_of,
+			
+			'to the right of d': self.to_the_right_of_deictic, 
 
-			'near.p': self.near,
-			'near': self.near,
-			'near_to.p': self.near,
-			'close_to.p': self.near,
-			'close.a': self.near,
-			'next to': self.near,
-			'beside': self.near,
-			'besides': self.near,
-			'on.p': self.on,
-			'on_top_of.p': self.on,
-			'on top of': self.on,
-			'above.p': self.above,
-			'above': self.above,
-			'below.p': self.below,
-			'below': self.below,
+			'near.p': self.near, 'near': self.near, 'near_to.p': self.near, 'close_to.p': self.near, 'close.a': self.near,
+			'next to': self.near, 'beside': self.near, 'besides': self.near,
+			
+			'above.p': self.above, 'above': self.above,
 
-			'over.p': self.over,
-			'over': self.over,
-			'under.p': self.below,
-			'under': self.below,
-			'underneath.p': self.below,
+			'below.p': self.below, 'below': self.below,
+
+			'over.p': self.over, 'over': self.over,
+
+			'under.p': self.below, 'under': self.below, 'underneath.p': self.below,
+
 			'supporting.p': self.under,
 
-			'in.p': self.inside,
-			'inside.p': self.inside,
-			'in': self.inside,
-			'inside': self.inside,
+			'in.p': self.inside, 'inside.p': self.inside, 'in': self.inside, 'inside': self.inside,
 
-			'touching.p': self.touching,
-			'touching': self.touching,
-			'touch.v': self.touching,
-			'touch': self.touching,
-			'adjacent_to.p': self.touching,
+			'touching.p': self.touching, 'touching': self.touching, 'touch.v': self.touching, 'touch': self.touching, 'adjacent_to.p': self.touching,
 
-			'at.p': self.at,
-			'next_to.p': self.at,
-			'next to': self.at,
+			'at.p': self.at, 'next_to.p': self.at, 'next to': self.at,
 
-			'high.a': self.higher_than,
-			'upper.a': self.higher_than,
-			'highest.a': self.higher_than,
-			'topmost.a': self.higher_than,
-			'top.a': self.higher_than,
-			'low.a': self.lower_than,
-			'lowest.a': self.lower_than,
+			'high.a': self.higher_than, 'upper.a': self.higher_than, 'highest.a': self.higher_than, 
+			'topmost.a': self.higher_than, 'top.a': self.higher_than,
 
-			'in_front_of.p': self.in_front_of,
-			'in front of': self.in_front_of,
-			'front.a': self.in_front_of,
-			'frontmost.a': self.in_front_of,
-			'in front of d': self.in_front_of_deictic,
+			'low.a': self.lower_than, 'lowest.a': self.lower_than,
+
+			'in_front_of.p': self.in_front_of, 'in front of': self.in_front_of, 'front.a': self.in_front_of, 'frontmost.a': self.in_front_of,
+
+			'in front of d': self.in_front_of_deictic, 
 			'in front of i': self.in_front_of_intrinsic,
 
-			'behind.p': self.behind,
-			'behind': self.behind,
-			'backmost.a': self.behind,
-			'back.a': self.behind,
-			'farthest.a': self.behind,
-			'far.a': self.behind,
-			'between.p': self.between,
-			'between': self.between,
-			'in between': self.between,
+			'behind.p': self.behind, 'behind': self.behind, 'backmost.a': self.behind, 'back.a': self.behind, 'farthest.a': self.behind, 'far.a': self.behind,
+
+			'between.p': self.between, 'between': self.between, 'in between': self.between,
 			# 'clear.a': self.clear,
 			# 'where.a': spatial.where,
 			# 'exist.pred': exist,
 
-			# 'face.v': spatial.facing,
-			# 'facing.p': spatial.facing,
+			# 'face.v': spatial.facing,	'facing.p': spatial.facing,
 
 			# 'color.pred': color_pred,
 
-			# 'blue.a': blue,
-			# 'red.a': red,
-			# 'green.a': green,
-
-			# 'blue': blue,
-			# 'red': red,
-			# 'green': green,
-		}
+			# 'blue.a': blue, 'blue': blue, 'red.a': red, 'red': red, 'green.a': green, 'green': green
+			}
 
 	def init_relations(self):
 		self.axial_distances = self.pairwise_axial_distances()
@@ -248,7 +201,7 @@ class Spatial:
 		self.parameters = None
 		self.vis_proj = self.cache_2d_projections()
 
-	def reload(self, world):
+	def update(self, world):
 		self.world = world
 		self.observer = self.world.get_observer()
 		self.preproc()
@@ -401,6 +354,65 @@ class Spatial:
 		with open('rel_accuracies', 'w') as file:
 			json.dump(rel_acc, file)
 
+
+	def rank_trs(self, relation, lms):
+		ranks = [(tr, relation.compute(tr, *lms)) for tr in self.world.entities]
+		ranks.sort(key = lambda x: x[1], reverse=True)
+		return ranks
+
+
+	def rank_lms(self, relation, tr):
+		lms = [lm for lm in self.world.active_context if lm.name != tr.name]
+		lm_pairs = [(lm1, lm2) for (lm1, lm2)\
+							in list(itertools.combinations(self.world.active_context, r = 2))\
+								if tr.name != lm1.name and tr.name != lm2.name]
+		
+		if relation != self.between:
+			ranks = [((tr, lm), relation(tr, lm)) for lm in self.world.entities]
+		else:
+			ranks = [((tr, lm1, lm2), self.between(tr, lm1, lm2)) for (lm1, lm2) in lm_pairs]
+
+		ranks.sort(key = lambda x: x[1], reverse=True)
+		return ranks
+
+
+	def where(tr):
+		#entities = [ent for ent in self.world.active_context if ent.name != entity.name and ent.name != 'Table']
+		#entity_pairs = [(ent1, ent2) for (ent1, ent2) in list(itertools.combinations(self.world.active_context, r = 2)) if entity.name != ent1.name and entity.name != ent2.name and ent1.name != 'Table' and ent2.name != 'Table']
+		entity_pairs = [(ent1, ent2) for (ent1, ent2)\
+							in list(itertools.combinations(self.world.active_context, r = 2))\
+								if entity.name != ent1.name and entity.name != ent2.name]
+
+		def get_vals(pred_func):
+			if pred_func != between:
+				val = [((entity, ent), pred_func(entity, ent)) for ent in entities]
+			else:
+				val = [((entity, ent1, ent2), between(entity, ent1, ent2)) for (ent1, ent2) in entity_pairs]
+			val.sort(key = lambda x: x[1], reverse=True)
+			return val[0]
+
+		pred_list = [self.at, self.between, self.on, self.under, self.to_the_left_of, self.to_the_right_of, self.in_front_of, self.behind]
+		# pred_to_str = {at: 'next_to.p', between: 'between.p', on: 'on_top_of.p', under: 'under.p', 
+		# to_the_left_of_deic: 'to_the_left_of.p', to_the_right_of_deic: 'to_the_right_of.p', in_front_of_deic: 'in_front_of.p',
+		# behind: 'behind.p'}
+
+		#print ('WHERE PROC: ', entities, entity_pairs)
+		max_val = 0
+		ret_val = None
+
+		for pred in pred_list:
+			val = get_vals(pred)
+			other_best = max([pred(ent, val[0][1]) for ent in entities]) if pred != between else \
+						max([pred(ent, val[0][1], val[0][2]) for ent in entities])
+			#print (pred, val)
+			#if val[1] > max_val and val[1] > other_best + 0.05:
+			if val[1] > max_val and val[1] > other_best - 0.1:
+				max_val = val[1]
+				ret_val = (pred.str(), val)
+
+		#if max_val > 0.8:
+		#print ("RET WHERE: ", ret_val)
+		return ret_val
 
 class Node:
 	def __init__(self, network=None, connections=None):
