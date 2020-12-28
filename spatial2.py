@@ -414,6 +414,24 @@ class Spatial:
 		#print ("RET WHERE: ", ret_val)
 		return ret_val
 
+	def preprocessig(self, tr):
+		info = {}
+		info[tr] = {'touching': [], 'above': []}
+		for e in self.world.entities:
+			if e != tr:
+				touching = self.str_to_pred["touching"].compute(tr, e)
+				if touching > 0.5:
+					ele = (e, touching)
+					info[tr]['touching'].append(ele)
+				above = self.str_to_pred["above"].compute(tr, e)
+				if above > 0.5:
+					ele = (e, above)
+					info[tr]['above'].append(ele)
+		return info
+
+
+
+
 class Node:
 	def __init__(self, network=None, connections=None):
 		self.arity = 2
@@ -1128,7 +1146,7 @@ class Above(Node):
 		vertical_dist_scaled = (tr.centroid[2] - lm.centroid[2]) / (max(tr.dimensions[2], lm.dimensions[2]) + 0.01)
 		# print ("WITHIN CONE: ", a, within_cone(a.centroid - b.centroid, np.array([0, 0, 1.0]), 0.1), sigmoid(vertical_dist_scaled, 1, 3), vertical_dist_scaled)
 		ret_val = self.connections['within_cone_region'].compute(tr.centroid - lm.centroid, np.array([0, 0, 1.0]), self.parameters["cone_width"])
-		print ("ABOVE FACTORS: ", tr.location, lm.location, ret_val, sigmoid(vertical_dist_scaled, 1, 3))
+		# print ("ABOVE FACTORS: ", tr.location, lm.location, ret_val, sigmoid(vertical_dist_scaled, 1, 3))
 		ret_val = ret_val * sigmoid(vertical_dist_scaled, 1, 3)  # math.e ** (- 0.01 * get_centroid_distance_scaled(a, b))
 		# print ("RET: ", ret_val, type(ret_val), ret_val.requires_grad)
 		#ret_val.retain_grad()
