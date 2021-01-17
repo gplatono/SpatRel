@@ -243,6 +243,7 @@ class Voxel:
 				return False
 
 		if depth == 0 or self.children[0][0][0] is None:
+			print (self.location, self.size, self.bbox_verts)
 			return True
 
 		child_res = False

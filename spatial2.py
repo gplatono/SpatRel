@@ -14,17 +14,12 @@ import os
 world = None
 observer = None
 
-#from voxeltree1 import Voxel, entitymap
-from voxeltree import Voxel
-
 
 class Spatial:
-	def __init__(self, world):
+	def __init__(self, world):		
 		self.update(world)
 		self.spat_rel = ['to_the_right_of_deictic.p', 'in_front_of_deictic.p', 'in_front_of_intrinsic.p', 'supported_by.p', 'touching.p', 'to_the_right_of.p', 'to_the_left_of.p', 'in_front_of.p', 'behind.p', 'above.p', 'below.p', 'near.p', 'over.p', 'on.p', 'under.p', 'between.p', 'inside.p', 'next_to.p']
-
-		#self.vox = Voxel(scope=entitymap(self.world.entities, 60), depth=8)
-		self.vox = Voxel(scope=self.world.entities, depth=6)
+		
 		self.str_to_pred = {
 			'on.p': self.on, 'on_top_of.p': self.on, 'on top of': self.on, 'on': self.on,
 
@@ -199,15 +194,21 @@ class Spatial:
 
 	def preproc(self):
 		self.parameters = None
-		self.vis_proj = self.cache_2d_projections()
+		self.vis_proj = self.cache_2d_projections()		
 
 	def update(self, world):
 		self.world = world
 		self.observer = self.world.get_observer()
+		#from voxeltree1 import Voxel, entitymap
+		#self.vox = Voxel(scope=entitymap(self.world.entities, 60), depth=8)
+		from voxeltree import Voxel
+		self.vox = Voxel(scope=self.world.entities, depth=9)
+		
 		self.preproc()
 		self.init_relations()		
-		self.load_parameters()
+		self.load_parameters()		
 		self.distances = self.cache_distances()
+		self.cache_relations()
 
 	def compute(self, relation, trs, lms):
 		if relation not in self.str_to_pred:
@@ -294,8 +295,9 @@ class Spatial:
 				annotation = [item.strip() for item in annotation]
 				# if "above" not in annotation[1] and "below" not in annotation[1]:
 				# 	continue
-				if "near" not in annotation[1]:
+				#if "on" not in annotation[1] or "ont" in annotation[1]:
 				#if "near" not in annotation[1]:
+				if "touching" not in annotation[1]:
 					continue
 
 				# if "d" in annotation[1]:
@@ -368,9 +370,9 @@ class Spatial:
 								if tr.name != lm1.name and tr.name != lm2.name]
 		
 		if relation != self.between:
-			ranks = [((tr, lm), relation(tr, lm)) for lm in self.world.entities]
+			ranks = [((tr, lm), relation.compute(tr, lm)) for lm in self.world.entities]
 		else:
-			ranks = [((tr, lm1, lm2), self.between(tr, lm1, lm2)) for (lm1, lm2) in lm_pairs]
+			ranks = [((tr, lm1, lm2), self.between.compute(tr, lm1, lm2)) for (lm1, lm2) in lm_pairs]
 
 		ranks.sort(key = lambda x: x[1], reverse=True)
 		return ranks
@@ -415,22 +417,34 @@ class Spatial:
 		return ret_val
 
 	def preprocessig(self, tr):
-		info = {}
-		info[tr] = {'touching': [], 'above': []}
+		#info = {}
+		info = {'touching': [], 'above': []}
 		for e in self.world.entities:
 			if e != tr:
 				touching = self.str_to_pred["touching"].compute(tr, e)
 				if touching > 0.5:
 					ele = (e, touching)
-					info[tr]['touching'].append(ele)
+					info['touching'].append(ele)
 				above = self.str_to_pred["above"].compute(tr, e)
 				if above > 0.5:
 					ele = (e, above)
-					info[tr]['above'].append(ele)
+					info['above'].append(ele)
 		return info
 
+	def cache_relations(self):
+		self.cached_by_relation = {'touching': {}, 'above': {}, 'near_raw': {}}
+		self.cached_by_trs = {}
+		#info[tr] = {'touching': [], 'above': []}
+		for tr in self.world.entities:
+			self.cached_by_trs[tr] = {}
+			self.cached_by_trs[tr]['touching'] = self.rank_lms(self.touching, tr)
+			self.cached_by_trs[tr]['near_raw'] = self.rank_lms(self.near_raw, tr)
+			self.cached_by_trs[tr]['above'] = self.rank_lms(self.above, tr)
 
-
+			for lm in self.world.entities:
+				self.cached_by_relation['touching'][(tr, lm)] = self.touching.compute(tr, lm)
+				self.cached_by_relation['near_raw'][(tr, lm)] = self.near_raw.compute(tr, lm)
+				self.cached_by_relation['above'][(tr, lm)] = self.above.compute(tr, lm)
 
 class Node:
 	def __init__(self, network=None, connections=None):
@@ -1182,7 +1196,10 @@ class Near_Raw(Node):
 		self.parameters = {"raw_metric_weight": torch.tensor(0.1, dtype=torch.float32, requires_grad=True)}
 
 	def compute(self, tr, lm):
-		dist = self.network.distances[(tr, lm)]
+		if (tr, lm) in self.network.distances:
+			dist = self.network.distances[(tr, lm)]
+		else:
+			dist = self.network.raw_distance.compute(tr, lm)
 		# bbox_tr = tr.bbox
 		# bbox_lm = lm.bbox
 		# if tr == lm:
@@ -1279,7 +1296,11 @@ class Near(Node):
 		if tr == lm:
 			return 0
 		connections = self.get_connections()
-		raw_near_measure = connections['near_raw'].compute(tr, lm)
+		if (tr, lm) in self.network.cached_by_relation['near_raw']:
+			raw_near_measure = self.network.cached_by_relation['near_raw'][(tr, lm)]
+		else:
+			raw_near_measure = connections['near_raw'].compute(tr, lm)
+
 		print("raw: ", raw_near_measure)
 
 		raw_near_tr = torch.tensor(
@@ -1498,7 +1519,7 @@ class Central(Node):
 			context = self.network.world.active_context
 		center = np.average([ent.centroid for ent in context])
 
-		return math.exp(- self.parameters["centroid_ewight"] * np.linalg.norm(tr.centroid - center))
+		return math.exp(- self.parameters["centroid_weight"] * np.linalg.norm(tr.centroid - center))
 
 	def str(self):
 		return "central.a"
@@ -1543,10 +1564,6 @@ class Apart(Node):
 # 	center_b = b.bbox_centroid
 # 	return gaussian(0.9 * point_distance((center_a[0], center_a[1], 0), (center_b[0], center_b[1], 0)) /
 # 					(max(dim_a[0], dim_a[1]) + max(dim_b[0], dim_b[1])), 0, 1 / math.sqrt(2 * math.pi))
-
-
-
-
 
 
 # # Computes the nearness measure for two entities

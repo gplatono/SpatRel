@@ -1,9 +1,55 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import json
+from torch.utils.data import DataLoader
+
+num_classes = 15
+
+class Dataset(torch.utils.data.Dataset):
+  def __init__(self, samples, labels):
+        self.labels = labels
+        self.samples = samples
+
+  def __len__(self):
+        return len(self.samples)
+
+  def __getitem__(self, index):
+    #print ('item: ', self.samples[index], self.labels[index])
+    return self.samples[index], self.labels[index]
+
 
 def build_data_loader(batch_size, num_workers, is_shuffle):
-    # TODO
+    data = None
+    with open('dataset', 'r') as file:
+        data = file.readlines()
+    data = [json.loads(item) for item in data]
+    samples = []
+    labels = []
+    for item in data:
+        label = [0] * num_classes
+        if item['label'] != 12 and item['label'] != -12:
+            if item['label'] > 0:
+                label[item['label']-1] = 1
+            else:
+                label[item['label']-1] = 0
+            labels.append(torch.tensor(label, dtype=torch.float32))
+            sample = []
+            for arg in item['arg0']:
+                sample += arg[:3]
+            for arg in item['arg1']:
+                sample += arg[:3]
+            print('samples: ', sample)
+            samples.append(torch.tensor(sample, dtype=torch.float32))
+        else:
+            continue
+
+    print('labels: ', labels)
+    print('label count: ', len(labels))
+    dataset = Dataset(samples, labels)
+    train_loader = DataLoader(dataset, batch_size = batch_size, shuffle = is_shuffle, num_workers = num_workers)
+    test_loader = train_loader
+
     return train_loader, test_loader
 
 

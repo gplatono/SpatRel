@@ -137,6 +137,7 @@ test_file = sys.argv[-1]
 tests = []
 
 with open(test_file) as f:
+	print (test_file)	
 	tests = [line.strip() for line in f.readlines()]
 	for test in tests:
 		print (run_testcase(test))
