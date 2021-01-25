@@ -130,7 +130,7 @@ class Spatial:
 		self.above = Above(connections={'within_cone_region': self.within_cone_region})
 		self.below = Below(connections={'above': self.above})
 		self.near_raw = Near_Raw(connections={'frame_size': self.frame_size, 'raw_distance': self.raw_distance}, network=self)
-		self.near = Near(connections={'near_raw': self.near_raw}, network=self)
+		self.near = Near(connections={'near_raw': self.near_raw, 'frame_size': self.frame_size}, network=self)
 		self.over = Over(connections={'above': self.above, 'projection_intersection': self.projection_intersection,
 									  'near': self.near})
 		self.on = On(connections={'above': self.above, 'touching': self.touching,
@@ -202,7 +202,7 @@ class Spatial:
 		#from voxeltree1 import Voxel, entitymap
 		#self.vox = Voxel(scope=entitymap(self.world.entities, 60), depth=8)
 		from voxeltree import Voxel
-		self.vox = Voxel(scope=self.world.entities, depth=9)
+		self.vox = Voxel(scope=self.world.entities, depth=5)
 		
 		self.preproc()
 		self.init_relations()		
@@ -297,7 +297,7 @@ class Spatial:
 				# 	continue
 				#if "on" not in annotation[1] or "ont" in annotation[1]:
 				#if "near" not in annotation[1]:
-				if "touching" not in annotation[1]:
+				if "near" not in annotation[1]:
 					continue
 
 				# if "d" in annotation[1]:
@@ -1230,15 +1230,16 @@ class Near_Raw(Node):
 		# elif tr.get('concave') is not None or lm.get('concave') is not None:
 		# 	dist = min(dist, closest_mesh_distance_scaled(tr, lm))
 		# print("dist ", dist)
+		
 		fr_size = self.connections['frame_size'].compute()
-
-		raw_metric = math.e ** (-self.parameters["raw_metric_weight"] * dist)
+		final_score = math.e ** (-self.parameters["raw_metric_weight"] * dist)
 		'''0.5 * (1 - min(1, dist / avg_dist + 0.01) +'''
 		# print("RAW NEAR: ", tr, lm, raw_metric * (1 - raw_metric / fr_size))
 		# if raw>fr
 		# negative exponent/ sigmoid
 		# raw_metric
-		final_score = raw_metric * (1 - dist / fr_size)  # dist larger, scale smaller
+		final_score = final_score * (1 - dist / fr_size)  # dist larger, scale smaller
+		#final_score = raw_metric * math.e ** (dist / fr_size - 1)  # dist larger, scale smaller
 		# print("raw: ", raw_metric)
 		# print("fr_size ", fr_size)
 		# print("final: ", final_score)
@@ -1301,7 +1302,9 @@ class Near(Node):
 		else:
 			raw_near_measure = connections['near_raw'].compute(tr, lm)
 
-		print("raw: ", raw_near_measure)
+		#print("raw: ", raw_near_measure)
+		# fr_size = self.connections['frame_size'].compute()
+		# raw_near_measure = raw_near_measure * math.e ** (1 - fr_size / raw_near_measure)
 
 		raw_near_tr = torch.tensor(
 			[connections['near_raw'].compute(tr, entity) for entity in self.network.world.entities if entity != tr],

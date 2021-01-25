@@ -5,6 +5,7 @@ import json
 from torch.utils.data import DataLoader
 
 num_classes = 15
+in_dim = 6
 
 class Dataset(torch.utils.data.Dataset):
   def __init__(self, samples, labels):
@@ -39,13 +40,13 @@ def build_data_loader(batch_size, num_workers, is_shuffle):
                 sample += arg[:3]
             for arg in item['arg1']:
                 sample += arg[:3]
-            print('samples: ', sample)
+            #print('samples: ', sample)
             samples.append(torch.tensor(sample, dtype=torch.float32))
         else:
             continue
 
-    print('labels: ', labels)
-    print('label count: ', len(labels))
+    #print('labels: ', labels)
+    #print('label count: ', len(labels))
     dataset = Dataset(samples, labels)
     train_loader = DataLoader(dataset, batch_size = batch_size, shuffle = is_shuffle, num_workers = num_workers)
     test_loader = train_loader
@@ -74,8 +75,9 @@ class Net(nn.Module):
 def train(train_loader, net, optimizer, criterion, epoch):
     epoch_loss = 0.0
     for epoch_i in range(epoch):
-        for data in enumerate(train_loader):
+        for i, data in enumerate(train_loader):
             inputs, labels = data
+            print ("inp: ", inputs, "label: ", labels)
             optimizer.zero_grad()
             outputs = net(inputs)
             loss = criterion(outputs, labels)
@@ -103,11 +105,11 @@ def test(test_loader, net):
 
 if __name__ == '__main__':
     # build dataloader
-    train_loader = build_data_loader(batch_size=4, num_workers=2, is_shuffle=True)
+    train_loader, test_loader = build_data_loader(batch_size=4, num_workers=2, is_shuffle=True)
     # initialize model
-    net = Net()
+    net = Net(n_in = in_dim, n_out = num_classes)
     # use crossentropy loss
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.BCELoss()
     # use sgd optimizer
     optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
     # train

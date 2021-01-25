@@ -176,6 +176,7 @@ def train(train_loader, net, optimizer, criterion, epoch):
 
         for step, data in enumerate(train_loader):
             inputs, labels = data
+            print (inputs, labels)
             optimizer.zero_grad()
             outputs = net(inputs)
             # labels = torch.max(labels, 1)[1]  # transfer label to 1D target when using CrossEntropy
