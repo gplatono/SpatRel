@@ -451,6 +451,22 @@ class Spatial:
 				self.cached_by_relation['near_raw'][(tr, lm)] = self.near_raw.compute(tr, lm)
 				self.cached_by_relation['above'][(tr, lm)] = self.above.compute(tr, lm)
 
+	def cotext_check(self, relation, tr, lm):
+		raw_measure = self.str_to_pred[relation].compute(tr, lm)
+		context_tr = []
+		context_lm = []
+		for entity in self.network.world.entities:
+			if entity != tr:
+				context_tr_entity = self.str_to_pred[relation].compute(tr, entity)
+				context_lm_entity = self.str_to_pred[relation].compute(tr, entity)
+				context_tr += [context_tr_entity]
+				context_lm += [context_lm_entity]
+		avg_context_tr = sum(context_tr) / len(context_tr)
+		avg_context_lm = sum(context_lm) / len(context_lm)
+		avg_context = 0.5 * (avg_context_lm + avg_context_tr)
+		return avg_context
+
+
 class Node:
 	def __init__(self, network=None, connections=None):
 		self.arity = 2
@@ -1164,9 +1180,9 @@ class Above(Node):
 		"""
 		vertical_dist_scaled = (tr.centroid[2] - lm.centroid[2]) / (max(tr.dimensions[2], lm.dimensions[2]) + 0.01)
 		# print ("WITHIN CONE: ", a, within_cone(a.centroid - b.centroid, np.array([0, 0, 1.0]), 0.1), sigmoid(vertical_dist_scaled, 1, 3), vertical_dist_scaled)
-		ret_val = self.connections['within_cone_region'].compute(tr.centroid - lm.centroid, np.array([0, 0, 1.0]), self.parameters["cone_width"])
+		within_cone_factor = self.connections['within_cone_region'].compute(tr.centroid - lm.centroid, np.array([0, 0, 1.0]), self.parameters["cone_width"])
 		# print ("ABOVE FACTORS: ", tr.location, lm.location, ret_val, sigmoid(vertical_dist_scaled, 1, 3))
-		ret_val = ret_val * sigmoid(vertical_dist_scaled, 1, 3)  # math.e ** (- 0.01 * get_centroid_distance_scaled(a, b))
+		ret_val = within_cone_factor * sigmoid(vertical_dist_scaled, 1, 3)  # math.e ** (- 0.01 * get_centroid_distance_scaled(a, b))
 		# print ("RET: ", ret_val, type(ret_val), ret_val.requires_grad)
 		#ret_val.retain_grad()
 		#self.val1 = ret_val
