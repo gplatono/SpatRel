@@ -92,6 +92,18 @@ class World(object):
 		self.init_event_log()	
 		self.start_time = time.time()	
 
+	def save_screenshot(self):
+		#add_props()
+		self.scene.render.resolution_x = 1920
+		self.scene.render.resolution_y = 1080
+		self.scene.render.resolution_percentage = 100
+		self.scene.render.use_border = False
+		self.scene.render.image_settings.file_format = 'JPEG'
+		filepath = os.path.dirname(os.path.abspath(__file__))
+		current_scene = bpy.data.filepath.split("/")[-1].split(".")[0]
+		self.scene.render.filepath = filepath + current_scene + ".jpg"
+		bpy.ops.render.render(write_still=True)
+
 	def get_block_data(self):
 		url = "http://127.0.0.1:1236/world-api/block-state.json"
 		response = requests.get(url, data="")

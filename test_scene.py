@@ -76,9 +76,9 @@ def fix_ids():
 #bpy.ops.wm.save_mainfile(filepath=bpy.data.filepath)
 
 world = World(bpy.context.scene, simulation_mode=True)
-spatial2.world = world
-spatial2.observer = world.get_observer()
-spatial_module = spatial2.Spatial(world)
+#spatial2.world = world
+#spatial2.observer = world.get_observer()
+#spatial_module = spatial2.Spatial(world)
 
 # print ('computing canopy...')
 # ent = world.find_entity_by_name('')
@@ -129,8 +129,8 @@ def run_testcase(testcase):
 		file.write(json.dumps(data) + '\n')
 	# if relation != 'on' and relation != 'next to' and relation != 'touching':
 	# print (trs, lms)
-	if relation != 'on' and None not in trs and None not in lms:
-		return spatial_module.compute(relation, trs, lms)
+	#if relation != 'on' and None not in trs and None not in lms:
+	#	return spatial_module.compute(relation, trs, lms)
 
 test_file = sys.argv[-1]
 

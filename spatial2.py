@@ -5,6 +5,7 @@
 
 from entity import Entity
 from geometry_utils import *
+import geometry_utils
 from queue import Queue
 import itertools
 import json
@@ -194,7 +195,7 @@ class Spatial:
 
 	def preproc(self):
 		self.parameters = None
-		self.vis_proj = self.cache_2d_projections()		
+		self.vis_proj, self.bboxes_2d = self.cache_2d_projections()		
 
 	def update(self, world):
 		self.world = world
@@ -220,10 +221,14 @@ class Spatial:
 
 	def cache_2d_projections(self):
 		proj = {}
+		bboxes_2d = {}
 		for ent in self.world.entities:
-			proj[ent] = vp_project(ent, self.observer)
-			#print (ent, proj[ent])
-		return proj
+			proj[ent] = geometry_utils.vp_project(ent, self.observer)
+			bboxes_2d[ent] = geometry_utils.get_2d_bbox(proj[ent])
+			with open("projections", "a+") as fil:
+				fil.write(ent.name + " " + str(bboxes_2d[ent]) + "\n")
+		#self.world.save_screenshot()
+		return proj, bboxes_2d
 
 	def cache_distances(self):
 		distances = {}
@@ -243,8 +248,8 @@ class Spatial:
 		for e1 in self.world.entities:
 			for e2 in self.world.entities:
 				if e1 != e2 and (e1, e2) not in dist:
-					tr_bbox = get_2d_bbox(self.vis_proj[e1])
-					lm_bbox = get_2d_bbox(self.vis_proj[e2])
+					tr_bbox = self.bboxes_2d[e1]
+					lm_bbox = self.bboxes_2d[e2]
 					axial_dist = scaled_axial_distance(tr_bbox, lm_bbox)
 					#print (e1.name, tr_bbox, e2.name, lm_bbox, axial_dist)
 					dist[(e1, e2)] = axial_dist
