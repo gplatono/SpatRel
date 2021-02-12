@@ -5,11 +5,14 @@ import bmesh
 import numpy as np
 import json
 
+print(1)
+
 filepath = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, filepath)
 
 from world import World
 import spatial2
+print(1)
 
 types_ids = {
 	'chair': 'props.item.furniture.chair',
@@ -76,9 +79,6 @@ def fix_ids():
 #bpy.ops.wm.save_mainfile(filepath=bpy.data.filepath)
 
 world = World(bpy.context.scene, simulation_mode=True)
-spatial2.world = world
-spatial2.observer = world.get_observer()
-spatial_module = spatial2.Spatial(world)
 
 # print ('computing canopy...')
 # ent = world.find_entity_by_name('')
@@ -109,9 +109,15 @@ def run_testcase(testcase):
 	print (trs, lms)
 	tr_data = [item.get_features() for item in trs]
 	lm_data = [item.get_features() for item in lms]
-	rel_to_label = {'on': 14, 'to the left of': 1, 'left of': 1, 'to the right of': 2, 'right of': 2, 'above': 3,
-			'below': 4, 'in front of': 5, 'behind': 6, 'over': 7, 'under': 8, 'underneath': 8, 'in': 9, 'inside': 9,
-			'touching': 10, 'touch': 10, 'at': 11, 'next to': 11, 'between': 12, 'near': 13, 'on top of': 14, 'beside': 15, 'besides': 15}
+	rel_to_label = {'on': 14, 'supported by': 14, 'to the left of': 1, 'left of': 1, 'to the right of': 2,
+					'right of': 2, 'above': 3,
+					'below': 4, 'in front of': 5, 'behind': 6, 'over': 7, 'under': 8, 'underneath': 8, 'in': 9,
+					'inside': 9,
+					'touching': 10, 'touch': 10, 'at': 11, 'next to': 11, 'between': 12, 'in between': 12, 'near': 13,
+					'on top of': 14, 'beside': 15,
+					'besides': 15, 'facing': 16, 'to the left of d': 1, 'to the left of i': 1, 'to the right of d': 2,
+					'to the right of i': 2,
+					'in front of d': 5, 'in front of i': 5}
 	if 'not ' not in relation:
 		label = rel_to_label[relation]
 	else:
@@ -129,12 +135,12 @@ def run_testcase(testcase):
 		file.write(json.dumps(data) + '\n')
 	# if relation != 'on' and relation != 'next to' and relation != 'touching':
 	# print (trs, lms)
-	if relation != 'on' and None not in trs and None not in lms:
-		return spatial_module.compute(relation, trs, lms)
+
 
 test_file = sys.argv[-1]
 
 tests = []
+print(1)
 
 with open(test_file) as f:
 	print (test_file)	

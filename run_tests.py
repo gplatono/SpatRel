@@ -16,5 +16,9 @@ for scene in scenes:
     ann_file = ann_path + os.sep + scene.split(os.sep)[-1].split(".blend")[0] + '.data'
     print(scene, ann_file)
     if ann_file in annotations:
-        command = ['blender', scene, '-P', 'test_scene.py', '--', ann_file]
+        #command = ['blender', scene, '--background', '-P', 'test_scene.py', '--', ann_file]
+        command = ['C:\\Program Files\\Blender Foundation\\Blender 2.90\\blender.exe', scene,
+                   '--background', '-P', 'test_scene.py', '--', ann_file]
+        print(command)
         subprocess.run(command)
+
