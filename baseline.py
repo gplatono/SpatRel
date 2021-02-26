@@ -38,12 +38,19 @@ def build_data_loader(batch_size, num_workers, is_shuffle, test_perc):
     data = None
     with open('dataset', 'r') as file:
         data = file.readlines()
-    data = [json.loads(item) for item in data]
+    data = [json.loads(item) for item in data ]
+    data = [item for item in data if (abs(item['label']) == 5) or (abs(item['label']) == 5)]
     random.shuffle(data)
     samples = []
     labels = []
     test_s = []
     test_l = []
+    label_count = [0]*num_classes
+    for item in data:
+        label_count[abs(item['label'])-1] += 1
+    for i in range(len(label_count)):
+        label_count[i] *= 1-test_perc
+    #print(label_count)
     for i, item in enumerate(data):
         try:
             if item['label'] > 0:
@@ -52,32 +59,40 @@ def build_data_loader(batch_size, num_workers, is_shuffle, test_perc):
                 label = 0
             else:
                 print("wrong label:", item['label'])
+                exit()
         except:
             print(item['label'] - 1)
             exit()
-        if item['label'] != 12 and item['label'] != -12:
-            sample = []
-            for arg in item['arg0']:
-                sample += arg[:3]
-            for arg in item['arg1']:
-                sample += arg[:3]
-            sample += [0,0,0]
-        else:
-            sample = []
-            for arg in item['arg0']:
-                sample += arg[:3]
-            for arg in item['arg1']:
-                sample += arg[:3]
 
-        sample += [abs(item['label'])]
+        sample = []
+        for arg in item['arg0']:
+            sample += arg[:11]
+        for arg in item['arg1']:
+            sample += arg[:11]
+        if item['label'] != 12 and item['label'] != -12:
+            sample += [0]*11
+
+        label_encode = [0]*num_classes
+        label_encode[abs(item['label'])-1] += 1
+        sample += label_encode
+        #sample += [abs(item['label'])]
         #print('samples: ', sample)
-        if i < len(data) * (1-test_perc):
+        #print('labels: ', label)
+        # if i < len(data) * (1-test_perc):
+        #     labels.append(torch.tensor([label], dtype=torch.float32))
+        #     samples.append(torch.tensor(sample, dtype=torch.float32))
+        # else:
+        #     test_l.append(torch.tensor([label], dtype=torch.float32))
+        #     test_s.append(torch.tensor(sample, dtype=torch.float32))
+
+        if label_count[abs(item['label'])-1] > 0:
             labels.append(torch.tensor([label], dtype=torch.float32))
             samples.append(torch.tensor(sample, dtype=torch.float32))
+            label_count[abs(item['label'])-1] += -1
         else:
             test_l.append(torch.tensor([label], dtype=torch.float32))
             test_s.append(torch.tensor(sample, dtype=torch.float32))
-
+    #print(label_count)
     #print('labels: ', labels)
     #print('label count: ', len(labels))
     dataset = Dataset(samples, labels)
@@ -127,6 +142,7 @@ class Net1(nn.Module):
                 self.mlp += [nn.Linear(layers[i-1], n_out)]
             else:
                 self.mlp += [nn.Linear(layers[i-1], layers[i])]
+            #self.mlp += [nn.ReLU(inplace=False)]
         self.mlp = nn.ModuleList(self.mlp)
         self.sigmoid = nn.Sigmoid()
 
@@ -147,12 +163,15 @@ def train(train_loader, net, optimizer, criterion, epoch):
             outputs = net(inputs)
             loss = criterion(outputs, labels)
             for j in range(len(outputs)):
+                label_index=(inputs[j][-num_classes:]==1).nonzero(as_tuple=True)[0]
+                #print(inputs[j])
+                #print(label_index)
                 if abs(outputs[j]-labels[j]) < 0.5:
-                    correct[int(inputs[j, 6])-1] += 1
-                count[int(inputs[j, 6])-1] += 1
+                    correct[label_index] += 1
+                count[label_index] += 1
             loss.backward()
             optimizer.step()
-            epoch_loss += outputs.shape[0] * loss.item()
+            epoch_loss += loss
 
         # suppress divide by 0 message
         fake_count = []
@@ -176,9 +195,10 @@ def test(test_loader, net):
             inputs, labels = data
             outputs = net(inputs)
             for j in range(len(outputs)):
+                label_index = (inputs[j][-num_classes:] == 1).nonzero(as_tuple=True)[0]
                 if abs(outputs[j] - labels[j]) < 0.5:
-                    correct[int(inputs[j, 6]) - 1] += 1
-                count[int(inputs[j, 6]) - 1] += 1
+                    correct[label_index] += 1
+                count[label_index] += 1
     #suppress divide by 0 message
     fake_count = []
     for i in range(len(count)):
@@ -197,13 +217,14 @@ def run(layers):
     train_loader, test_loader = build_data_loader(batch_size=4, num_workers=2, is_shuffle=True, test_perc=0.1)
     # initialize model
     # net = Net(7, 1)
-    net = Net1(10, 1, layers)
+    net = Net1(33+num_classes, 1, layers)
     # use crossentropy loss
+    #criterion = nn.MSELoss()
     criterion = nn.BCELoss()
     # use sgd optimizer
-    optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.9)
+    optimizer = optim.SGD(net.parameters(), lr=0.003, momentum=0.9)
     # train
-    train(train_loader, net, optimizer, criterion, epoch=10)
+    train(train_loader, net, optimizer, criterion, epoch=20)
     # save model
     savepath = 'classifier_param.pth'
     torch.save(net.state_dict(), savepath)
@@ -214,14 +235,14 @@ if __name__ == '__main__':
     # build dataloader
     train_loader, test_loader = build_data_loader(batch_size=4, num_workers=2, is_shuffle=True, test_perc=0.1)
     # initialize model
-    net = Net(10, 1)
+    net = Net(33+num_classes, 1)
     #net = Net1(10, 1)
     # use crossentropy loss
     criterion = nn.BCELoss()
     # use sgd optimizer
-    optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.9)
+    optimizer = optim.SGD(net.parameters(), lr=0.005, momentum=0.9)
     # train
-    train(train_loader, net, optimizer, criterion, epoch=10)
+    train(train_loader, net, optimizer, criterion, epoch=30)
     # save model
     savepath = 'classifier_param.pth'
     torch.save(net.state_dict(), savepath)
