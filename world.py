@@ -108,9 +108,10 @@ class World(object):
 		self.scene.render.resolution_percentage = 100
 		self.scene.render.use_border = False
 		self.scene.render.image_settings.file_format = 'JPEG'
-		filepath = os.path.dirname(os.path.abspath(__file__))
-		current_scene = bpy.data.filepath.split("/")[-1].split(".")[0]
-		self.scene.render.filepath = filepath + current_scene + ".jpg"
+		filepath = os.path.dirname(os.path.abspath(__file__))		
+		current_scene = bpy.data.filepath.split(os.sep)[-1].split(".")[0]
+		print (filepath, current_scene)
+		self.scene.render.filepath = filepath + os.sep + current_scene + ".jpg"
 		bpy.ops.render.render(write_still=True)
 
 	def get_block_data(self):

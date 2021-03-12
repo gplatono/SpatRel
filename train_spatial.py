@@ -24,7 +24,7 @@ def train(epochs):
 		if ann_path + os.sep + name in annotations and "RW1." in scene:
 			#command = ['/Applications/Blender.app/Contents/MacOS/Blender', scene, '-P', 'train_scene.py', '--', ann_path + os.sep + name]
 			#command = ['../blender/blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name]
-			command = ['../blender/blender', scene, '-P', 'train_scene.py', '--', ann_path + os.sep + name]
+			command = ['blender', scene, '-P', 'train_scene.py', '--', ann_path + os.sep + name]
 			subprocess.run(command)
 			
 			tmp_acc = None
