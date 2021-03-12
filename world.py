@@ -12,6 +12,7 @@ from mathutils import Vector
 from mathutils import Quaternion
 from entity import Entity
 from geometry_utils import *
+import geometry_utils
 
 #import spatial
 
@@ -29,9 +30,15 @@ class World(object):
 		self.simulation_mode = simulation_mode
 
 		#Set the fundamental extrinsic axes
-		self.right_axis = np.array([0, -1, 0])
-		self.front_axis = np.array([-1.0, 0, 0])
+		if self.scene["frontal"] is not None:
+			self.front_axis = np.array(self.scene["frontal"])
+		else:
+			self.front_axis = np.array([-1.0, 0, 0])
 		self.up_axis = np.array([0, 0, 1.0])
+		#self.right_axis = np.array([0, -1, 0])
+		self.right_axis = np.cross(self.front_axis, self.up_axis)
+		#print (self.front_axis, self.right_axis)
+
 		#Sizes of BW objects in meters
 		self.block_edge = 1.0
 		#self.block_edge = 0.155
@@ -94,6 +101,8 @@ class World(object):
 
 	def save_screenshot(self):
 		#add_props()
+		for ob in self.scene.objects:
+			ob.hide_render = ob.hide_viewport
 		self.scene.render.resolution_x = 1920
 		self.scene.render.resolution_y = 1080
 		self.scene.render.resolution_percentage = 100
@@ -127,56 +136,59 @@ class World(object):
 		(which is just a camera). Needed for deictic relations as
 		well as several other aspects requiring the POV concept,
 		e.g., taking screenshots.
-		"""
-	
-		lamp = bpy.data.lights.new(name="Lamp", type = 'POINT')
-		lamp.energy = 30		
-
+		"""	
+		
 		if bpy.data.objects.get("Lamp") is not None:
 			lamp_obj = bpy.data.objects["Lamp"]
 		else:
-			lamp_obj = bpy.data.objects.new("Lamp", lamp)			
+			lamp = bpy.data.lights.new(name="Lamp", type = 'POINT')
+			lamp.energy = 30
+			lamp_obj = bpy.data.objects.new("Lamp", lamp)
 			bpy.context.collection.objects.link(lamp_obj)
 			
-		cam = bpy.data.cameras.new("Camera")
+		#cam = bpy.data.cameras.new("Camera")
 		if bpy.data.objects.get("Camera") is not None:
 			cam_ob = bpy.data.objects["Camera"]
 		else:
-			cam_ob = bpy.data.objects.new("Camera", cam)
+			cam_ob = bpy.data.objects.new("Camera", bpy.data.cameras.new("Camera"))
 			bpy.context.collection.objects.link(cam_ob)
 			
 		#lamp_obj.location = (-20, 0, 10)
 		#cam_ob.location = (-15.5, 0, 7)
-		lamp_obj.location = (0, -20, 10)
-		cam_ob.location = (0, -9, 3)
+		lamp_obj.location = (20 * self.front_axis[0], 20 * self.front_axis[1], 20 * self.front_axis[2] + 10)
+		cam_ob.location = (14 * self.front_axis[0], 14 * self.front_axis[1], 14 * self.front_axis[2] + 6)
+		#print (lamp_obj.location, cam_ob.location)
 		cam_ob.rotation_mode = 'XYZ'
-		cam_ob.rotation_euler = (1.1, 0, -1.57)
+		#cam_ob.rotation_euler = (1.1, 0, -1.57)
+		cam_ob.rotation_euler = (1.4, 0, 3.14)
 		bpy.data.cameras['Camera'].lens = 20
 
 		bpy.context.scene.camera = self.scene.objects["Camera"]
 		
-		if bpy.data.objects.get("Observer") is None:
-			mesh = bpy.data.meshes.new("Observer")
-			bm = bmesh.new()
-			bm.verts.new(cam_ob.location)
-			bm.to_mesh(mesh)
-			observer = bpy.data.objects.new("Observer", mesh)    
-			bpy.context.collection.objects.link(observer)
-			#self.scene.objects.link(observer)
-			bm.free()
-			#self.scene.update()
-		else: 
-			observer = bpy.data.objects["Observer"]            
+		# if bpy.data.objects.get("Observer") is None:
+		# 	mesh = bpy.data.meshes.new("Observer")
+		# 	bm = bmesh.new()
+		# 	bm.verts.new(cam_ob.matrix_world @ cam_ob.location)
+		# 	bm.to_mesh(mesh)
+		# 	observer = bpy.data.objects.new("Observer", mesh)    
+		# 	bpy.context.collection.objects.link(observer)
+		# 	#self.scene.objects.link(observer)
+		# 	bm.free()
+		# 	#self.scene.update()
+		# else: 
+		# 	observer = bpy.data.objects["Observer"]            
 
 		dg = bpy.context.evaluated_depsgraph_get() 
 		dg.update()
 
-		observer_entity = Entity(observer)
-		observer_entity.camera = cam_ob
-		observer_entity.location = np.array(cam_ob.location)
-		observer_entity.up = np.array([0, 1, 3])
-		observer_entity.right = np.array([0, -1.0, 0])
-		observer_entity.set_frontal(observer_entity.location)
+		#observer_entity = Entity(observer)
+		observer_entity = Entity(bpy.data.objects.get("Camera"))
+		#observer_entity.camera = cam_ob
+		#observer_entity.location = np.array(cam_ob.location)
+		observer_entity.set_frontal(-observer_entity.location)
+		observer_entity.up = -self.front_axis + np.array([0, 0, 3])
+		observer_entity.right = -self.right_axis
+		#bpy.ops.wm.save_mainfile(filepath=bpy.data.filepath)
 		return observer_entity
 
 	def create_block(self, name="", location=(0,0,0), rotation=(0,0,0), material=None):

@@ -46,8 +46,8 @@ def sigmoid(x, a, b):
 #Inputs: a,b - vector coordinates as tuples or lists
 #Return value: a triple of coordinates
 def cross_product(a, b):
-    return (a[1] * b[2] - a[2] * b[1], b[0] * a[2] - b[2] * a[0],
-            a[0] * b[1] - a[1] * b[0])
+    return np.array([a[1] * b[2] - a[2] * b[1], b[0] * a[2] - b[2] * a[0],
+            a[0] * b[1] - a[1] * b[0]])
 
 #Given three points that define a plane, computes the unit normal vector to that plane
 #Inputs: a,b,c - point coordinates as tuples or lists
@@ -202,7 +202,7 @@ def get_2d_bbox(points):
         min_x = min(min_x, p[0])
         min_y = min(min_y, p[1])
         max_x = max(max_x, p[0])
-        max_y = max(max_y, p[1])       
+        max_y = max(max_y, p[1])           
     return [min_x, max_x, min_y, max_y]
 
 #Computes the distance between the centroids of
@@ -320,20 +320,19 @@ def get_planar_distance_scaled(ent_a, ent_b):
 def closest_mesh_distance(ent_a, ent_b):
     min_dist = 1e9
 
-    #print (ent_a.vertex_set, ent_b.vertex_set)
-    if len(ent_a.vertex_set) * len(ent_b.vertex_set) <= 1000:
-        min_dist = min([point_distance(u,v) for u in ent_a.vertex_set for v in ent_b.vertex_set])
+    if len(ent_a.vertices) * len(ent_b.vertices) <= 1000:
+        min_dist = min([point_distance(u,v) for u in ent_a.vertices for v in ent_b.vertices])
         return min_dist
     
     count = 0    
-    u0 = ent_a.vertex_set[0]
-    v0 = ent_b.vertex_set[0]
+    u0 = ent_a.vertices[0]
+    v0 = ent_b.vertices[0]
     min_dist = point_distance(u0, v0)       
-    for v in ent_b.vertex_set:
+    for v in ent_b.vertices:
         if point_distance(u0, v) <= min_dist:
             min_dist = point_distance(u0, v)
             v0 = v
-    for u in ent_a.vertex_set:
+    for u in ent_a.vertices:
         if point_distance(u, v0) <= min_dist:
             min_dist = point_distance(u, v0)
             u0 = u
@@ -380,7 +379,7 @@ def box_entity_vertex_containment(box, entity):
     [+x, -y, -z], [+x, -y, +z], [+x, +y, -z], [+x, +y, +z].
     """
 
-    for v in entity.vertex_set:
+    for v in entity.vertices:
         if box_point_containment(box, v):
             return True
 
@@ -848,13 +847,80 @@ def intersect_from_objects(a, b, depsgraph, eps_threshold=0.01):
 # Return value: list of pixel coordinates in the observer's plane if vision
 def vp_project(entity, observer):
     # points = reduce((lambda x,y: x + y), [[obj.matrix_world * v.co for v in obj.data.vertices] for obj in entity.constituents if (obj is not None and hasattr(obj.data, 'vertices') and hasattr(obj, 'matrix_world'))])
-    # co_2d = [bpy_extras.object_utils.world_to_camera_view(world.scene, observer.camera, point) for point in points]
-    # render_scale = world.scene.render.resolution_percentage / 100
-    # render_size = (int(world.scene.render.resolution_x * render_scale), int(world.scene.render.resolution_y * render_scale),)
-    # pixel_coords = [(round(point.x * render_size[0]),round(point.y * render_size[1]),) for point in co_2d]
-    pixel_coords = [(eye_projection(point, observer.up, observer.right, np.linalg.norm(observer.location), 2)) for point
-                    in entity.vertex_set]
-    return pixel_coords
+    points = entity.vertices
+    import bpy_extras
+    from mathutils import Vector
+    scene = bpy.context.scene
+
+    #Camera view coordinates
+    co_2d = [bpy_extras.object_utils.world_to_camera_view(scene, observer.components[0], Vector(point)) for point in points]
+
+    #Compute NDC (pixel) coordinates
+    render_scale = scene.render.resolution_percentage / 100
+    #print ("RENDER RES: ", scene.render.resolution_x,scene.render.resolution_y, render_scale)
+    render_size = (int(scene.render.resolution_x * render_scale), int(scene.render.resolution_y * render_scale),)
+    pixel_coords = [(round(point.x * render_size[0]),round(point.y * render_size[1]),) for point in co_2d]    
+
+    # camera = observer.components[0]
+    # render = bpy.context.scene.render
+    
+    # def project_3d_point(camera: bpy.types.Object, p: Vector, render: bpy.types.RenderSettings = bpy.context.scene.render) -> Vector:
+    #     """
+    #     Given a camera and its projection matrix M;
+    #     given p, a 3d point to project:
+
+    #     Compute P’ = M * P
+    #     P’= (x’, y’, z’, w')
+
+    #     Ignore z'
+    #     Normalize in:
+    #     x’’ = x’ / w’
+    #     y’’ = y’ / w’
+
+    #     x’’ is the screen coordinate in normalised range -1 (left) +1 (right)
+    #     y’’ is the screen coordinate in  normalised range -1 (bottom) +1 (top)
+
+    #     :param camera: The camera for which we want the projection
+    #     :param p: The 3D point to project
+    #     :param render: The render settings associated to the scene.
+    #     :return: The 2D projected point in normalized range [-1, 1] (left to right, bottom to top)
+    #     """
+
+    #     if camera.type != 'CAMERA':
+    #         raise Exception("Object {} is not a camera.".format(camera.name))
+
+    #     if len(p) != 3:
+    #         raise Exception("Vector {} is not three-dimensional".format(p))
+
+    #     # Get the two components to calculate M
+    #     modelview_matrix = camera.matrix_world.inverted()
+    #     projection_matrix = camera.calc_matrix_camera(
+    #         bpy.data.scenes["Scene"].view_layers["View Layer"].depsgraph,
+    #         x = render.resolution_x,
+    #         y = render.resolution_y,
+    #         scale_x = render.pixel_aspect_x,
+    #         scale_y = render.pixel_aspect_y,
+    #     )
+    #     # print(projection_matrix * modelview_matrix)
+    #     # Compute P’ = M * P
+    #     p1 = projection_matrix @ modelview_matrix @ Vector((p.x, p.y, p.z, 1))
+    #     # Normalize in: x’’ = x’ / w’, y’’ = y’ / w’
+    #     p2 = Vector(((p1.x/p1.w, p1.y/p1.w)))        
+    #     return p2
+
+ 
+    # P = Vector((-0.002170146, 0.409979939, 0.162410125))
+
+    # print("Projecting point {} for camera '{:s}' into resolution {:d}x{:d}..."
+    #       .format(P, camera.name, render.resolution_x, render.resolution_y))
+
+    # proj_p = project_3d_point(camera=camera, p=P, render=render)
+    # print("Projected point (homogeneous coords): {}.".format(proj_p))
+
+    # proj_p_pixels = Vector(((render.resolution_x-1) * (proj_p.x + 1) / 2, (render.resolution_y - 1) * (proj_p.y - 1) / (-2)))
+    # print("Projected point (pixel coords): {}.".format(proj_p_pixels))
+    #pixel_coords = [(eye_projection(point, observer.up, observer.right, np.linalg.norm(observer.location), 2)) for point in entity.vertices]
+    return co_2d
 
 # Computes a special function that takes a maximum value at cutoff point
 # and decreasing to zero with linear speed to the left, and with exponetial speed to the right

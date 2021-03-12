@@ -21,7 +21,7 @@ with open(datapath, "r") as f:
 	#spatial.reload(world)
 	spatial.train(annotations, 10)
 	spatial.save_parameters()
-	bpy.ops.wm.quit_blender()
+	#bpy.ops.wm.quit_blender()
 
 # for entity in world.entities:
 # 	en_info = spatial.preprocessig(entity)

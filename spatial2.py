@@ -222,12 +222,20 @@ class Spatial:
 	def cache_2d_projections(self):
 		proj = {}
 		bboxes_2d = {}
+		with open("projections", "w") as fil:
+			fil.close()
 		for ent in self.world.entities:
 			proj[ent] = geometry_utils.vp_project(ent, self.observer)
 			bboxes_2d[ent] = geometry_utils.get_2d_bbox(proj[ent])
+			if "Chair" in ent.name:
+				print ("\n" + ent.name, [(item[0], id(item)) for item in proj[ent]], bboxes_2d[ent])
 			with open("projections", "a+") as fil:
-				fil.write(ent.name + " " + str(bboxes_2d[ent]) + "\n")
-		#self.world.save_screenshot()
+				coor = [int(1920 * max(0, bboxes_2d[ent][0])),
+						int(1080 * (1 - max(0, bboxes_2d[ent][2]))),
+						int(1920 * min(1, bboxes_2d[ent][1])), 
+						int(1080 * (1 - min(1, bboxes_2d[ent][3])))]
+				fil.write(ent.name + ":" + str(coor[0]) + ":" + str(coor[1]) + ":" + str(coor[2]) + ":" + str(coor[3]) + "\n")
+		self.world.save_screenshot()
 		return proj, bboxes_2d
 
 	def cache_distances(self):
@@ -876,7 +884,7 @@ class RightOf_Intrinsic(Node):
 		within_cone_factor = self.connections['within_cone_region'].compute(disp_vec, intrinsic_right, self.parameters['cone_width'])
 		scaled_dist_factor = dist / (max(tr.size, lm.size) + 0.001)
 		# print ("WITHIN CONE EXTR: ", within_cone_factor, "DIST: ", scaled_dist_factor)
-		print(self.parameters)
+		#print(self.parameters)
 		final_score = within_cone_factor * math.e ** (- torch.abs(self.parameters['dist_factor_scale']) * scaled_dist_factor)
 
 		#final_score = math.e ** (- self.parameters["angle_weight"] * (1 - cos)) \
@@ -990,11 +998,11 @@ class InFrontOf_Deictic(Node):
 		scaled_proj_dist = torch.tensor(scaled_proj_dist, dtype=torch.float32)
 		projection_factor = math.e ** (self.parameters["projection_factor_scale"] * scaled_proj_dist)
 
-		print("params: ", self.parameters)
+		#print("params: ", self.parameters)
 
 		final_score = self.parameters["observer_dist_factor_weight"] * observer_dist_factor \
 			   + self.parameters["projection_factor_weight"] * projection_factor
-		print(final_score)
+		#print(final_score)
 		return final_score
 
 	def str(self):

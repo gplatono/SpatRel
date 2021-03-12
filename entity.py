@@ -92,9 +92,13 @@ class Entity(object):
 
 	def compute_geometry(self):
 		#Compute mesh-related data
-		self.vertex_set = self.compute_vertex_set()
-		self.faces = self.compute_faces()
+		#self.vertex_set = self.compute_vertex_set()
+		#self.faces = self.compute_faces()
 		self.vertices, self.polygons = self.compute_mesh_geometry()
+		# print (self.vertices[0], len(self.vertices))
+		# print (self.vertex_set[0], len(self.vertex_set))
+		#print (self.faces[0], len(self.faces))
+		#print (self.polygons[0], len(self.polygons))		
 		#print (self.name)
 		#print (self.vertices)
 		#print (self.polygons, "\n")
@@ -107,6 +111,12 @@ class Entity(object):
 				if v>0.001:
 					print(v)
 		'''
+
+		#Entity's mesh centroid
+		self.centroid = self.compute_centroid()
+		self.centroid_t = torch.tensor(self.centroid, dtype = torch.float32)
+		self.location = self.centroid
+		self.location_t = self.centroid_t  
 
 
 		#self.bvh_trees = [BVHTree.FromObject(item, bpy.context.evaluated_depsgraph_get()) for item in self.full_mesh]
@@ -145,12 +155,6 @@ class Entity(object):
 		self.dimensions = self.compute_dimensions()
 		self.dimensions_t = torch.tensor(self.dimensions, dtype = torch.float32)
 
-		#Entity's mesh centroid
-		self.centroid = self.compute_centroid()
-		self.centroid_t = torch.tensor(self.centroid, dtype = torch.float32)
-		self.location = self.centroid
-		self.location_t = self.centroid_t
-	  
 		#The fundamental intrinsic vectors
 		self.up = np.array([0, 0, 1])
 		self.up_t = torch.tensor(self.up, dtype = torch.float32)
@@ -203,8 +207,12 @@ class Entity(object):
 		for component in self.components:
 			if type(component) == bpy_types.Object:
 				world_matrix = self.components[0].matrix_world
-				current_vert = [world_matrix @ v.co for v in component.data.vertices]
-				current_faces = [[idx + offset for idx in face.vertices] for face in component.data.polygons]
+				current_vert = []
+				current_faces = []
+				if hasattr(component.data, "vertices"):
+					current_vert = [np.array(world_matrix @ v.co) for v in component.data.vertices]
+				if hasattr(component.data, "polygons"):
+					current_faces = [[idx + offset for idx in face.vertices] for face in component.data.polygons]
 			else:
 				current_vert = component.vertices
 				current_faces = [[idx + offset for idx in poly] for poly in component.polygons]
@@ -213,49 +221,53 @@ class Entity(object):
 			offset += len(current_vert)
 		return vertices, faces
 
-	def compute_vertex_set(self):
-		"""
-		Compute and return the total vertex set of the entity.
-		In case of a primitive or a structure it is the union 
-		of the meshes of constituent objects.
-		"""
-		vertices = []
-		#print (self.components, self.category)
-		if self.category == self.Category.PRIMITIVE:
-			# 	vertices += [self.components[0].matrix_world @ v.co for v in self.components[0].data.vertices]
-			# for ent in self.components:
-			vertices = [self.components[0].matrix_world @ v.co for v in self.components[0].data.vertices]
-			# for obj in self.components:
-			# 	vertices += [obj.matrix_world @ v.co for v in obj.data.vertices]
-			vertices = [np.array([v[0],v[1],v[2]]) for v in vertices]
-		elif self.category == self.Category.STRUCTURE:
-			vertices = [v for e in self.components for v in e.vertex_set]
-		elif self.category == self.Category.REGION:
-			vertices = self.components
-		return vertices
+	# def compute_vertex_set(self):
+	# 	"""
+	# 	Compute and return the total vertex set of the entity.
+	# 	In case of a primitive or a structure it is the union 
+	# 	of the meshes of constituent objects.
+	# 	"""
+	# 	vertices = []
+	# 	#print (self.components, self.category)
+	# 	if self.category == self.Category.PRIMITIVE:
+	# 		# 	vertices += [self.components[0].matrix_world @ v.co for v in self.components[0].data.vertices]
+	# 		# for ent in self.components:
+	# 		vertices = [self.components[0].matrix_world @ v.co for v in self.components[0].data.vertices]
+	# 		# for obj in self.components:
+	# 		# 	vertices += [obj.matrix_world @ v.co for v in obj.data.vertices]
+	# 		vertices = [np.array([v[0],v[1],v[2]]) for v in vertices]
+	# 	elif self.category == self.Category.STRUCTURE:
+	# 		vertices = [v for e in self.components for v in e.vertex_set]
+	# 	elif self.category == self.Category.REGION:
+	# 		vertices = self.components
+	# 	return vertices
 
-	def compute_faces(self):
-		"""Compute and return the list of faces of the entity."""
-		faces = []
-		#print ("CAT: ", self.category)
-		if self.category == self.Category.PRIMITIVE:
-			for face in self.components[0].data.polygons:
-			 	faces.append([self.components[0].matrix_world @ self.components[0].data.vertices[i].co for i in face.vertices])
-			# for ob in self.components:
-			# for face in self.components[0].data.polygons:
-			# 	faces.append([self.components[0].matrix_world @ self.components[0].data.vertices[i].co for i in face.vertices])
-		elif self.category == self.Category.STRUCTURE:
-			faces = [f for entity in self.components for f in entity.faces]        
-		return faces
+	# def compute_faces(self):
+	# 	"""Compute and return the list of faces of the entity."""
+	# 	faces = []
+	# 	#print ("CAT: ", self.category)
+	# 	if self.category == self.Category.PRIMITIVE:
+	# 		for face in self.components[0].data.polygons:
+	# 		 	faces.append([self.components[0].matrix_world @ self.components[0].data.vertices[i].co for i in face.vertices])
+	# 		# for ob in self.components:
+	# 		# for face in self.components[0].data.polygons:
+	# 		# 	faces.append([self.components[0].matrix_world @ self.components[0].data.vertices[i].co for i in face.vertices])
+	# 	elif self.category == self.Category.STRUCTURE:
+	# 		faces = [f for entity in self.components for f in entity.faces]        
+	# 	return faces
 
 	def compute_span(self):
 		"""Calculate the coordinate span of the entity."""
-		return [min([v[0] for v in self.vertex_set]),
-				max([v[0] for v in self.vertex_set]),
-				min([v[1] for v in self.vertex_set]),
-				max([v[1] for v in self.vertex_set]),
-				min([v[2] for v in self.vertex_set]),
-				max([v[2] for v in self.vertex_set])]
+		if self.vertices != []:
+			return [min([v[0] for v in self.vertices]),
+					max([v[0] for v in self.vertices]),
+					min([v[1] for v in self.vertices]),
+					max([v[1] for v in self.vertices]),
+					min([v[2] for v in self.vertices]),
+					max([v[2] for v in self.vertices])]
+		else:
+			return [self.location, self.location, self.location, self.location, self.location, self.location]
+
 
 	def compute_bbox(self):
 		"""
@@ -264,12 +276,12 @@ class Entity(object):
 		"""
 		return [(self.span[0], self.span[2], self.span[4]),
 			(self.span[0], self.span[2], self.span[5]),
-		(self.span[0], self.span[3], self.span[4]),
-		(self.span[0], self.span[3], self.span[5]),
-		(self.span[1], self.span[2], self.span[4]),
-		(self.span[1], self.span[2], self.span[5]),
-		(self.span[1], self.span[3], self.span[4]),
-		(self.span[1], self.span[3], self.span[5])]
+			(self.span[0], self.span[3], self.span[4]),
+			(self.span[0], self.span[3], self.span[5]),
+			(self.span[1], self.span[2], self.span[4]),
+			(self.span[1], self.span[2], self.span[5]),
+			(self.span[1], self.span[3], self.span[4]),
+			(self.span[1], self.span[3], self.span[5])]
 
 	def compute_bbox_centroid(self):
 		"""Compute and return the bounding box centroid."""
@@ -279,7 +291,11 @@ class Entity(object):
    
 	def compute_centroid(self):
 		"""Compute and return the centroid the vertex set."""
-		return np.average(self.vertex_set, axis=0)
+		if self.vertices != []:
+			return np.average(self.vertices, axis=0)
+		else:
+			#print ("LOCATION: ", self.components[0].name, self.components[0].location)
+			return np.array(self.components[0].location)
 
 	def compute_dimensions(self):
 		"""Gets the dimensions of the entity as a list of number."""
@@ -287,7 +303,10 @@ class Entity(object):
 
 	def compute_radius(self):
 		"""Compute and return the radius of the circumscribed sphere of the entity."""
-		return max([np.linalg.norm(v - self.centroid) for v in self.vertex_set])
+		if self.vertices != []:
+			return max([np.linalg.norm(v - self.centroid) for v in self.vertices])
+		else:
+			return 0
 		"""if not hasattr(self, 'radius'):
 			total_mesh = self.get_total_mesh()
 			centroid = self.get_centroid()
@@ -337,7 +356,7 @@ class Entity(object):
 				extend = np.array([0, 1, 0])
 				frontal = np.array([0, 1, 0])
 		else:
-			normals = [get_normal(face[0], face[1], face[2]) for face in self.faces]
+			normals = [get_normal(self.vertices[face[0]], self.vertices[face[1]], self.vertices[face[2]]) for face in self.polygons]
 			normals = [item for item in normals if math.fabs(item[2]) < 0.5 * (math.fabs(item[0]) + math.fabs(item[1]))]
 			if len(normals) > 0:
 				frontal = np.average(np.array(normals), axis = 0)
@@ -352,12 +371,12 @@ class Entity(object):
 
 	#Coomputes the distance from a point to closest face of the entity
 	def get_closest_face_distance(self, point):
-		return min([get_distance_from_plane(point, face[0], face[1], face[2]) for face in self.faces])
+		return min([get_distance_from_plane(point, self.vertices[face[0]], self.vertices[face[1]], self.vertices[face[2]]) for face in self.polygons])
 
 	#STUB
-	def get_closest_distance(self, other_entity):
-		this_faces = self.get_faces()
-		other_faces = other_entity.get_faces()
+	# def get_closest_distance(self, other_entity):
+	# 	this_faces = self.get_faces()
+	# 	other_faces = other_entity.get_faces()
 
 	def print(self):
 		print ("ENTITY: " + self.name)
