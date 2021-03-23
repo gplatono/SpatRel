@@ -23,8 +23,8 @@ def train(epochs):
 		#print("SCENE DATA:", scene, name)
 		if ann_path + os.sep + name in annotations and "RW2." in scene:
 			#command = ['/Applications/Blender.app/Contents/MacOS/Blender', scene, '-P', 'train_scene.py', '--', ann_path + os.sep + name]
-			#command = ['../blender/blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name]
-			command = ['blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name]
+			command = ['../blender/blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name]
+			#command = ['blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name]
 			subprocess.run(command)
 			
 			tmp_acc = None
