@@ -329,6 +329,8 @@ class Spatial:
 				#label = torch.tensor(label, dtype=torch.float32, requires_grad=True)
 				#print (sample, label, relation)
 				output = relation(*sample)
+				# factors = self.factor_list(*sample)
+				# print(factors)
 
 				print("ANNOTATION: ", annotation, round(float(output), 2), round(float(label), 2))
 				loss = torch.square(label - output)
@@ -474,6 +476,11 @@ class Spatial:
 		avg_context = 0.5 * (avg_context_lm + avg_context_tr)
 		return avg_context
 
+	def factor_list(self, relation, tr, lm):
+		rel_score = self.str_to_pred[relation].compute(tr, lm)
+		factors = {rel_score, self.str_to_pred[relation].get_factors()}
+		return factors
+
 
 class Node:
 	def __init__(self, network=None, connections=None):
@@ -491,6 +498,12 @@ class Node:
 
 	def get_parameters(self):
 		return self.parameters
+
+	def set_factors(self, factors):
+		self.factors = factors
+
+	def get_factors(self):
+		return self.factors
 
 
 class ProjectionIntersection(Node):
@@ -750,6 +763,7 @@ class Touching(Node):
 						   "mesh_dist_scale": torch.tensor(1.0, dtype=torch.float32, requires_grad=True),
 						   "centroid_dist_threshold": torch.tensor(1.5, dtype=torch.float32, requires_grad=True)}
 
+
 	def compute(self, tr, lm):
 		if tr == lm:
 			return torch.tensor(0.0)
@@ -808,6 +822,7 @@ class RightOf_Deictic(Node):
 		self.parameters = {"hor_weight": torch.tensor(0.4, dtype=torch.float32, requires_grad=True),
 						   "ver_weight": torch.tensor(0.6, dtype=torch.float32, requires_grad=True),
 						   "sigmoid_decay": torch.tensor(0.6, dtype=torch.float32, requires_grad=True)}
+		self.factors = {"hor_component": 0, "ver_component": 0}
 
 	def compute(self, tr, lm):
 		if tr == lm:
@@ -815,6 +830,9 @@ class RightOf_Deictic(Node):
 		horizontal_component = self.connections['horizontal_deictic_component'].compute(tr, lm)
 		# asym_inv_exp(axial_dist[0], 1, 1, 0.05)
 		vertical_component = self.connections['vertical_deictic_component'].compute(tr, lm)
+		self.factors["hor_component"] = horizontal_component
+		self.factors["ver_component"] = vertical_component
+		# print(self.factors)
 		# math.exp(- math.fabs(axial_dist[1]))
 		#horizontal_component = torch.tensor(horizontal_component, dtype=torch.float32, requires_grad=True)
 		#vertical_component = torch.tensor(vertical_component, dtype=torch.float32, requires_grad=True)
@@ -851,6 +869,7 @@ class RightOf_Extrinsic(Node):
 						   "size_weight": torch.tensor(0.05, dtype=torch.float32, requires_grad=True),
 						   "cone_width": torch.tensor(1.0, dtype=torch.float32, requires_grad=True),
 						   "dist_factor_scale": torch.tensor(1.0, dtype=torch.float32, requires_grad=True)}
+		self.factors = {"within_cone_factor": 0}
 
 	def compute(self, tr, lm):
 		if tr == lm:
@@ -863,6 +882,7 @@ class RightOf_Extrinsic(Node):
 		#cos = extrinsic_right.dot(disp_vec)
 
 		within_cone_factor = self.connections['within_cone_region'].compute(disp_vec, extrinsic_right, self.parameters['cone_width'])
+		self.factors["within_cone_factor"] = within_cone_factor.detach().numpy().item()
 		scaled_dist_factor = dist / (max(tr.size, lm.size) + 0.001)
 		#print ("WITHIN CONE EXTR: ", within_cone_factor, "DIST: ", scaled_dist_factor)
 		final_score = within_cone_factor * math.e ** (- torch.abs(self.parameters['dist_factor_scale']) * scaled_dist_factor)
@@ -885,6 +905,7 @@ class RightOf_Intrinsic(Node):
 						   "size_weight": torch.tensor(0.1, dtype=torch.float32, requires_grad=True),
 						   "cone_width": torch.tensor(1.0, dtype=torch.float32, requires_grad=True),
 						   "dist_factor_scale": torch.tensor(1.0, dtype=torch.float32, requires_grad=True)}
+		self.factors = {"within_cone_factor": 0}
 
 	def compute(self, tr, lm):
 		if lm.right is None or tr == lm:
@@ -898,6 +919,7 @@ class RightOf_Intrinsic(Node):
 		cos = intrinsic_right.dot(disp_vec)
 
 		within_cone_factor = self.connections['within_cone_region'].compute(disp_vec, intrinsic_right, self.parameters['cone_width'])
+		self.factors["within_cone_factor"] = within_cone_factor.detach().numpy().item()
 		scaled_dist_factor = dist / (max(tr.size, lm.size) + 0.001)
 		# print ("WITHIN CONE EXTR: ", within_cone_factor, "DIST: ", scaled_dist_factor)
 		#print(self.parameters)
@@ -926,6 +948,10 @@ class RightOf(Node):
 			deictic = connections['to_the_right_of_deictic'].compute(tr, lm)
 			extrinsic = connections['to_the_right_of_extrinsic'].compute(tr, lm)
 			intrinsic = connections['to_the_right_of_intrinsic'].compute(tr, lm)
+			self.set_factors({"RightOfDeictic": (deictic.detach().numpy().item(), connections['to_the_right_of_deictic'].factors),
+							  "RightOfExtrinsic": (extrinsic.detach().numpy().item(), connections['to_the_right_of_extrinsic'].factors),
+							  "RightOfIntrinsic": (intrinsic.detach().numpy().item(), connections['to_the_right_of_intrinsic'].factors)})
+			print("factors: ", self.get_factors())
 			# print(connections['to_the_right_of_deictic'].parameters)
 			# print ("RIGHT OF FACTORS: ", deictic, extrinsic, intrinsic)
 			#vals = torch.tensor([deictic, extrinsic, intrinsic], dtype=torch.float32, requires_grad=True)
@@ -1176,6 +1202,7 @@ class Above(Node):
 	def __init__(self, connections):
 		self.connections = connections
 		self.parameters = {"cone_width": torch.tensor(0.1, dtype=torch.float32, requires_grad=True)}
+		self.factors = {"ver_distance": 0, "within_cone_factor": 0}
 
 	def compute(self, tr, lm):
 		"""Computes the 'a above b' relation, returns the certainty value.
@@ -1189,6 +1216,9 @@ class Above(Node):
 		vertical_dist_scaled = (tr.centroid[2] - lm.centroid[2]) / (max(tr.dimensions[2], lm.dimensions[2]) + 0.01)
 		# print ("WITHIN CONE: ", a, within_cone(a.centroid - b.centroid, np.array([0, 0, 1.0]), 0.1), sigmoid(vertical_dist_scaled, 1, 3), vertical_dist_scaled)
 		within_cone_factor = self.connections['within_cone_region'].compute(tr.centroid - lm.centroid, np.array([0, 0, 1.0]), self.parameters["cone_width"])
+		self.factors["ver_distance"] = vertical_dist_scaled
+		self.factors["within_cone_factor"] = within_cone_factor.detach().numpy().item()
+		print(self.get_factors())
 		# print ("ABOVE FACTORS: ", tr.location, lm.location, ret_val, sigmoid(vertical_dist_scaled, 1, 3))
 		ret_val = within_cone_factor * sigmoid(vertical_dist_scaled, 1, 3)  # math.e ** (- 0.01 * get_centroid_distance_scaled(a, b))
 		# print ("RET: ", ret_val, type(ret_val), ret_val.requires_grad)
@@ -1464,6 +1494,10 @@ class On(Node):
 				#print ("RETVAL: ", ret_val)
 		if lm.get('planar') is not None and isVertical(lm):
 			ret_val = torch.max(ret_val, torch.exp(- self.parameters['vertical_on_scaling_factor'] * get_planar_distance_scaled(tr, lm)))
+
+		self.set_factors({"touching": self.connections['touching'].compute(tr, lm).detach().numpy().item(),
+						  "above": self.connections['above'].compute(tr, lm).detach().numpy().item()})
+		print(self.get_factors())
 		return ret_val
 
 	def str(self):
