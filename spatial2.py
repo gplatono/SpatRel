@@ -310,8 +310,8 @@ class Spatial:
 				# 	continue
 				#if "on" not in annotation[1] or "ont" in annotation[1]:
 				#if "near" not in annotation[1]:
-				if "near" not in annotation[1]:
-					continue
+				# if "near" not in annotation[1]:
+				# 	continue
 
 				# if "d" in annotation[1]:
 				# 	continue
