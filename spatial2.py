@@ -855,6 +855,11 @@ class RightOf_Deictic(Node):
 
 		return final_score
 
+
+	def explain(self, tr, lm):
+		result = self.compute(tr, lm)
+		
+
 	def str(self):
 		return 'to_the_right_of_deictic.p'
 
