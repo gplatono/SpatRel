@@ -23,46 +23,28 @@ class Spatial:
 		
 		self.str_to_pred = {
 			'on.p': self.on, 'on_top_of.p': self.on, 'on top of': self.on, 'on': self.on,
-
 			'to_the_left_of.p': self.to_the_left_of, 'to the left of': self.to_the_left_of, 'left of': self.to_the_left_of,	
 			'left.a': self.to_the_left_of, 'leftmost.a': self.to_the_left_of, 'left.p': self.to_the_left_of,
-
 			'to_the_right_of.p': self.to_the_right_of, 'to the right of': self.to_the_right_of, 
-			'right of': self.to_the_right_of, 'right.a': self.to_the_right_of, 'rightmost.a': self.to_the_right_of, 'right.p': self.to_the_right_of,
-			
+			'right of': self.to_the_right_of, 'right.a': self.to_the_right_of, 'rightmost.a': self.to_the_right_of, 'right.p': self.to_the_right_of,			
 			'to the right of d': self.to_the_right_of_deictic, 
-
 			'near.p': self.near, 'near': self.near, 'near_to.p': self.near, 'close_to.p': self.near, 'close.a': self.near,
-			'next to': self.near, 'beside': self.near, 'besides': self.near,
-			
+			'next to': self.near, 'beside': self.near, 'besides': self.near,			
 			'above.p': self.above, 'above': self.above,
-
 			'below.p': self.below, 'below': self.below,
-
 			'over.p': self.over, 'over': self.over,
-
 			'under.p': self.below, 'under': self.below, 'underneath.p': self.below,
-
 			'supporting.p': self.under,
-
 			'in.p': self.inside, 'inside.p': self.inside, 'in': self.inside, 'inside': self.inside,
-
 			'touching.p': self.touching, 'touching': self.touching, 'touch.v': self.touching, 'touch': self.touching, 'adjacent_to.p': self.touching,
-
 			'at.p': self.at, 'next_to.p': self.at, 'next to': self.at,
-
 			'high.a': self.higher_than, 'upper.a': self.higher_than, 'highest.a': self.higher_than, 
 			'topmost.a': self.higher_than, 'top.a': self.higher_than,
-
 			'low.a': self.lower_than, 'lowest.a': self.lower_than,
-
 			'in_front_of.p': self.in_front_of, 'in front of': self.in_front_of, 'front.a': self.in_front_of, 'frontmost.a': self.in_front_of,
-
 			'in front of d': self.in_front_of_deictic, 
 			'in front of i': self.in_front_of_intrinsic,
-
 			'behind.p': self.behind, 'behind': self.behind, 'backmost.a': self.behind, 'back.a': self.behind, 'farthest.a': self.behind, 'far.a': self.behind,
-
 			'between.p': self.between, 'between': self.between, 'in between': self.between,
 			# 'clear.a': self.clear,
 			# 'where.a': spatial.where,
@@ -203,7 +185,7 @@ class Spatial:
 		#from voxeltree1 import Voxel, entitymap
 		#self.vox = Voxel(scope=entitymap(self.world.entities, 60), depth=8)
 		from voxeltree import Voxel
-		self.vox = Voxel(scope=self.world.entities, depth=5)
+		self.vox = Voxel(scope=self.world.entities, depth=6)
 		
 		self.preproc()
 		self.init_relations()		
@@ -227,15 +209,19 @@ class Spatial:
 		for ent in self.world.entities:
 			proj[ent] = geometry_utils.vp_project(ent, self.observer)
 			bboxes_2d[ent] = geometry_utils.get_2d_bbox(proj[ent])
-			if "Chair" in ent.name:
-				print ("\n" + ent.name, [(item[0], id(item)) for item in proj[ent]], bboxes_2d[ent])
-			with open("projections", "a+") as fil:
-				coor = [int(1920 * max(0, bboxes_2d[ent][0])),
-						int(1080 * (1 - max(0, bboxes_2d[ent][2]))),
-						int(1920 * min(1, bboxes_2d[ent][1])), 
-						int(1080 * (1 - min(1, bboxes_2d[ent][3])))]
-				fil.write(ent.name + ":" + str(coor[0]) + ":" + str(coor[1]) + ":" + str(coor[2]) + ":" + str(coor[3]) + "\n")
-		self.world.save_screenshot()
+			
+		# 	if "Chair" in ent.name:
+		# 		print ("\n" + ent.name, [(item[0], id(item)) for item in proj[ent]], bboxes_2d[ent])
+		# 	with open("projections", "a+") as fil:
+		# 		coor = [int(1920 * max(0, bboxes_2d[ent][0])),
+		# 				int(1080 * (1 - max(0, bboxes_2d[ent][2]))),
+		# 				int(1920 * min(1, bboxes_2d[ent][1])), 
+		# 				int(1080 * (1 - min(1, bboxes_2d[ent][3])))]
+		# 		if ent.name.lower() == "east wall" or ent.name.lower() == "west wall" or ent.name.lower() == "north wall" or ent.name.lower() == "floor" or ent.name.lower() == "ceiling":
+		# 			fil.write(ent.name + ":" + str(coor[0]) + ":" + str(coor[1]) + ":" + str(coor[2]) + ":" + str(coor[3]) + ":0\n")
+		# 		else:
+		# 			fil.write(ent.name + ":" + str(coor[0]) + ":" + str(coor[1]) + ":" + str(coor[2]) + ":" + str(coor[3]) + "\n")
+		# self.world.save_screenshot()
 		return proj, bboxes_2d
 
 	def cache_distances(self):
@@ -306,33 +292,22 @@ class Spatial:
 
 			for annotation in data:
 				annotation = [item.strip() for item in annotation]
-				# if "above" not in annotation[1] and "below" not in annotation[1]:
-				# 	continue
-				#if "on" not in annotation[1] or "ont" in annotation[1]:
-				#if "near" not in annotation[1]:
-				# if "near" not in annotation[1]:
-				# 	continue
-
-				# if "d" in annotation[1]:
-				# 	continue
-
-				# ## postive test ###
-				# if "not" in annotation[1]:
-				# 	continue
-				## negative test ###
-				# print("annotation: ", annotation)
-
+				
+				# if "right of" not in annotation[1] and "left of" not in annotation[1]:
+				if "touching" not in annotation[1]:
+				 	continue				
 
 				sample, label, relation = self.process_sample(annotation)
 				if relation is None:
 					continue
 				#label = torch.tensor(label, dtype=torch.float32, requires_grad=True)
 				#print (sample, label, relation)
+				#print("ANNOTATION: ", annotation)
 				output = relation(*sample)
 				# factors = self.factor_list(*sample)
 				# print(factors)
 
-				print("ANNOTATION: ", annotation, round(float(output), 2), round(float(label), 2))
+				print("RESULT: ", annotation, round(float(output), 2), round(float(label), 2))
 				loss = torch.square(label - output)
 				scene_loss = scene_loss + loss
 
@@ -348,8 +323,6 @@ class Spatial:
 				rel_acc[relation.__self__.str()]['acc'] += acc
 
 				#output.retain_grad()
-
-
 				processed += 1.0
 
 			#print (rel_acc)
@@ -391,7 +364,6 @@ class Spatial:
 
 		ranks.sort(key = lambda x: x[1], reverse=True)
 		return ranks
-
 
 	def where(tr):
 		#entities = [ent for ent in self.world.active_context if ent.name != entity.name and ent.name != 'Table']
@@ -769,7 +741,17 @@ class Touching(Node):
 			return torch.tensor(0.0)
 		mesh_dist = 1e9
 		planar_dist = 1e9
-		return torch.tensor(float(self.network.vox.contains([tr, lm], depth=5)), dtype=torch.float32, requires_grad=True)
+		if above(tr, lm) > 0.7 or above(lm, tr) > 0.7:
+		final_score = torch.tensor(float(self.network.vox.contains([tr, lm], depth=6)), dtype=torch.float32, requires_grad=True)
+		print ("F SCORE: ", tr.name, lm.name, final_score)
+		for part_tr in tr.components:
+			for part_lm in lm.components:
+				part_score = torch.tensor(float(self.network.vox.contains([part_tr, part_lm], depth=6)), dtype=torch.float32, requires_grad=True)
+				final_score = max(final_score, part_score)
+				print ("F SCORE: ", part_tr.name, part_lm.name, final_score)
+
+		return final_score
+		#return torch.tensor(float(self.network.vox.contains([tr, lm], depth=5)), dtype=torch.float32, requires_grad=True)
 		# from mathutils.bvhtree import BVHTree
 		# for a in tr.full_mesh:
 		# 	for b in lm.full_mesh
@@ -855,10 +837,9 @@ class RightOf_Deictic(Node):
 
 		return final_score
 
-
 	def explain(self, tr, lm):
 		result = self.compute(tr, lm)
-		
+
 
 	def str(self):
 		return 'to_the_right_of_deictic.p'
@@ -874,7 +855,9 @@ class RightOf_Extrinsic(Node):
 						   "size_weight": torch.tensor(0.05, dtype=torch.float32, requires_grad=True),
 						   "cone_width": torch.tensor(1.0, dtype=torch.float32, requires_grad=True),
 						   "dist_factor_scale": torch.tensor(1.0, dtype=torch.float32, requires_grad=True)}
-		self.factors = {"within_cone_factor": 0}
+		self.factors = {"within_cone_factor": (None, 0), 
+						"distance_decay_factor": (None, 0),
+						"combination_rule": "product"}
 
 	def compute(self, tr, lm):
 		if tr == lm:
@@ -884,18 +867,66 @@ class RightOf_Extrinsic(Node):
 		disp_vec = disp_vec / (dist + 0.001)
 
 		extrinsic_right = self.network.world.right_axis
+		print ("ETR RIGHT ", extrinsic_right)
 		#cos = extrinsic_right.dot(disp_vec)
 
 		within_cone_factor = self.connections['within_cone_region'].compute(disp_vec, extrinsic_right, self.parameters['cone_width'])
-		self.factors["within_cone_factor"] = within_cone_factor.detach().numpy().item()
+		#self.factors["within_cone_factor"] = within_cone_factor.detach().numpy().item()		
 		scaled_dist_factor = dist / (max(tr.size, lm.size) + 0.001)
+		distance_decay_factor = math.e ** (- torch.abs(self.parameters['dist_factor_scale']) * scaled_dist_factor)
 		#print ("WITHIN CONE EXTR: ", within_cone_factor, "DIST: ", scaled_dist_factor)
-		final_score = within_cone_factor * math.e ** (- torch.abs(self.parameters['dist_factor_scale']) * scaled_dist_factor)
+		self.factors["within_cone_factor"][1] = within_cone_factor
+		self.factors["distance_decay_factor"][1] = distance_decay_factor
+		final_score = within_cone_factor * distance_decay_factor
 		# print("params: ", self.parameters)
 		#final_score = math.e ** (- self.parameters["angle_weight"] * (1 - cos)) \
 					  #* math.e ** (- self.parameters["size_weight"] * dist / max(tr.size, lm.size))
 		#final_score = torch.tensor([final_score], dtype=torch.float32)
 		return final_score
+
+	def explain(self):
+		result = self.compute(tr, lm)
+
+		expl_tree = {}
+
+		if result >= 0.5:
+			#max_val = 0
+			for key in self.factors:
+				if key != "combination_rule":
+					expl_tree[key] = {"factor_object": self.factors[key][0], "factor_value": self.factors[key][1], "factor_expl": None}
+
+		else:			
+			if self.factors["combination_rule"] == "product":# or self.factors["combination_rule"] == "max":
+				min_val = 1
+				min_key = None
+				for key in self.factors:
+					if key != "combination_rule":
+						if self.factors[key][1] < min_val:
+							min_key = key
+							min_val = self.factors[key][1]
+				expl_tree[min_key] = {"factor_object": self.factors[min_key][0],
+												"factor_value": min_val,
+												"factor_expl": None}
+			elif self.factors["combination_rule"] == "max":
+				max_val = 1
+				max_key = None
+				for key in self.factors:
+					if key != "combination_rule":
+						if self.factors[key][1] < min_val:
+							min_key = key
+							min_val = self.factors[key][1]
+				expl_tree[min_key] = {"factor_object": self.factors[min_key][0],
+												"factor_value": min_val,
+												"factor_expl": None}
+
+
+		
+		for factor in expl_tree:
+			if expl_tree[factor]["factor_object"] is not None and hasattr(expl_tree[factor]["factor_object"], "explain"):
+						expl_tree[factor]["factor_expl"] = expl_tree[factor]["factor_object"].explain()
+
+		return expl_tree
+
 
 	def str(self):
 		return 'to_the_right_of_extrinsic.p'
@@ -1009,7 +1040,7 @@ class LeftOf(Node):
 			return torch.max(deictic, torch.max(intrinsic, extrinsic))
 
 		elif lm is None:
-			ret_val = torch.mean([self.compute(tr, entity) for entity in world.active_context])
+			ret_val = torch.mean([self.compute(tr, entity) for entity in self.network.world.active_context])
 		return ret_val
 
 	def str(self):
@@ -1223,7 +1254,7 @@ class Above(Node):
 		within_cone_factor = self.connections['within_cone_region'].compute(tr.centroid - lm.centroid, np.array([0, 0, 1.0]), self.parameters["cone_width"])
 		self.factors["ver_distance"] = vertical_dist_scaled
 		self.factors["within_cone_factor"] = within_cone_factor.detach().numpy().item()
-		print(self.get_factors())
+		#print(self.get_factors())
 		# print ("ABOVE FACTORS: ", tr.location, lm.location, ret_val, sigmoid(vertical_dist_scaled, 1, 3))
 		ret_val = within_cone_factor * sigmoid(vertical_dist_scaled, 1, 3)  # math.e ** (- 0.01 * get_centroid_distance_scaled(a, b))
 		# print ("RET: ", ret_val, type(ret_val), ret_val.requires_grad)

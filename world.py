@@ -157,7 +157,7 @@ class World(object):
 		#lamp_obj.location = (-20, 0, 10)
 		#cam_ob.location = (-15.5, 0, 7)
 		lamp_obj.location = (20 * self.front_axis[0], 20 * self.front_axis[1], 20 * self.front_axis[2] + 10)
-		cam_ob.location = (14 * self.front_axis[0], 14 * self.front_axis[1], 14 * self.front_axis[2] + 6)
+		cam_ob.location = (17 * self.front_axis[0], 17 * self.front_axis[1], 14 * self.front_axis[2] + 6)
 		#print (lamp_obj.location, cam_ob.location)
 		cam_ob.rotation_mode = 'XYZ'
 		#cam_ob.rotation_euler = (1.1, 0, -1.57)
