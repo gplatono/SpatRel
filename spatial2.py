@@ -295,7 +295,7 @@ class Spatial:
 				
 				# if "right of" not in annotation[1] and "left of" not in annotation[1]:
 				if "touching" not in annotation[1]:
-				 	continue				
+					continue				
 
 				sample, label, relation = self.process_sample(annotation)
 				if relation is None:
@@ -304,6 +304,7 @@ class Spatial:
 				#print (sample, label, relation)
 				#print("ANNOTATION: ", annotation)
 				output = relation(*sample)
+				#print (relation.explain(*sample))
 				# factors = self.factor_list(*sample)
 				# print(factors)
 
@@ -476,6 +477,65 @@ class Node:
 
 	def get_factors(self):
 		return self.factors
+
+	def explain(self, tr, lm):
+		result = self.compute(tr, lm)
+
+		expl_tree = {"final_score": result}
+
+		#Positive explanation
+		if result >= 0.5:
+			#max_val = 0
+			if self.factors["combination_rule"] == "product":
+				for key in self.factors:
+					if key != "combination_rule":
+						expl_tree[key] = {"factor_object": self.factors[key][0], "factor_value": self.factors[key][1], "factor_expl": None}
+
+			elif self.factors["combination_rule"] == "max":
+				max_val = 0
+				max_key = None
+				for key in self.factors:
+					if key != "combination_rule":
+						if self.factors[key][1] > max_val:
+							max_key = key
+							max_val = self.factors[key][1]
+				expl_tree[max_key] = {"factor_object": self.factors[max_key][0],
+												"factor_value": max_val,
+												"factor_expl": None}
+
+		#Negative explanation (why X doesn't hold)
+		else:
+			#If we have a product, at least one factor must be small			
+			if self.factors["combination_rule"] == "product":# or self.factors["combination_rule"] == "max":
+				min_val = 1
+				min_key = None
+				for key in self.factors:
+					if key != "combination_rule":
+						if self.factors[key][1] < min_val:
+							min_key = key
+							min_val = self.factors[key][1]
+				expl_tree[min_key] = {"factor_object": self.factors[min_key][0],
+												"factor_value": min_val,
+												"factor_expl": None}
+
+			#If we take maximum, the maximal factor must be small
+			elif self.factors["combination_rule"] == "max":
+				max_val = 0
+				max_key = None
+				for key in self.factors:
+					if key != "combination_rule":
+						if self.factors[key][1] > max_val:
+							max_key = key
+							max_val = self.factors[key][1]
+				expl_tree[max_key] = {"factor_object": self.factors[max_key][0],
+												"factor_value": max_val,
+												"factor_expl": None}
+
+		for factor in expl_tree:			
+			if factor != "final_score" and expl_tree[factor]["factor_object"] is not None and hasattr(expl_tree[factor]["factor_object"], "explain"):
+				expl_tree[factor]["factor_expl"] = expl_tree[factor]["factor_object"].explain()
+
+		return expl_tree
 
 
 class ProjectionIntersection(Node):
@@ -741,14 +801,14 @@ class Touching(Node):
 			return torch.tensor(0.0)
 		mesh_dist = 1e9
 		planar_dist = 1e9
-		if above(tr, lm) > 0.7 or above(lm, tr) > 0.7:
+		#if above(tr, lm) > 0.7 or above(lm, tr) > 0.7:
 		final_score = torch.tensor(float(self.network.vox.contains([tr, lm], depth=6)), dtype=torch.float32, requires_grad=True)
-		print ("F SCORE: ", tr.name, lm.name, final_score)
+		#print ("F SCORE: ", tr.name, lm.name, final_score)
 		for part_tr in tr.components:
 			for part_lm in lm.components:
 				part_score = torch.tensor(float(self.network.vox.contains([part_tr, part_lm], depth=6)), dtype=torch.float32, requires_grad=True)
 				final_score = max(final_score, part_score)
-				print ("F SCORE: ", part_tr.name, part_lm.name, final_score)
+				#print ("F SCORE: ", part_tr.name, part_lm.name, final_score)
 
 		return final_score
 		#return torch.tensor(float(self.network.vox.contains([tr, lm], depth=5)), dtype=torch.float32, requires_grad=True)
@@ -884,50 +944,7 @@ class RightOf_Extrinsic(Node):
 		#final_score = torch.tensor([final_score], dtype=torch.float32)
 		return final_score
 
-	def explain(self):
-		result = self.compute(tr, lm)
-
-		expl_tree = {}
-
-		if result >= 0.5:
-			#max_val = 0
-			for key in self.factors:
-				if key != "combination_rule":
-					expl_tree[key] = {"factor_object": self.factors[key][0], "factor_value": self.factors[key][1], "factor_expl": None}
-
-		else:			
-			if self.factors["combination_rule"] == "product":# or self.factors["combination_rule"] == "max":
-				min_val = 1
-				min_key = None
-				for key in self.factors:
-					if key != "combination_rule":
-						if self.factors[key][1] < min_val:
-							min_key = key
-							min_val = self.factors[key][1]
-				expl_tree[min_key] = {"factor_object": self.factors[min_key][0],
-												"factor_value": min_val,
-												"factor_expl": None}
-			elif self.factors["combination_rule"] == "max":
-				max_val = 1
-				max_key = None
-				for key in self.factors:
-					if key != "combination_rule":
-						if self.factors[key][1] < min_val:
-							min_key = key
-							min_val = self.factors[key][1]
-				expl_tree[min_key] = {"factor_object": self.factors[min_key][0],
-												"factor_value": min_val,
-												"factor_expl": None}
-
-
-		
-		for factor in expl_tree:
-			if expl_tree[factor]["factor_object"] is not None and hasattr(expl_tree[factor]["factor_object"], "explain"):
-						expl_tree[factor]["factor_expl"] = expl_tree[factor]["factor_object"].explain()
-
-		return expl_tree
-
-
+	
 	def str(self):
 		return 'to_the_right_of_extrinsic.p'
 
@@ -976,6 +993,9 @@ class RightOf(Node):
 	def __init__(self, connections, network):
 		self.network = network
 		self.set_connections(connections)
+		self.factors = {"to_the_right_of_deictic": (self.connections["to_the_right_of_deictic"], 0),
+						"to_the_right_of_extrinsic": (self.connections["to_the_right_of_extrinsic"], 0),
+						"to_the_right_of_intrinsic": (self.connections["to_the_right_of_intrinsic"], 0)}
 
 	def compute(self, tr, lm=None):
 		ret_val = 0
@@ -1452,6 +1472,8 @@ class Between(Node):
 
 	def str(self):
 		return 'between.p'
+
+	
 
 
 class MetonymicOn(Node):
