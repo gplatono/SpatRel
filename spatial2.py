@@ -64,6 +64,7 @@ class Spatial:
 		self.within_cone_region = WithinConeRegion()
 		self.frame_size = FrameSize(network=self)
 		self.raw_distance = RawDistance()
+		self.raw_distance_scaled = RawDistanceScaled()
 		self.larger_than = LargerThan()
 		self.closer_than = CloserThan()
 		self.higher_than_centroidwise = HigherThan_Centroidwise()
@@ -112,7 +113,7 @@ class Spatial:
 										  'behind_extrinsic': self.behind_extrinsic}, network=self)
 		self.above = Above(connections={'within_cone_region': self.within_cone_region})
 		self.below = Below(connections={'above': self.above})
-		self.near_raw = Near_Raw(connections={'frame_size': self.frame_size, 'raw_distance': self.raw_distance}, network=self)
+		self.near_raw = Near_Raw(connections={'frame_size': self.frame_size, 'raw_distance': self.raw_distance, 'raw_distance_scaled': self.raw_distance_scaled}, network=self)
 		self.near = Near(connections={'near_raw': self.near_raw, 'frame_size': self.frame_size}, network=self)
 		self.over = Over(connections={'above': self.above, 'projection_intersection': self.projection_intersection,
 									  'near': self.near})
@@ -190,7 +191,7 @@ class Spatial:
 		self.preproc()
 		self.init_relations()		
 		self.load_parameters()		
-		self.distances = self.cache_distances()
+		self.scaled_distances, self.unscaled_distances = self.cache_distances()
 		self.cache_relations()
 
 	def compute(self, relation, trs, lms):
@@ -212,30 +213,35 @@ class Spatial:
 			
 		# 	if "Chair" in ent.name:
 		# 		print ("\n" + ent.name, [(item[0], id(item)) for item in proj[ent]], bboxes_2d[ent])
-			with open("projections", "a+") as fil:
-				coor = [int(1920 * max(0, bboxes_2d[ent][0])),
-						int(1080 * (1 - max(0, bboxes_2d[ent][2]))),
-						int(1920 * min(1, bboxes_2d[ent][1])), 
-						int(1080 * (1 - min(1, bboxes_2d[ent][3])))]
-				if ent.name.lower() == "east wall" or ent.name.lower() == "west wall" or ent.name.lower() == "north wall" or ent.name.lower() == "floor" or ent.name.lower() == "ceiling":
-					fil.write(ent.name + ":" + str(coor[0]) + ":" + str(coor[1]) + ":" + str(coor[2]) + ":" + str(coor[3]) + ":0\n")
-				else:
-					fil.write(ent.name + ":" + str(coor[0]) + ":" + str(coor[1]) + ":" + str(coor[2]) + ":" + str(coor[3]) + "\n")
-		self.world.save_screenshot()
+		# 	with open("projections", "a+") as fil:
+		# 		coor = [int(1920 * max(0, bboxes_2d[ent][0])),
+		# 				int(1080 * (1 - max(0, bboxes_2d[ent][2]))),
+		# 				int(1920 * min(1, bboxes_2d[ent][1])), 
+		# 				int(1080 * (1 - min(1, bboxes_2d[ent][3])))]
+		# 		if ent.name.lower() == "east wall" or ent.name.lower() == "west wall" or ent.name.lower() == "north wall" or ent.name.lower() == "floor" or ent.name.lower() == "ceiling":
+		# 			fil.write(ent.name + ":" + str(coor[0]) + ":" + str(coor[1]) + ":" + str(coor[2]) + ":" + str(coor[3]) + ":0\n")
+		# 		else:
+		# 			fil.write(ent.name + ":" + str(coor[0]) + ":" + str(coor[1]) + ":" + str(coor[2]) + ":" + str(coor[3]) + "\n")
+		# self.world.save_screenshot()
 		return proj, bboxes_2d
 
 	def cache_distances(self):
-		distances = {}
+		scaled_distances = {}
+		unscaled_distances = {}
 		for e1 in self.world.entities:
 			for e2 in self.world.entities:
-				if (e1, e2) not in distances:
+				if (e1, e2) not in scaled_distances:
 					if e1 != e2:
-						distances[(e1, e2)] = self.raw_distance.compute(e1, e2)
-						distances[(e2, e1)] = distances[(e1, e2)]
+						scaled_distances[(e1, e2)] = self.raw_distance_scaled.compute(e1, e2)
+						scaled_distances[(e2, e1)] = scaled_distances[(e1, e2)]
+						unscaled_distances[(e1, e2)] = self.raw_distance.compute(e1, e2)
+						unscaled_distances[(e2, e1)] = unscaled_distances[(e1, e2)]
 					else:
-						distances[(e1, e2)] = 0
-						distances[(e2, e1)] = 0
-		return distances
+						scaled_distances[(e1, e2)] = 0
+						scaled_distances[(e2, e1)] = 0
+						unscaled_distances[(e1, e2)] = 0
+						unscaled_distances[(e2, e1)] = 0
+		return scaled_distances, unscaled_distances
 
 	def pairwise_axial_distances(self):
 		dist = {}
@@ -294,7 +300,7 @@ class Spatial:
 				annotation = [item.strip() for item in annotation]
 				
 				# if "right of" not in annotation[1] and "left of" not in annotation[1]:
-				if "touching" not in annotation[1]:
+				if "near" not in annotation[1]:
 					continue				
 
 				sample, label, relation = self.process_sample(annotation)
@@ -639,26 +645,69 @@ class FrameSize(Node):
 	def str(self):
 		return 'frame_size.n'
 
-
 class RawDistance(Node):
 
-	def compute(self, tr, lm):
-		dist = dist_obj(tr, lm)
-		if tr.get('planar') is not None:
-			dist = min(dist, get_planar_distance_scaled(tr, lm))
+	def compute(self, tr, lm):		
+		dist = get_centroid_distance(tr, lm)		
+		if tr.get('extended') is not None:
+			dist = min(dist, tr.get_closest_face_distance(lm.bbox_centroid))			
+		elif lm.get('extended') is not None:
+			dist = min(dist, lm.get_closest_face_distance(tr.bbox_centroid))			
+		elif tr.get('planar') is not None:
+			dist = min(dist, get_planar_distance(tr, lm))			
 		elif lm.get('planar') is not None:
-			dist = min(dist, get_planar_distance_scaled(lm, tr))
+			dist = min(dist, get_planar_distance(lm, tr))			
 		elif tr.get('vertical_rod') is not None or tr.get('horizontal_rod') is not None or tr.get('rod') is not None:
-			dist = min(dist, get_line_distance_scaled(tr, lm))
+			dist = min(dist, get_line_distance(tr, lm))
 		elif lm.get('vertical_rod') is not None or lm.get('horizontal_rod') is not None or lm.get('rod') is not None:
-			dist = min(dist, get_line_distance_scaled(lm, tr))
-		elif tr.get('concave') is not None or lm.get('concave') is not None:
-			dist = min(dist, closest_mesh_distance_scaled(tr, lm))
-
+			dist = min(dist, get_line_distance(lm, tr))
+		elif tr.get('concave') is not None or lm.get('concave') is not None or dist > 1.5:
+			dist = min(dist, closest_mesh_distance(tr, lm))
+			
 		return dist
 
 	def str(self):
 		return 'raw_distance.n'
+
+
+class RawDistanceScaled(Node):
+
+	def compute(self, tr, lm):
+		#dist = dist_obj(tr, lm)		
+		dist = get_centroid_distance_scaled(tr, lm)
+		# if tr.name == "Banana 2":
+		# 	print ("CENTROID DIST: ", dist)
+		if tr.get('extended') is not None:
+			dist = min(dist, tr.get_closest_face_distance(lm.bbox_centroid))
+			# if tr.name == "Green Book 1":
+			# 	print ("EXT1 DIST: ", dist)
+		elif lm.get('extended') is not None:
+			dist = min(dist, lm.get_closest_face_distance(tr.bbox_centroid))
+			# if tr.name == "Green Book 1":
+			# 	print ("EXT2 DIST: ", dist)
+		elif tr.get('planar') is not None:
+			dist = min(dist, get_planar_distance_scaled(tr, lm))
+			# if tr.name == "Green Book 1":
+			# 	print ("PLANAR1 DIST: ", dist)
+		elif lm.get('planar') is not None:
+			dist = min(dist, get_planar_distance_scaled(lm, tr))
+			# if tr.name == "Green Book 1":
+			# 	print ("PLANAR2 DIST: ", dist)
+		elif tr.get('vertical_rod') is not None or tr.get('horizontal_rod') is not None or tr.get('rod') is not None:
+			dist = min(dist, get_line_distance_scaled(tr, lm))
+		elif lm.get('vertical_rod') is not None or lm.get('horizontal_rod') is not None or lm.get('rod') is not None:
+			dist = min(dist, get_line_distance_scaled(lm, tr))
+		elif tr.get('concave') is not None or lm.get('concave') is not None or dist > 1.5:
+			dist = min(dist, closest_mesh_distance_scaled(tr, lm))
+			# if tr.name == "Banana 2":
+			# 	print ("MESH DIST: ", dist)
+
+		# if (tr.name == "Banana 2"):
+		# 	print (lm.name, dist)
+		return dist
+
+	def str(self):
+		return 'raw_distance_scaled.n'
 
 
 class LargerThan(Node):
@@ -915,8 +964,8 @@ class RightOf_Extrinsic(Node):
 						   "size_weight": torch.tensor(0.05, dtype=torch.float32, requires_grad=True),
 						   "cone_width": torch.tensor(1.0, dtype=torch.float32, requires_grad=True),
 						   "dist_factor_scale": torch.tensor(1.0, dtype=torch.float32, requires_grad=True)}
-		self.factors = {"within_cone_factor": (None, 0), 
-						"distance_decay_factor": (None, 0),
+		self.factors = {"within_cone_factor": [None, 0], 
+						"distance_decay_factor": [None, 0],
 						"combination_rule": "product"}
 
 	def compute(self, tr, lm):
@@ -1311,54 +1360,28 @@ class Near_Raw(Node):
 		self.parameters = {"raw_metric_weight": torch.tensor(0.1, dtype=torch.float32, requires_grad=True)}
 
 	def compute(self, tr, lm):
-		if (tr, lm) in self.network.distances:
-			dist = self.network.distances[(tr, lm)]
+		if (tr, lm) in self.network.scaled_distances:
+			scaled_distance = self.network.scaled_distances[(tr, lm)]
 		else:
-			dist = self.network.raw_distance.compute(tr, lm)
-		# bbox_tr = tr.bbox
-		# bbox_lm = lm.bbox
-		# if tr == lm:
-		# 	return torch.tensor(0, dtype=torch.float32, requires_grad=True)
-		# else:
-		# 	dist = self.network.distanceconnections['raw_distance'].compute(tr, lm)
-		#dist = dist_obj(tr, lm)
+			scaled_distance = self.network.raw_distance_scaled.compute(tr, lm)
 
-		# max_dim_a = max(bbox_tr[7][0] - bbox_tr[0][0],
-		# 				bbox_tr[7][1] - bbox_tr[0][1],
-		# 				bbox_tr[7][2] - bbox_tr[0][2])
-		# max_dim_b = max(bbox_lm[7][0] - bbox_lm[0][0],
-		# 				bbox_lm[7][1] - bbox_lm[0][1],
-		# 				bbox_lm[7][2] - bbox_lm[0][2])		
-		# if tr.get('planar') is not None:
-		# 	# print ("TEST", a.name, b.name)
-		# 	p_dist = get_planar_distance_scaled(tr, lm)
-		# 	dist = min(dist, p_dist)
-		# 	# print("pla: ", p_dist)
-		# elif lm.get('planar') is not None:
-		# 	p_dist = get_planar_distance_scaled(tr, lm)
-		# 	dist = min(dist, get_planar_distance_scaled(lm, tr))
-		# 	# print("dist ", dist)
-		# elif tr.get('vertical_rod') is not None or tr.get('horizontal_rod') is not None or tr.get('rod') is not None:
-		# 	dist = min(dist, get_line_distance_scaled(tr, lm))
-		# elif lm.get('vertical_rod') is not None or lm.get('horizontal_rod') is not None or lm.get('rod') is not None:
-		# 	dist = min(dist, get_line_distance_scaled(lm, tr))
-		# elif tr.get('concave') is not None or lm.get('concave') is not None:
-		# 	dist = min(dist, closest_mesh_distance_scaled(tr, lm))
-		# print("dist ", dist)
+		if (tr, lm) in self.network.unscaled_distances:
+			unscaled_distance = self.network.unscaled_distances[(tr, lm)]
+		else:
+			unscaled_distance = self.network.raw_distance.compute(tr, lm)
 		
 		fr_size = self.connections['frame_size'].compute()
-		final_score = math.e ** (-self.parameters["raw_metric_weight"] * dist)
-		'''0.5 * (1 - min(1, dist / avg_dist + 0.01) +'''
-		# print("RAW NEAR: ", tr, lm, raw_metric * (1 - raw_metric / fr_size))
-		# if raw>fr
-		# negative exponent/ sigmoid
-		# raw_metric
-		final_score = final_score * (1 - dist / fr_size)  # dist larger, scale smaller
-		#final_score = raw_metric * math.e ** (dist / fr_size - 1)  # dist larger, scale smaller
-		# print("raw: ", raw_metric)
-		# print("fr_size ", fr_size)
-		# print("final: ", final_score)
-		# print("param:", self.parameters)
+		final_score = math.e ** (-self.parameters["raw_metric_weight"] * scaled_distance)
+
+		
+		# if (unscaled_distance > fr_size):
+		# 	print ("ERROR!!!:", tr.name, lm.name, unscaled_distance, fr_size)
+		fr_size = max(fr_size, unscaled_distance)
+
+		#Take the frame size into account, i.e., the farther the objects compared 
+		#to the scene size, the smaller should be the raw nearness value.
+		final_score = final_score * (1 - unscaled_distance / fr_size)
+		
 		return final_score
 
 	def str(self):
@@ -1405,38 +1428,49 @@ class Near(Node):
 	def __init__(self, connections, network):
 		self.connections = connections
 		self.network = network
-		self.parameters = {"size_weight": torch.tensor(0.1, dtype=torch.float32, requires_grad=True)}
+		self.parameters = {"size_weight": torch.tensor(0.1, dtype=torch.float32, requires_grad=True),
+							"rank_decay_weight": torch.tensor(0.95, dtype=torch.float32, requires_grad=True)}
 
 	def compute(self, tr, lm=None):
 
 		if tr == lm:
 			return 0
-		connections = self.get_connections()
+		#connections = self.get_connections()
 		if (tr, lm) in self.network.cached_by_relation['near_raw']:
 			raw_near_measure = self.network.cached_by_relation['near_raw'][(tr, lm)]
 		else:
-			raw_near_measure = connections['near_raw'].compute(tr, lm)
+			raw_near_measure = self.connections['near_raw'].compute(tr, lm)
 
 		#print("raw: ", raw_near_measure)
 		# fr_size = self.connections['frame_size'].compute()
 		# raw_near_measure = raw_near_measure * math.e ** (1 - fr_size / raw_near_measure)
 
 		raw_near_tr = torch.tensor(
-			[connections['near_raw'].compute(tr, entity) for entity in self.network.world.entities if entity != tr],
+			[self.connections['near_raw'].compute(tr, entity) for entity in self.network.world.entities if entity != tr],
 			dtype=torch.float32, requires_grad=True)
 		raw_near_lm = torch.tensor(
-			[connections['near_raw'].compute(lm, entity) for entity in self.network.world.entities if entity != lm],
+			[self.connections['near_raw'].compute(lm, entity) for entity in self.network.world.entities if entity != lm],
 			dtype=torch.float32, requires_grad=True)
-		# print(raw_near_lm)
-		# print(raw_near_tr)
-		avg_near = 0.5 * (torch.mean(raw_near_tr) + torch.mean(raw_near_lm))
-		near_measure = raw_near_measure + (raw_near_measure - avg_near) * torch.min(raw_near_measure, 1 - raw_near_measure)
+		
+		tr_ranked = self.network.rank_trs(self.connections['near_raw'], [lm])
+		final_score = raw_near_measure
+		count = 0
+		for entity, value in tr_ranked:
+			if entity != tr and value > raw_near_measure:
+				count += 1
+
+		final_score = (math.e ** (- self.parameters['rank_decay_weight'] * count)) * final_score
+
+		#final_score = raw_near_measure
+		# avg_near = 0.5 * (torch.mean(raw_near_tr) + torch.mean(raw_near_lm))
+		# final_score = raw_near_measure + (raw_near_measure - avg_near) * torch.min(raw_near_measure, 1 - raw_near_measure)
+		
 		# print("final: ", near_measure)
 		# if tr.compute_size() > lm.compute_size():
 		# 	near_measure = near_measure - self.parameters["size_weight"]
 		# elif tr.compute_size() < lm.compute_size():
 		# 	near_measure = near_measure + self.parameters["size_weight"]
-		return near_measure
+		return final_score
 
 	def str(self):
 		return 'near.p'

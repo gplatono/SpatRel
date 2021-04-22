@@ -220,12 +220,46 @@ def get_centroid_distance(ent_a, ent_b):
 #Inputs: ent_a, ent_b - entities
 #Return value: real number
 def get_centroid_distance_scaled(ent_a, ent_b):
-    a_max_dim = max(ent_a.dimensions)
-    b_max_dim = max(ent_b.dimensions)
+    #a_max_dim = max(ent_a.dimensions)
+    #b_max_dim = max(ent_b.dimensions)
 
     #add a small number to denominator in order to
     #avoid division by zero in the case when a_max_dim + b_max_dim == 0
-    return get_centroid_distance(ent_a, ent_b) / (ent_a.radius + ent_b.radius + 0.0001)
+    # if (ent_a.name == "Blue Chair 2"):
+    #     print ("CENTR DIST SCALED: ", ent_b.name, get_centroid_distance(ent_a, ent_b), ent_a.size + ent_b.size)
+    return get_centroid_distance(ent_a, ent_b) / (ent_a.size + ent_b.size + 0.0001)
+
+#Computes the distance between two entities in the special
+#case if the first entity is elongated, i.e., can be approximated by a line or a rod
+#Inputs: ent_a, ent_b - entities
+#Return value: real number
+def get_line_distance(ent_a, ent_b):
+    a_dims = ent_a.dimensions
+    b_dims = ent_b.dimensions
+    a_bbox = ent_a.bbox
+    dist = 1e9
+
+    #If ent_a is elongated, one dimension should be much bigger than the sum of the other two
+    #Here we check which dimension is that
+    if a_dims[0] >= 1.4 * (a_dims[1] + a_dims[2]):
+        dist = min(get_distance_from_line(a_bbox[0], a_bbox[4], ent_b.centroid),
+                   get_distance_from_line(a_bbox[1], a_bbox[5], ent_b.centroid),
+                   get_distance_from_line(a_bbox[2], a_bbox[6], ent_b.centroid),
+                   get_distance_from_line(a_bbox[3], a_bbox[7], ent_b.centroid))
+        dist = math.sqrt(0.5 * (ent_a.centroid[0] - ent_b.centroid[0]) ** 2 + 0.5 * dist ** 2)
+    elif a_dims[1] >= 1.4 * (a_dims[0] + a_dims[2]):
+        dist = min(get_distance_from_line(a_bbox[0], a_bbox[2], ent_b.centroid),
+                   get_distance_from_line(a_bbox[1], a_bbox[3], ent_b.centroid),
+                   get_distance_from_line(a_bbox[4], a_bbox[6], ent_b.centroid),
+                   get_distance_from_line(a_bbox[5], a_bbox[7], ent_b.centroid))
+        dist = math.sqrt(0.5 * (ent_a.centroid[1] - ent_b.centroid[1]) ** 2 + 0.5 * dist ** 2)
+    elif a_dims[2] >= 1.4 * (a_dims[1] + a_dims[0]):
+        dist = min(get_distance_from_line(a_bbox[0], a_bbox[1], ent_b.centroid),
+                   get_distance_from_line(a_bbox[2], a_bbox[3], ent_b.centroid),
+                   get_distance_from_line(a_bbox[4], a_bbox[5], ent_b.centroid),
+                   get_distance_from_line(a_bbox[6], a_bbox[7], ent_b.centroid))
+        dist = math.sqrt(0.5 * (ent_a.centroid[2] - ent_b.centroid[2]) ** 2 + 0.5 * dist ** 2)
+    return dist
 
 
 #Computes the distance between two entities in the special
@@ -236,7 +270,7 @@ def get_line_distance_scaled(ent_a, ent_b):
     a_dims = ent_a.dimensions
     b_dims = ent_b.dimensions
     a_bbox = ent_a.bbox
-    dist = 0
+    dist = 1e9
 
     #If ent_a is elongated, one dimension should be much bigger than the sum of the other two
     #Here we check which dimension is that
@@ -273,11 +307,41 @@ def get_line_distance_scaled(ent_a, ent_b):
 #case if the first entity is planar, i.e., can be approximated by a plane or a thin box
 #Inputs: ent_a, ent_b - entities
 #Return value: real number
+def get_planar_distance(ent_a, ent_b):
+    a_dims = ent_a.dimensions
+    b_dims = ent_b.dimensions
+    a_bbox = ent_a.bbox
+    dist = 1e9
+
+    #If ent_a is planar, one dimension should be much smaller than the other two
+    #Here we check which dimension is that
+    if a_dims[0] <= 0.5 * a_dims[1] and a_dims[0] <= 0.5 * a_dims[2]:
+        dist = min(get_distance_from_plane(ent_b.centroid, a_bbox[0], a_bbox[1], a_bbox[2]),
+                   get_distance_from_plane(ent_b.centroid, a_bbox[4], a_bbox[5], a_bbox[6]))
+        dist = math.sqrt(0.6 * ((ent_a.centroid[1] - ent_b.centroid[1]) ** 2 + (ent_a.centroid[2] - ent_b.centroid[2]) ** 2) \
+                             + 0.4 * dist ** 2)
+    elif a_dims[1] <= 0.5 * a_dims[0] and a_dims[1] <= 0.5 * a_dims[2]:
+        dist = min(get_distance_from_plane(ent_b.centroid, a_bbox[0], a_bbox[1], a_bbox[4]),
+                   get_distance_from_plane(ent_b.centroid, a_bbox[2], a_bbox[3], a_bbox[5]))
+        dist = math.sqrt(0.6 * ((ent_a.centroid[0] - ent_b.centroid[0]) ** 2 + (ent_a.centroid[2] - ent_b.centroid[2]) ** 2) \
+                             + 0.4 * dist ** 2)
+    elif a_dims[2] <= 0.5 * a_dims[0] and a_dims[2] <= 0.5 * a_dims[1]:
+        dist = min(get_distance_from_plane(ent_b.centroid, a_bbox[0], a_bbox[2], a_bbox[4]),
+                   get_distance_from_plane(ent_b.centroid, a_bbox[1], a_bbox[3], a_bbox[5]))
+        dist = math.sqrt(0.6 * ((ent_a.centroid[1] - ent_b.centroid[1]) ** 2 + (ent_a.centroid[0] - ent_b.centroid[0]) ** 2) \
+                             + 0.4 * dist ** 2)
+    return dist
+
+
+#Computes the distance between two entities in the special
+#case if the first entity is planar, i.e., can be approximated by a plane or a thin box
+#Inputs: ent_a, ent_b - entities
+#Return value: real number
 def get_planar_distance_scaled(ent_a, ent_b):
     a_dims = ent_a.dimensions
     b_dims = ent_b.dimensions
     a_bbox = ent_a.bbox
-    dist = 0
+    dist = 1e9
 
     #If ent_a is planar, one dimension should be much smaller than the other two
     #Here we check which dimension is that
@@ -350,9 +414,11 @@ def closest_mesh_distance(ent_a, ent_b):
 #Input: ent_a, ent_b - entities
 #Return value: real number
 def closest_mesh_distance_scaled(ent_a, ent_b):
-    a_dims = ent_a.dimensions
-    b_dims = ent_b.dimensions
-    return closest_mesh_distance(ent_a, ent_b) / (max(a_dims) + max(b_dims) + 0.0001)
+    # a_dims = ent_a.dimensions
+    # b_dims = ent_b.dimensions
+    # if (ent_a.name == "Blue Chair 2"):
+    #     print ("MESH DIST SCALED: ", ent_b.name, closest_mesh_distance(ent_a, ent_b), ent_a.size + ent_b.size)
+    return closest_mesh_distance(ent_a, ent_b) / (ent_a.size + ent_b.size + 0.0001)
 
 def get_span_from_box(box):
     """
@@ -965,15 +1031,15 @@ def scaled_axial_distance(a_bbox, b_bbox):
     # print ("SPANS:", a_span, b_span, a_center, b_center)
     return (axis_dist[0] / (max(a_span[0], b_span[0]) + 0.001), axis_dist[1] / (max(a_span[1], b_span[1]) + 0.001))
 
-def dist_obj(a, b):
-    if not hasattr(a, "bbox") or not hasattr(b, "bbox"):
-        return -1
-    bbox_a = a.bbox
-    bbox_b = b.bbox
-    center_a = a.bbox_centroid
-    center_b = b.bbox_centroid
-    if a.get('extended') is not None:
-        return a.get_closest_face_distance(center_b)
-    if b.get('extended') is not None:
-        return b.get_closest_face_distance(center_a)
-    return point_distance(center_a, center_b)
+# def dist_obj(a, b):
+#     if not hasattr(a, "bbox") or not hasattr(b, "bbox"):
+#         return -1
+#     bbox_a = a.bbox
+#     bbox_b = b.bbox
+#     center_a = a.bbox_centroid
+#     center_b = b.bbox_centroid
+#     if a.get('extended') is not None:
+#         return a.get_closest_face_distance(center_b)
+#     if b.get('extended') is not None:
+#         return b.get_closest_face_distance(center_a)
+#     return point_distance(center_a, center_b)

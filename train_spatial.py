@@ -13,6 +13,8 @@ ann_path = path_to_data + os.sep + "annotations"
 scenes = glob.glob(scene_path + os.sep + "*.blend")
 annotations = glob.glob(ann_path + os.sep + "*.data")
 
+sc_subset = ["RW1.data", "RW2.data", "RW3.data", "RW4.data", "RW5.data", "RW6.data", "RW7.data", "RW8.data", "RW9.data", "RW10.data"]
+
 def train(epochs):
 	scene_idx = 0
 	rel_acc = None
@@ -21,7 +23,7 @@ def train(epochs):
 		scene = scenes[scene_idx]
 		name = scene.split(os.sep)[-1].split(".blend")[0] + '.data'
 		#print("SCENE DATA:", scene, name)
-		if ann_path + os.sep + name in annotations and "RW15." in scene:#"RW1." in scene or "RW2." in scene or "RW3." in scene or "RW4." in scene or "RW5." in scene or "RW6." in scene:
+		if ann_path + os.sep + name in annotations and name in sc_subset:#"RW1." in scene or "RW2." in scene or "RW3." in scene or "RW4." in scene or "RW5." in scene or "RW6." in scene:
 			#command = ['/Applications/Blender.app/Contents/MacOS/Blender', scene, '-P', 'train_scene.py', '--', ann_path + os.sep + name]
 			command = ['../blender/blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name]
 			#command = ['blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name]
