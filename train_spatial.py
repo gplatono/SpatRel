@@ -21,10 +21,10 @@ def train(epochs):
 		scene = scenes[scene_idx]
 		name = scene.split(os.sep)[-1].split(".blend")[0] + '.data'
 		#print("SCENE DATA:", scene, name)
-		if ann_path + os.sep + name in annotations and "RW202." in scene:#"RW1." in scene or "RW2." in scene or "RW3." in scene or "RW4." in scene or "RW5." in scene or "RW6." in scene:
+		if ann_path + os.sep + name in annotations and "RW15." in scene:#"RW1." in scene or "RW2." in scene or "RW3." in scene or "RW4." in scene or "RW5." in scene or "RW6." in scene:
 			#command = ['/Applications/Blender.app/Contents/MacOS/Blender', scene, '-P', 'train_scene.py', '--', ann_path + os.sep + name]
-			#command = ['../blender/blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name]
-			command = ['blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name]
+			command = ['../blender/blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name]
+			#command = ['blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name]
 			subprocess.run(command)
 			
 			tmp_acc = None

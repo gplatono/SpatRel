@@ -212,16 +212,16 @@ class Spatial:
 			
 		# 	if "Chair" in ent.name:
 		# 		print ("\n" + ent.name, [(item[0], id(item)) for item in proj[ent]], bboxes_2d[ent])
-		# 	with open("projections", "a+") as fil:
-		# 		coor = [int(1920 * max(0, bboxes_2d[ent][0])),
-		# 				int(1080 * (1 - max(0, bboxes_2d[ent][2]))),
-		# 				int(1920 * min(1, bboxes_2d[ent][1])), 
-		# 				int(1080 * (1 - min(1, bboxes_2d[ent][3])))]
-		# 		if ent.name.lower() == "east wall" or ent.name.lower() == "west wall" or ent.name.lower() == "north wall" or ent.name.lower() == "floor" or ent.name.lower() == "ceiling":
-		# 			fil.write(ent.name + ":" + str(coor[0]) + ":" + str(coor[1]) + ":" + str(coor[2]) + ":" + str(coor[3]) + ":0\n")
-		# 		else:
-		# 			fil.write(ent.name + ":" + str(coor[0]) + ":" + str(coor[1]) + ":" + str(coor[2]) + ":" + str(coor[3]) + "\n")
-		# self.world.save_screenshot()
+			with open("projections", "a+") as fil:
+				coor = [int(1920 * max(0, bboxes_2d[ent][0])),
+						int(1080 * (1 - max(0, bboxes_2d[ent][2]))),
+						int(1920 * min(1, bboxes_2d[ent][1])), 
+						int(1080 * (1 - min(1, bboxes_2d[ent][3])))]
+				if ent.name.lower() == "east wall" or ent.name.lower() == "west wall" or ent.name.lower() == "north wall" or ent.name.lower() == "floor" or ent.name.lower() == "ceiling":
+					fil.write(ent.name + ":" + str(coor[0]) + ":" + str(coor[1]) + ":" + str(coor[2]) + ":" + str(coor[3]) + ":0\n")
+				else:
+					fil.write(ent.name + ":" + str(coor[0]) + ":" + str(coor[1]) + ":" + str(coor[2]) + ":" + str(coor[3]) + "\n")
+		self.world.save_screenshot()
 		return proj, bboxes_2d
 
 	def cache_distances(self):
