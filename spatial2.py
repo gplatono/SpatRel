@@ -300,8 +300,8 @@ class Spatial:
 				annotation = [item.strip() for item in annotation]
 				
 				# if "right of" not in annotation[1] and "left of" not in annotation[1]:
-				if "near" not in annotation[1]:
-					continue				
+				# if "near" not in annotation[1]:
+				# 	continue				
 
 				sample, label, relation = self.process_sample(annotation)
 				if relation is None:
@@ -348,9 +348,55 @@ class Spatial:
 			if rel_acc[key]['total'] != 0:
 				rel_acc[key]['acc'] = float(rel_acc[key]['acc'] / rel_acc[key]['total'])
 			#print (key.upper() + ", {} annotations, accuracy: {:.3f}".format(rel_acc[key]['total'], rel_acc[key]['acc']))
-		with open('rel_accuracies', 'w') as file:
+		with open('rel_accuracies_train', 'w') as file:
 			json.dump(rel_acc, file)
 
+	def evaluate(self, data):
+		param = self.get_param_list()
+		rel_acc = {}
+
+		scene_loss = torch.tensor(0.0, requires_grad=True)
+		scene_accuracy = 0
+		processed = 0
+
+		for prop, obj in self.__dict__.items():
+			if hasattr(obj, 'str') and obj.str() in self.spat_rel:
+				rel_acc[obj.str()] = {'total': 0, 'acc': 0}
+
+		for annotation in data:
+			annotation = [item.strip() for item in annotation]
+				
+			sample, label, relation = self.process_sample(annotation)
+			if relation is None:
+				continue
+			
+			output = relation(*sample)
+			
+			print("RESULT: ", annotation, round(float(output), 2), round(float(label), 2))
+			loss = torch.square(label - output)
+			scene_loss = scene_loss + loss
+
+			acc = int(torch.abs(output - label) < torch.abs(output - (1 - label)))
+			scene_accuracy += acc
+
+			rel_acc[relation.__self__.str()]['total'] += 1
+			rel_acc[relation.__self__.str()]['acc'] += acc
+
+			processed += 1.0			
+			scene_loss = scene_loss / len(data)
+			
+			if processed != 0:
+				print("Loss: {:.3f}, Acc: {:.2f}".format(float(scene_loss), float(100 * scene_accuracy / processed)))#, output.grad, scene_loss.grad)
+			else:
+				print("no annotations found!")			
+
+		for key in rel_acc:
+			if rel_acc[key]['total'] != 0:
+				rel_acc[key]['acc'] = float(rel_acc[key]['acc'] / rel_acc[key]['total'])
+			#print (key.upper() + ", {} annotations, accuracy: {:.3f}".format(rel_acc[key]['total'], rel_acc[key]['acc']))
+		with open('rel_accuracies_test', 'w') as file:
+			json.dump(rel_acc, file)
+			
 
 	def rank_trs(self, relation, lms):
 		ranks = [(tr, relation.compute(tr, *lms)) for tr in self.world.entities]
