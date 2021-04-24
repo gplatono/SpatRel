@@ -9,7 +9,8 @@ sys.path.insert(0, filepath)
 from world import World
 from spatial2 import Spatial
 
-datapath = sys.argv[-1]
+datapath = sys.argv[-2]
+train_flag = sys.argv[-1]
 
 world = World(bpy.context.scene, simulation_mode=True)
 spatial = Spatial(world)
@@ -19,8 +20,11 @@ with open(datapath, "r") as f:
 	lines = f.readlines()
 	annotations = [line.split(":") for line in lines if line.strip() != ""]
 	#spatial.reload(world)
-	spatial.train(annotations, 10)
-	spatial.save_parameters()
+	if train_flag == 'train':
+		spatial.train(annotations, 10)
+		spatial.save_parameters()
+	else:
+		spatial.evaluate(annotations)
 	#bpy.ops.wm.quit_blender()
 
 # for entity in world.entities:

@@ -294,7 +294,7 @@ class Spatial:
 
 			for prop, obj in self.__dict__.items():
 				if hasattr(obj, 'str') and obj.str() in self.spat_rel:
-					rel_acc[obj.str()] = {'total': 0, 'acc': 0}
+					rel_acc[obj.str()] = {'total': 0, 'acc': 0, 'tp': 0, 'fp': 0, 'tn': 0, 'fn': 0}
 
 			for annotation in data:
 				annotation = [item.strip() for item in annotation]
@@ -328,6 +328,14 @@ class Spatial:
 
 				rel_acc[relation.__self__.str()]['total'] += 1
 				rel_acc[relation.__self__.str()]['acc'] += acc
+				if output >= 0.5 and label == 1:
+					rel_acc[relation.__self__.str()]['tp'] += 1
+				elif output < 0.5 and label == 1:
+					rel_acc[relation.__self__.str()]['fn'] += 1
+				elif output >= 0.5 and label == 0:
+					rel_acc[relation.__self__.str()]['fp'] += 1
+				else:
+					rel_acc[relation.__self__.str()]['tn'] += 1
 
 				#output.retain_grad()
 				processed += 1.0
@@ -355,13 +363,13 @@ class Spatial:
 		param = self.get_param_list()
 		rel_acc = {}
 
-		scene_loss = torch.tensor(0.0, requires_grad=True)
+		#scene_loss = torch.tensor(0.0, requires_grad=True)
 		scene_accuracy = 0
 		processed = 0
 
 		for prop, obj in self.__dict__.items():
 			if hasattr(obj, 'str') and obj.str() in self.spat_rel:
-				rel_acc[obj.str()] = {'total': 0, 'acc': 0}
+				rel_acc[obj.str()] = {'total': 0, 'acc': 0, 'tp': 0, 'fp': 0, 'tn': 0, 'fn': 0}
 
 		for annotation in data:
 			annotation = [item.strip() for item in annotation]
@@ -373,20 +381,29 @@ class Spatial:
 			output = relation(*sample)
 			
 			print("RESULT: ", annotation, round(float(output), 2), round(float(label), 2))
-			loss = torch.square(label - output)
-			scene_loss = scene_loss + loss
+			#loss = torch.square(label - output)
+			#scene_loss = scene_loss + loss
+
 
 			acc = int(torch.abs(output - label) < torch.abs(output - (1 - label)))
 			scene_accuracy += acc
 
 			rel_acc[relation.__self__.str()]['total'] += 1
 			rel_acc[relation.__self__.str()]['acc'] += acc
+			if output >= 0.5 and label == 1:
+				rel_acc[relation.__self__.str()]['tp'] += 1
+			elif output < 0.5 and label == 1:
+				rel_acc[relation.__self__.str()]['fn'] += 1
+			elif output >= 0.5 and label == 0:
+				rel_acc[relation.__self__.str()]['fp'] += 1
+			else:
+				rel_acc[relation.__self__.str()]['tn'] += 1
 
-			processed += 1.0			
-			scene_loss = scene_loss / len(data)
+			processed += 1.0
+			#scene_loss = scene_loss / len(data)
 			
 			if processed != 0:
-				print("Loss: {:.3f}, Acc: {:.2f}".format(float(scene_loss), float(100 * scene_accuracy / processed)))#, output.grad, scene_loss.grad)
+				print("Test Accuracy: {:.2f}".format(float(100 * scene_accuracy / processed)))
 			else:
 				print("no annotations found!")			
 
@@ -396,7 +413,7 @@ class Spatial:
 			#print (key.upper() + ", {} annotations, accuracy: {:.3f}".format(rel_acc[key]['total'], rel_acc[key]['acc']))
 		with open('rel_accuracies_test', 'w') as file:
 			json.dump(rel_acc, file)
-			
+
 
 	def rank_trs(self, relation, lms):
 		ranks = [(tr, relation.compute(tr, *lms)) for tr in self.world.entities]
