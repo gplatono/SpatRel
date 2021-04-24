@@ -162,7 +162,7 @@ class World(object):
 		cam_ob.rotation_mode = 'XYZ'
 		#cam_ob.rotation_euler = (1.1, 0, -1.57)
 		cam_ob.rotation_euler = (1.4, 0, 3.14)
-		bpy.data.cameras['Camera'].lens = 20
+		bpy.data.cameras[0].lens = 20
 
 		bpy.context.scene.camera = self.scene.objects["Camera"]
 		
