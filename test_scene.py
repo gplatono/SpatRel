@@ -111,11 +111,13 @@ def run_testcase(testcase):
 	lm_data = [item.get_features() for item in lms]
 	rel_to_label = {'on': 14, 'to the left of': 1, 'left of': 1, 'to the right of': 2, 'right of': 2, 'above': 3,
 			'below': 4, 'in front of': 5, 'behind': 6, 'over': 7, 'under': 8, 'underneath': 8, 'in': 9, 'inside': 9,
-			'touching': 10, 'touch': 10, 'at': 11, 'next to': 11, 'between': 12, 'near': 13, 'on top of': 14, 'beside': 15, 'besides': 15}
+			'touching': 10, 'touch': 10, 'at': 11, 'next to': 11, 'between': 12, 'near': 13, 'on top of': 14, 'beside': 15,
+			'besides': 15, 'facing': 16}
 	if 'not ' not in relation:
 		label = rel_to_label[relation]
 	else:
-		label = -rel_to_label[relation.replace('not ', '')]
+		label = -rel_to_label[relation.replace('not ', '').strip()]
+
 
 	# if label != 3 and label != -3 and label != 4 and label != -4:
 	#  	return
