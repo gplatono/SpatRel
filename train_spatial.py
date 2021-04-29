@@ -13,8 +13,8 @@ ann_path = path_to_data + os.sep + "annotations"
 scenes = sorted(glob.glob(scene_path + os.sep + "*.blend"))
 annotations = sorted(glob.glob(ann_path + os.sep + "*.data"))
 
-train_subset = ["RW1.data", "RW2.data", "RW3.data", "RW4.data", "RW5.data", "RW6.data", "RW7.data", "RW8.data", "RW9.data", "RW10.data", "RW11.data", "RW12.data", "RW13.data", "RW14.data", "RW15.data"]
-test_subset = ["RW101.data", "RW201.data", "RW202.data", "RW203.data", "RW204.data", "RW205.data", "RW206.data", "RW207.data", "RW208.data", "RW209.data", "RW210.data"]
+train_subset = ["RW101.data", "RW201.data", "RW202.data", "RW203.data", "RW204.data", "RW205.data", "RW206.data", "RW207.data", "RW208.data", "RW209.data", "RW210.data"]#["RW1.data", "RW2.data", "RW3.data", "RW4.data", "RW5.data", "RW6.data", "RW7.data", "RW8.data", "RW9.data", "RW10.data", "RW11.data", "RW12.data", "RW13.data", "RW14.data", "RW15.data"]
+test_subset = ["RW1.data", "RW2.data", "RW3.data", "RW4.data", "RW5.data", "RW6.data", "RW7.data", "RW8.data", "RW9.data", "RW10.data", "RW11.data", "RW12.data", "RW13.data", "RW14.data", "RW15.data"]#["RW101.data", "RW201.data", "RW202.data", "RW203.data", "RW204.data", "RW205.data", "RW206.data", "RW207.data", "RW208.data", "RW209.data", "RW210.data"]
 
 def model_train(epochs):
 	train_acc_dict = None
