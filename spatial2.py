@@ -285,6 +285,7 @@ class Spatial:
 		rel_acc = {}
 
 		optimizer = torch.optim.Adam(param, lr=0.01) #weight_decay=0.05)
+		torch.autograd.set_detect_anomaly(True)
 		for iter in range(iterations):
 			optimizer.zero_grad()
 
@@ -1430,8 +1431,12 @@ class Near_Raw(Node):
 		else:
 			scaled_distance = self.network.raw_distance_scaled.compute(tr, lm)
 
-		final_score = math.e ** (-torch.square(self.parameters["raw_metric_weight"]) * scaled_distance)
-
+		# theta_sq = self.parameters["raw_metric_weight"]
+		# theta_sq1 = torch.clone(theta_sq)
+		#result = theta_sq1 * theta_sq * scaled_distance
+		#final_score = math.e ** (- result)
+		final_score = torch.sigmoid(self.parameters["raw_metric_weight"] * scaled_distance)
+		#print ("RAW DIST", theta_sq, theta_sq1, final_score)
 		
 		# if (unscaled_distance > fr_size):
 		# 	print ("ERROR!!!:", tr.name, lm.name, unscaled_distance, fr_size)		
@@ -1523,10 +1528,10 @@ class Near(Node):
 		#self.parameters['frame_factor_weight'] = torch.clamp(self.parameters['frame_factor_weight'])
 
 		#final_score = torch.sum(torch.mul(weights, torch.tensor([raw_near_measure, self.factors['frame_size_factor'][1]], requires_grad = True)))
-		#final_score = weights[0] * raw_near_measure + weights[1] * self.factors['frame_size_factor'][1]
-		final_score = raw_near_measure * self.factors['frame_size_factor'][1]
+		final_score = weights[0] * raw_near_measure + weights[1] * self.factors['frame_size_factor'][1]
+		#final_score = raw_near_measure * (1 - unscaled_distance / fr_size)#self.factors['frame_size_factor'][1]
 
-		print ("NEAR FINAL: ", weights, self.parameters['rank_decay_weight'], final_score, raw_near_measure, self.factors['frame_size_factor'][1])
+		#print ("NEAR FINAL: ", weights, self.parameters['rank_decay_weight'], final_score, raw_near_measure, self.factors['frame_size_factor'][1])
 
 
 		# raw_near_tr = torch.tensor(

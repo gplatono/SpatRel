@@ -26,8 +26,8 @@ def model_train(epochs):
 		if ann_path + os.sep + name in annotations and name in train_subset:
 
 			#command = ['/Applications/Blender.app/Contents/MacOS/Blender', scene, '-P', 'train_scene.py', '--', ann_path + os.sep + name]
-			command = ['../blender/blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name, 'train']
-			#command = ['blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name, 'train']
+			#command = ['../blender/blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name, 'train']
+			command = ['blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name, 'train']
 			subprocess.run(command)
 			
 			tmp_acc = None
@@ -69,8 +69,8 @@ def model_evaluate(epochs):
 		if ann_path + os.sep + name in annotations and name in test_subset:
 
 			#command = ['/Applications/Blender.app/Contents/MacOS/Blender', scene, '-P', 'train_scene.py', '--', ann_path + os.sep + name]
-			command = ['../blender/blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name, 'test']
-			#command = ['blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name, 'test']
+			#command = ['../blender/blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name, 'test']
+			command = ['blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name, 'test']
 			subprocess.run(command)
 			
 			tmp_acc = None
@@ -123,7 +123,7 @@ def print_stats(acc_dict):
 			precision = tp / (tp + fp)		
 			recall = tp / (tp + fn)
 			total_accuracy = (tp + tn) / (tp + tn + fp + fn)
-			F1 = 1 / (1 / precision + 1 / recall)
+			F1 = 2 / (1 / precision + 1 / recall)
 			print (key.upper() + ", {} total annontations, avg accuracy: {:.3f}, total accuracy: {:.3f}, tp: {}, tn: {}, fp: {}, fn: {}, precision: {:.3f}, recall: {:.3f}, F1: {:.3f}".format(sum(acc_dict[key]['total']), acc_dict[key]['acc'], \
 			total_accuracy, tp, tn, fp, fn, precision, recall, F1))
 		else:
