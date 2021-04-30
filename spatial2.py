@@ -65,6 +65,7 @@ class Spatial:
 		self.frame_size = FrameSize(network=self)
 		self.raw_distance = RawDistance()
 		self.raw_distance_scaled = RawDistanceScaled()
+		self.distance_decay_factor = DistanceDecayFactor(connections=None, network=self)
 		self.larger_than = LargerThan()
 		self.closer_than = CloserThan()
 		self.higher_than_centroidwise = HigherThan_Centroidwise()
@@ -113,7 +114,7 @@ class Spatial:
 										  'behind_extrinsic': self.behind_extrinsic}, network=self)
 		self.above = Above(connections={'within_cone_region': self.within_cone_region})
 		self.below = Below(connections={'above': self.above})
-		self.near_raw = Near_Raw(connections={'frame_size': self.frame_size, 'raw_distance': self.raw_distance, 'raw_distance_scaled': self.raw_distance_scaled}, network=self)
+		self.near_raw = Near_Raw(connections={'frame_size': self.frame_size, 'raw_distance': self.raw_distance, 'raw_distance_scaled': self.raw_distance_scaled, 'distance_decay_factor': self.distance_decay_factor}, network=self)
 		self.near = Near(connections={'near_raw': self.near_raw, 'frame_size': self.frame_size, 'raw_distance': self.raw_distance}, network=self)
 		self.over = Over(connections={'above': self.above, 'projection_intersection': self.projection_intersection,
 									  'near': self.near})
@@ -495,16 +496,16 @@ class Spatial:
 		self.cached_by_relation = {'touching': {}, 'above': {}, 'near_raw': {}}
 		self.cached_by_trs = {}
 		#info[tr] = {'touching': [], 'above': []}
-		for tr in self.world.entities:
-			self.cached_by_trs[tr] = {}
-			self.cached_by_trs[tr]['touching'] = self.rank_lms(self.touching, tr)
-			self.cached_by_trs[tr]['near_raw'] = self.rank_lms(self.near_raw, tr)
-			self.cached_by_trs[tr]['above'] = self.rank_lms(self.above, tr)
+		# for tr in self.world.entities:
+		# 	self.cached_by_trs[tr] = {}
+		# 	self.cached_by_trs[tr]['touching'] = self.rank_lms(self.touching, tr)
+		# 	self.cached_by_trs[tr]['near_raw'] = self.rank_lms(self.near_raw, tr)
+		# 	self.cached_by_trs[tr]['above'] = self.rank_lms(self.above, tr)
 
-			for lm in self.world.entities:
-				self.cached_by_relation['touching'][(tr, lm)] = self.touching.compute(tr, lm)
-				self.cached_by_relation['near_raw'][(tr, lm)] = self.near_raw.compute(tr, lm)
-				self.cached_by_relation['above'][(tr, lm)] = self.above.compute(tr, lm)
+		# 	for lm in self.world.entities:
+		# 		self.cached_by_relation['touching'][(tr, lm)] = self.touching.compute(tr, lm)
+		# 		self.cached_by_relation['near_raw'][(tr, lm)] = self.near_raw.compute(tr, lm)
+		# 		self.cached_by_relation['above'][(tr, lm)] = self.above.compute(tr, lm)
 
 	def cotext_check(self, relation, tr, lm):
 		raw_measure = self.str_to_pred[relation].compute(tr, lm)
@@ -1314,7 +1315,7 @@ class InFrontOf(Node):
 			deictic = connections['in_front_of_deictic'].compute(tr, lm)
 			extrinsic = connections['in_front_of_extrinsic'].compute(tr, lm)
 			intrinsic = connections['in_front_of_intrinsic'].compute(tr, lm)
-			print ("IN FORNT OF: ", deictic, extrinsic, intrinsic)
+			#print ("IN FORNT OF: ", deictic, extrinsic, intrinsic)
 			return torch.max(deictic, torch.max(extrinsic, intrinsic))
 		elif lm is None:
 			ret_val = np.average([self.compute(tr, entity) for entity in world.active_context])
@@ -1418,12 +1419,11 @@ class Below(Node):
 	def str(self):
 		return 'below.p'
 
-
-class Near_Raw(Node):
+class DistanceDecayFactor(Node):
 	def __init__(self, connections, network):
 		self.network = network
 		self.connections = connections
-		self.parameters = {"raw_metric_weight": torch.tensor(0.1, dtype=torch.float32, requires_grad=True)}
+		self.parameters = {"distance_decay": torch.tensor(0.1, dtype=torch.float32, requires_grad=True),}
 
 	def compute(self, tr, lm):
 		if (tr, lm) in self.network.scaled_distances:
@@ -1435,7 +1435,7 @@ class Near_Raw(Node):
 		# theta_sq1 = torch.clone(theta_sq)
 		#result = theta_sq1 * theta_sq * scaled_distance
 		#final_score = math.e ** (- result)
-		final_score = torch.sigmoid(self.parameters["raw_metric_weight"] * scaled_distance)
+		score = torch.sigmoid(self.parameters["distance_decay"] * scaled_distance)
 		#print ("RAW DIST", theta_sq, theta_sq1, final_score)
 		
 		# if (unscaled_distance > fr_size):
@@ -1444,7 +1444,59 @@ class Near_Raw(Node):
 		#Take the frame size into account, i.e., the farther the objects compared 
 		#to the scene size, the smaller should be the raw nearness value.		
 		
-		return final_score
+		return score
+
+	def str(self):
+		return 'distance_decay_factor.p'
+
+
+
+class Near_Raw(Node):
+	def __init__(self, connections, network):
+		self.network = network
+		self.connections = connections
+		self.parameters = {"raw_metric_weight": torch.tensor(0.1, dtype=torch.float32, requires_grad=True),
+							"frame_rebalance_weights": torch.tensor([0.5, 0.5], dtype=torch.float32, requires_grad=True)}
+
+		self.factors = {"frame_size_factor": [self.connections["frame_size"], 0]}
+		self.sftmax = torch.nn.Softmax()
+
+	def compute(self, tr, lm):
+		score = self.connections['distance_decay_factor'].compute(tr, lm)
+
+		if (tr, lm) in self.network.unscaled_distances:
+			unscaled_distance = self.network.unscaled_distances[(tr, lm)]
+		else:
+			unscaled_distance = self.network.raw_distance.compute(tr, lm)
+		
+		fr_size = self.connections['frame_size'].compute()
+		fr_size = max(fr_size, unscaled_distance)
+
+		#print ("RAW MEASURE", raw_near_measure)
+		
+
+		self.factors["frame_size_factor"][1] = torch.tensor((1 - unscaled_distance / fr_size), dtype=torch.float32, requires_grad=True)
+		#weights = sftmax(self.parameters['frame_rebalance_weights'])
+		weights = self.parameters['frame_rebalance_weights']
+		score = weights[0] * score + weights[1] * self.factors['frame_size_factor'][1]
+		# if (tr, lm) in self.network.scaled_distances:
+		# 	scaled_distance = self.network.scaled_distances[(tr, lm)]
+		# else:
+		# 	scaled_distance = self.network.raw_distance_scaled.compute(tr, lm)
+
+		# # theta_sq = self.parameters["raw_metric_weight"]
+		# # theta_sq1 = torch.clone(theta_sq)
+		# #result = theta_sq1 * theta_sq * scaled_distance
+		# #final_score = math.e ** (- result)
+		# final_score = torch.sigmoid(self.parameters["raw_metric_weight"] * scaled_distance)
+		#print ("RAW DIST", theta_sq, theta_sq1, final_score)
+		
+		# if (unscaled_distance > fr_size):
+		# 	print ("ERROR!!!:", tr.name, lm.name, unscaled_distance, fr_size)		
+
+		#Take the frame size into account, i.e., the farther the objects compared 
+		#to the scene size, the smaller should be the raw nearness value.				
+		return score
 
 	def str(self):
 		return 'near_raw.p'
@@ -1494,7 +1546,8 @@ class Near(Node):
 							"rank_decay_weight": torch.tensor(0.95, dtype=torch.float32, requires_grad=True),
 							"scaled_distance_weight": torch.tensor(0.5, dtype=torch.float32, requires_grad=True),
 							"frame_factor_weight": torch.tensor(0.5, dtype=torch.float32, requires_grad=True),
-							"frame_rebalance_weights": torch.tensor([0.5, 0.5], dtype=torch.float32, requires_grad=True)}
+							"frame_rebalance_weights": torch.tensor([0.5, 0.5], dtype=torch.float32, requires_grad=True),
+							"tr_size_weight": torch.tensor(0.95, dtype=torch.float32, requires_grad=True)}
 
 		self.factors = {"frame_size_factor": [self.connections["frame_size"], 0]}
 
@@ -1504,31 +1557,36 @@ class Near(Node):
 			return 0
 		#connections = self.get_connections()
 		if (tr, lm) in self.network.cached_by_relation['near_raw']:
-			raw_near_measure = self.network.cached_by_relation['near_raw'][(tr, lm)]
+			score = self.network.cached_by_relation['near_raw'][(tr, lm)]
 		else:
-			raw_near_measure = self.connections['near_raw'].compute(tr, lm)
+			score = self.connections['near_raw'].compute(tr, lm)
 
 		#print("raw: ", raw_near_measure)
 		# fr_size = self.connections['frame_size'].compute()
 		# raw_near_measure = raw_near_measure * math.e ** (1 - fr_size / raw_near_measure)
 
-		if (tr, lm) in self.network.unscaled_distances:
-			unscaled_distance = self.network.unscaled_distances[(tr, lm)]
-		else:
-			unscaled_distance = self.network.raw_distance.compute(tr, lm)
+		# if (tr, lm) in self.network.unscaled_distances:
+		# 	unscaled_distance = self.network.unscaled_distances[(tr, lm)]
+		# else:
+		# 	unscaled_distance = self.network.raw_distance.compute(tr, lm)
 		
-		fr_size = self.connections['frame_size'].compute()
-		fr_size = max(fr_size, unscaled_distance)
+		# fr_size = self.connections['frame_size'].compute()
+		# fr_size = max(fr_size, unscaled_distance)
 
-		#print ("RAW MEASURE", raw_near_measure)
+		# #print ("RAW MEASURE", raw_near_measure)
 
-		self.factors["frame_size_factor"][1] = torch.tensor((1 - unscaled_distance / fr_size), dtype=torch.float32, requires_grad=True)
-		weights = torch.nn.Softmax()(self.parameters['frame_rebalance_weights'])
+		# self.factors["frame_size_factor"][1] = torch.tensor((1 - unscaled_distance / fr_size), dtype=torch.float32, requires_grad=True)
+		#weights = torch.nn.Softmax()(self.parameters['frame_rebalance_weights'])
 		#self.parameters['scaled_distance_weight'] = torch.clamp(self.parameters['scaled_distance_weight'])
 		#self.parameters['frame_factor_weight'] = torch.clamp(self.parameters['frame_factor_weight'])
 
 		#final_score = torch.sum(torch.mul(weights, torch.tensor([raw_near_measure, self.factors['frame_size_factor'][1]], requires_grad = True)))
-		final_score = weights[0] * raw_near_measure + weights[1] * self.factors['frame_size_factor'][1]
+		#score = weights[0] * raw_near_measure + weights[1] * self.factors['frame_size_factor'][1]
+		#score = raw_near_measure * torch.sigmoid(self.parameters['frame_factor_weight'] * self.factors['frame_size_factor'][1])
+
+		if (tr.size > lm.size):
+		#print ("SIZE DIFF:", tr.name, tr.size, lm.name, lm.size, score, (0.9 + 0.1 * torch.sigmoid(self.parameters['tr_size_weight'] * (lm.size - tr.size))) * score)
+			score = (0.9 + 0.1 * torch.sigmoid(self.parameters['tr_size_weight'] * (lm.size - tr.size))) * score
 		#final_score = raw_near_measure * (1 - unscaled_distance / fr_size)#self.factors['frame_size_factor'][1]
 
 		#print ("NEAR FINAL: ", weights, self.parameters['rank_decay_weight'], final_score, raw_near_measure, self.factors['frame_size_factor'][1])
@@ -1543,12 +1601,12 @@ class Near(Node):
 		
 		tr_ranked = self.network.rank_trs(self.connections['near_raw'], [lm])
 		#final_score = raw_near_measure
-		count = 0
+		rank = 0
 		for entity, value in tr_ranked:
-			if entity != tr and value > final_score:
-				count += 1
+			if entity != tr and value > score:
+				rank += 1
 
-		final_score = (math.e ** (- torch.square(self.parameters['rank_decay_weight']) * count)) * final_score
+		score = (math.e ** (- torch.square(self.parameters['rank_decay_weight']) * rank)) * score
 
 		#final_score = raw_near_measure
 		# avg_near = 0.5 * (torch.mean(raw_near_tr) + torch.mean(raw_near_lm))
@@ -1559,7 +1617,7 @@ class Near(Node):
 		# 	near_measure = near_measure - self.parameters["size_weight"]
 		# elif tr.compute_size() < lm.compute_size():
 		# 	near_measure = near_measure + self.parameters["size_weight"]
-		return final_score
+		return score
 
 	def str(self):
 		return 'near.p'

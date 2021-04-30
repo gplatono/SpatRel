@@ -26,8 +26,8 @@ def model_train(epochs):
 		if ann_path + os.sep + name in annotations and name in train_subset:
 
 			#command = ['/Applications/Blender.app/Contents/MacOS/Blender', scene, '-P', 'train_scene.py', '--', ann_path + os.sep + name]
-			#command = ['../blender/blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name, 'train']
-			command = ['blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name, 'train']
+			command = ['../blender/blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name, 'train']
+			#command = ['blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name, 'train']
 			subprocess.run(command)
 			
 			tmp_acc = None
@@ -69,17 +69,15 @@ def model_evaluate(epochs):
 		if ann_path + os.sep + name in annotations and name in test_subset:
 
 			#command = ['/Applications/Blender.app/Contents/MacOS/Blender', scene, '-P', 'train_scene.py', '--', ann_path + os.sep + name]
-			#command = ['../blender/blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name, 'test']
-			command = ['blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name, 'test']
+			command = ['../blender/blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name, 'test']
+			#command = ['blender', scene, '--background', '-P', 'train_scene.py', '--', ann_path + os.sep + name, 'test']
 			subprocess.run(command)
 			
 			tmp_acc = None
 			with open('rel_accuracies_test', 'r') as file:
 				tmp_acc = json.load(file)
 
-			test_acc_dict = update_dict(test_acc_dict, tmp_acc)
-			
-				
+			test_acc_dict = update_dict(test_acc_dict, tmp_acc)				
 			actual_epoch += 1
 
 		scene_idx += 1
