@@ -72,8 +72,7 @@ class Spatial:
 		self.higher_than = HigherThan(connections={'higher_than_centroidwise': self.higher_than_centroidwise})
 		self.lower_than = LowerThan(connections={'higher_than': self.higher_than})
 		self.taller_than = TallerThan()
-		self.at_same_height = AtSameHeight()
-		self.supported = Supported()
+		self.at_same_height = AtSameHeight()		
 		self.central = Central()
 		self.horizontal_deictic_component = HorizontalDeicticComponent(network=self)
 		self.vertical_deictic_component = VerticalDeicticComponent(network=self)
@@ -118,9 +117,19 @@ class Spatial:
 		self.near = Near(connections={'near_raw': self.near_raw, 'frame_size': self.frame_size, 'raw_distance': self.raw_distance}, network=self)
 		self.over = Over(connections={'above': self.above, 'projection_intersection': self.projection_intersection,
 									  'near': self.near})
+
+		self.supported_by = SupportedBy(connections = {'above': self.above, 'touching': self.touching}, network=self)
+		self.indirectly_supported_by = IndirectlySupportedBy(connections = {'above': self.above,
+																		 	'touching': self.touching,
+																		 	'supported_by':self.supported_by}, 
+																		 	network=self)
+
 		self.on = On(connections={'above': self.above, 'touching': self.touching,
 								  'projection_intersection': self.projection_intersection,
-								  'larger_than': self.larger_than, 'near': self.near})
+								  'larger_than': self.larger_than, 
+								  'near': self.near,
+								  'supported_by': self.supported_by,
+								  'indirectly_supported_by': self.indirectly_supported_by})
 		self.under = Under(connections={'on': self.on})
 		self.between = Between()
 		self.inside = Inside()
@@ -285,7 +294,7 @@ class Spatial:
 		# print("param: ", param)
 		rel_acc = {}
 
-		optimizer = torch.optim.Adam(param, lr=0.01) #weight_decay=0.05)
+		optimizer = torch.optim.Adam(param, lr=0.01, weight_decay=0.1) #weight_decay=0.05)
 		torch.autograd.set_detect_anomaly(True)
 		for iter in range(iterations):
 			optimizer.zero_grad()
@@ -302,7 +311,7 @@ class Spatial:
 				annotation = [item.strip() for item in annotation]
 				
 				# if "right of" not in annotation[1] and "left of" not in annotation[1]:
-				if "near" not in annotation[1]:
+				if "on" not in annotation[1]:
 					continue				
 
 				sample, label, relation = self.process_sample(annotation)
@@ -843,44 +852,108 @@ class TallerThan(Node):
 	def str(self):
 		return 'taller_than.p'
 
-
 class AtSameHeight(Node):
+	def __init__(self):
+		self.parameters = {"distance_decay": torch.tensor(0.5, dtype=torch.float32, requires_grad=True)}
+
 	def compute(self, tr, lm):
 		"""
 		Check if two entities are at the same height
 		"""
 		dist = np.linalg.norm(tr.centroid[2] - lm.centroid[2])
 		scaled_dist = dist / (tr.size + lm.size + 0.01)
-		return math.e ** (-scaled_dist)
+		return math.e ** (-self.parameters['distance_decay'] * scaled_dist)
 
 	def str(self):
 		return 'at_same_height.p'
 
 
-class Supported(Node):
+class SupportedBy(Node):
 	"""
 	Computes whether the TR is physically supported by the LM.
 	The result is a real number from [0, 1].
 	"""
 
-	def __init__(self):
+	def __init__(self, connections, network):
+		self.network = network
+		self.connections = connections
 		self.parameters = {'rel_dist': torch.tensor(0.8, dtype=torch.float32, requires_grad=True)}
 
 	def compute(self, tr, lm):
-		direct_support = self.connections['touching'](tr, lm) * self.connections['above'](tr, lm)  # tensor
-		indirect_support = torch.tensor([0], dtype=torch.float32)
-		tr_h = torch.tensor([tr.centroid[2]], dtype=torch.float32)
-		lm_h = torch.tensor([lm.centroid[2]], dtype=torch.float32)
-		for entity in world.entities:
-			e_h = torch.tensor([entity.centroid[2]], dtype=torch.float32)
-			if (e_h - lm_h) / torch.tensor([lm.size], dtype=torch.float32) >= self.parameters['rel_dist'] and \
-					(tr_h - e_h) / torch.tensor([tr.size], dtype=torch.float32) >= self.parameters['rel_dist']:
-				indirect_support = torch.max(indirect_support, torch.min(self.compute(tr, entity),
-																		 self.compute(entity, lm)))
-		return torch.max(direct_support, indirect_support)
+		# if 'Bookshelf 1' not in lm.name:
+		# 	return torch.tensor(0, dtype=torch.float32)		
+		touching = self.connections['touching'].compute(tr, lm)
+		above = self.connections['above'].compute(tr, lm)  # tensor		
+		direct_support = touching * above
+		#print ("SUPP: ", tr.name, lm.name, touching, above, direct_support)
+		#indirect_support = torch.tensor(0, dtype=torch.float32)		
+		part_based = torch.tensor(0, dtype=torch.float32)		
+
+		for part in lm.components:
+			if type(part) == Entity:
+				supp = self.compute(tr, part)
+				#print (tr.name, part, supp)				
+				part_based = torch.max(part_based, supp)
+
+		# tr_h = tr.centroid[2]
+		# lm_h = lm.centroid[2]
+		# for entity in self.network.world.entities:
+		# 	e_h = entity.centroid[2]
+		# 	if (e_h - lm_h) / (lm.size + 0.001) >= self.parameters['rel_dist'] and \
+		# 			(tr_h - e_h) / (tr.size + 0.001) >= self.parameters['rel_dist']:
+		# 		indirect_support = torch.max(indirect_support, 
+		# 			torch.min(self.compute(tr, entity), self.compute(entity, lm)))
+		# tr_h = torch.tensor(tr.centroid[2], dtype=torch.float32)
+		# lm_h = torch.tensor(lm.centroid[2], dtype=torch.float32)
+		# for entity in world.entities:
+		# 	e_h = torch.tensor(entity.centroid[2], dtype=torch.float32)
+		# 	if (e_h - lm_h) / torch.tensor([lm.size], dtype=torch.float32) >= self.parameters['rel_dist'] and \
+		# 			(tr_h - e_h) / torch.tensor([tr.size], dtype=torch.float32) >= self.parameters['rel_dist']:
+		# 		indirect_support = torch.max(indirect_support, torch.min(self.compute(tr, entity),
+		#																 self.compute(entity, lm)))
+		score = torch.max(direct_support, part_based)
+		# if ('Bookshelf 1' in lm.name):
+		# 	print ("SUPPORT: ", tr.name, lm.name, score)
+		return score
 
 	def str(self):
 		return 'supported_by.p'
+
+class IndirectlySupportedBy(Node):
+	"""
+	Computes whether the TR is physically supported by the LM.
+	The result is a real number from [0, 1].
+	"""
+
+	def __init__(self, connections, network):
+		self.network = network
+		self.connections = connections
+		self.parameters = {'rel_dist': torch.tensor(0.8, dtype=torch.float32, requires_grad=True)}
+
+	def compute(self, tr, lm):
+		score = torch.tensor(0, dtype=torch.float32)		
+		tr_h = tr.centroid[2]
+		lm_h = lm.centroid[2]
+		for entity in self.network.world.entities:
+			e_h = entity.centroid[2]
+			if (e_h - lm_h) / (lm.size + 0.001) >= self.parameters['rel_dist'] and \
+					(tr_h - e_h) / (tr.size + 0.001) >= self.parameters['rel_dist']:
+				score = torch.max(score, 
+					torch.min(self.connections['supported_by'].compute(tr, entity), self.connections['supported_by'].compute(entity, lm)))
+		# tr_h = torch.tensor(tr.centroid[2], dtype=torch.float32)
+		# lm_h = torch.tensor(lm.centroid[2], dtype=torch.float32)
+		# for entity in world.entities:
+		# 	e_h = torch.tensor(entity.centroid[2], dtype=torch.float32)
+		# 	if (e_h - lm_h) / torch.tensor([lm.size], dtype=torch.float32) >= self.parameters['rel_dist'] and \
+		# 			(tr_h - e_h) / torch.tensor([tr.size], dtype=torch.float32) >= self.parameters['rel_dist']:
+		# 		indirect_support = torch.max(indirect_support, torch.min(self.compute(tr, entity),
+		#																 self.compute(entity, lm)))		
+		# if (score > 0):
+		#print ("SUPPORT: ", tr.name, lm.name, score)
+		return score
+
+	def str(self):
+		return 'indirectly_supported_by.p'
 
 
 class HorizontalDeicticComponent(Node):
@@ -945,7 +1018,7 @@ class Touching(Node):
 		mesh_dist = torch.tensor(min(mesh_dist, planar_dist), dtype=torch.float32, requires_grad=True)  # transfer to tensors
 		touch_face = torch.tensor(0.0, dtype=torch.float32, requires_grad=True)
 
-		mesh_dist_factor = torch.exp(- torch.abs(self.parameters["mesh_dist_scale"]) * mesh_dist)
+		mesh_dist_factor = torch.exp(- torch.square(self.parameters["mesh_dist_scale"]) * mesh_dist)
 
 		# print ('INIT...', len(lm.faces))
 		# for face in lm.faces:
@@ -954,19 +1027,20 @@ class Touching(Node):
 		# # print ('COMPLETE...')
 		if shared_volume == 0:
 			if touch_face > self.parameters['touch_face_threshold']:
-				ret_val = touch_face
+				score = touch_face
 			elif mesh_dist < self.parameters['mesh_dist_threshold']:
-				ret_val = torch.exp(- mesh_dist)
+				score = torch.exp(- mesh_dist)
 			else:
-				ret_val = mesh_dist_factor
+				score = mesh_dist_factor
 		else:
-			ret_val = self.parameters["mesh_vs_volume_weight"] * mesh_dist_factor
+			score = self.parameters["mesh_vs_volume_weight"] * mesh_dist_factor
 			if shared_volume > 0:
-				ret_val += 1.0 - self.parameters["mesh_vs_volume_weight"]
+				score += 1.0 - self.parameters["mesh_vs_volume_weight"]
 
 		#print (ret_val)
 		# print ("Touching " + a.name + ", " + b.name + ": " + str(ret_val))
-		return ret_val
+		score = torch.max(score, final_score)
+		return score
 
 	def str(self):
 		return 'touching.p'
@@ -1043,7 +1117,7 @@ class RightOf_Extrinsic(Node):
 		disp_vec = disp_vec / (dist + 0.001)
 
 		extrinsic_right = self.network.world.right_axis
-		print ("ETR RIGHT ", extrinsic_right)
+		#print ("EXTR RIGHT ", extrinsic_right)
 		#cos = extrinsic_right.dot(disp_vec)
 
 		within_cone_factor = self.connections['within_cone_region'].compute(disp_vec, extrinsic_right, self.parameters['cone_width'])
@@ -1123,7 +1197,7 @@ class RightOf(Node):
 			self.set_factors({"RightOfDeictic": (deictic.detach().numpy().item(), connections['to_the_right_of_deictic'].factors),
 							  "RightOfExtrinsic": (extrinsic.detach().numpy().item(), connections['to_the_right_of_extrinsic'].factors),
 							  "RightOfIntrinsic": (intrinsic.detach().numpy().item(), connections['to_the_right_of_intrinsic'].factors)})
-			print("factors: ", self.get_factors())
+			#print("factors: ", self.get_factors())
 			# print(connections['to_the_right_of_deictic'].parameters)
 			# print ("RIGHT OF FACTORS: ", deictic, extrinsic, intrinsic)
 			#vals = torch.tensor([deictic, extrinsic, intrinsic], dtype=torch.float32, requires_grad=True)
@@ -1685,7 +1759,8 @@ class On(Node):
 						   "vertical_on_scaling_factor": torch.tensor(0.5, dtype=torch.float32, requires_grad=True),
 						   "v_offset_vs_proj_intersection_weight": torch.tensor(0.5, dtype=torch.float32, requires_grad=True),
 						   "nearness_vs_larger_weight": torch.tensor(0.5, dtype=torch.float32, requires_grad=True),
-						   "nearness_threshold": torch.tensor(0.96, dtype=torch.float32, requires_grad=True)}
+						   "nearness_threshold": torch.tensor(0.96, dtype=torch.float32, requires_grad=True),
+						   "above_touching_weights": torch.tensor([0.5, 0.5], dtype=torch.float32, requires_grad=True)}
 
 
 	def compute(self, tr, lm):
@@ -1698,9 +1773,17 @@ class On(Node):
 		# print ("PROJ DIST: ", a, b, hor_offset)
 		# print ("ON METRICS: ", touching(a, b), above(a, b), hor_offset, touching(a, b) * above(a, b) * hor_offset)
 		#print ("DATA: ", self.connections['touching'].compute(tr, lm), self.connections['above'].compute(tr, lm))
-		ret_val = self.connections['touching'].compute(tr, lm) * self.connections['above'].compute(tr, lm) \
-			if hor_offset < self.parameters["hor_offset_threshold"] \
-			else self.connections['above'].compute(tr, lm)  # * touching(a, b)
+		above = self.connections['above'].compute(tr, lm)
+		touching = self.connections['touching'].compute(tr, lm)
+		supported_by = self.connections['supported_by'].compute(tr, lm)
+		weights = torch.nn.Softmax()(self.parameters["above_touching_weights"])
+		score1 = weights[0] * above + weights[1] * touching
+		if hor_offset < self.parameters["hor_offset_threshold"]:
+			score = self.connections['touching'].compute(tr, lm) * self.connections['above'].compute(tr, lm)
+		else:
+			score = self.connections['above'].compute(tr, lm)  # * touching(a, b)
+
+		score = torch.max(score, score1)
 		# print ("ON METRICS: ", touching(a, b), above(a, b), hor_offset, touching(a, b) * above(a, b) * hor_offset)
 		# ret_val = max(ret_val, supporting(b, a))
 
@@ -1708,13 +1791,14 @@ class On(Node):
 		#    ret_val =  touching(a, b) * hor_offset if above(a, b) < 0.88 else above(a, b) * touching(a, b)
 		# print ("CURRENT ON:", ret_val)
 		if lm.get('planar') is not None and self.connections['larger_than'].compute(lm, tr) and tr.centroid[2] > self.parameters["centroid_z_threshold"] * tr.dimensions[2]:
-			ret_val = torch.max(ret_val, self.connections['touching'].compute(tr, lm))
+			score = torch.max(score, self.connections['touching'].compute(tr, lm))
 
 
 		# ret_val = 0.5 * (v_offset(a, b) + get_proj_intersection(a, b))
 		# print ("ON {}, {}, {}".format(ret_val, get_proj_intersection(a, b), v_offset(a, b)))
 		# ret_val = max(ret_val, 0.5 * (above(a, b) + touching(a, b)))
 		# print ("ON {}".format(ret_val))
+		part_based = torch.tensor(0, dtype=torch.float32)
 		for ob in lm.components:
 			# ob_ent = Entity(ob)
 			if type(ob) == Entity:
@@ -1729,15 +1813,15 @@ class On(Node):
 				cmp2 = self.parameters['nearness_vs_larger_weight'] * int(self.connections['near'].compute(tr, ob_ent) > self.parameters['nearness_threshold']) +\
 				(1 - self.parameters['nearness_vs_larger_weight']) * self.connections['larger_than'].compute(ob_ent, tr)
 
-				ret_val = torch.max(ret_val, torch.max(cmp1, cmp2))
+				part_based = torch.max(part_based, torch.max(cmp1, cmp2))
 				#print ("RETVAL: ", ret_val)
 		if lm.get('planar') is not None and isVertical(lm):
-			ret_val = torch.max(ret_val, torch.exp(- self.parameters['vertical_on_scaling_factor'] * get_planar_distance_scaled(tr, lm)))
+			score = torch.max(score, torch.exp(- self.parameters['vertical_on_scaling_factor'] * get_planar_distance_scaled(tr, lm)))
 
-		self.set_factors({"touching": self.connections['touching'].compute(tr, lm).detach().numpy().item(),
-						  "above": self.connections['above'].compute(tr, lm).detach().numpy().item()})
-		print(self.get_factors())
-		return ret_val
+		#self.set_factors({"touching": self.connections['touching'].compute(tr, lm).detach().numpy().item(),
+		#				  "above": self.connections['above'].compute(tr, lm).detach().numpy().item()})
+		#print(self.get_factors())
+		return score
 
 	def str(self):
 		return 'on.p'
@@ -1781,19 +1865,23 @@ class At(Node):
 	def __init__(self, connections, network=None):
 		self.connections = connections
 		self.network = network
-		self.parameters = {'touch_threshold': torch.tensor(0.9, dtype=torch.float32, requires_grad=True)}
+		self.parameters = {'touch_threshold': torch.tensor(0.9, dtype=torch.float32, requires_grad=True),
+							'factor_weights': torch.tensor([0.3, 0.3, 0.3], dtype=torch.float32, requires_grad=True)}
 
 	def compute(self, tr, lm):
 		if tr == lm:
 			return 0
 		touching = self.connections['touching'].compute(tr, lm)
 		at_same_height = self.connections['at_same_height'].compute(tr, lm)
-		if touching > self.parameters['touch_threshold']:
-			ret_val = at_same_height * touching
-		else:
-			ret_val = at_same_height * self.connections['near'].compute(tr, lm)
-
-		return ret_val
+		near = self.connections['near'].compute(tr, lm)
+		weights = torch.nn.Softmax()(self.parameters['factor_weights'])
+		# if touching > self.parameters['touch_threshold']:
+		# 	ret_val = at_same_height * touching
+		# else:
+		# 	ret_val = at_same_height * self.connections['near'].compute(tr, lm)
+		score = weights[0] * touching + weights[1] * at_same_height + weights[2] * near
+		print ("NEXT TO:", score)
+		return score
 
 	def str(self):
 		return 'next_to.p'

@@ -46,6 +46,8 @@ class Voxel:
 
 		self.subdivide()
 		self.node_count = self.get_node_count()
+		if self.depth == 2:
+			self.highlight()
 		#self.fillNeighbors()
 
 	def run_on_children(self, method_name):
@@ -295,7 +297,7 @@ class Voxel:
 				self.neighbors[2][0] is None or \
 				self.neighbors[2][1] is None
 
-	def cut(self, voxel):		
+	def cut(self, voxel):	
 		#dist = {}
 		vox_dict = {}
 		voxel.distance = 0
@@ -342,6 +344,29 @@ class Voxel:
 		target = self.cut(origin)
 		return origin, target
 
+	def highlight(self):
+		# bpy.ops.mesh.primitive_cube_add()
+		# block = bpy.context.selected_objects[0]
+		# block.location = self.location
+		# block.size = self.size
+		# bpy.data.materials.new(name="vox")		
+		# bpy.data.materials['vox'].diffuse_color = (1, 0, 0, 0)		
+		# block.data.materials.append(bpy.data.materials['vox'])
+
+		block_mesh = bpy.data.meshes.new('Block_mesh')
+		block = bpy.data.objects.new("voxx", block_mesh)
+		bpy.context.collection.objects.link(block)
+
+		bm = bmesh.new()
+		bmesh.ops.create_cube(bm, size=self.size)
+		bm.to_mesh(block_mesh)
+		bm.free()
+		bpy.data.materials.new(name="vox")		
+		bpy.data.materials['vox'].diffuse_color = (1, 0, 0, 0)		
+		block.data.materials.append(bpy.data.materials['vox'])
+		block.location = self.location		
+		bpy.context.evaluated_depsgraph_get().update()		
+
 if __name__ == "__main__":
 	from world import World
 	world = World(bpy.context.scene, simulation_mode=True)
@@ -351,6 +376,8 @@ if __name__ == "__main__":
 	for idx1 in range(len(world.entities)):
 		for idx2 in range(idx1+1, len(world.entities)):
 			print (world.entities[idx1], world.entities[idx2], vox.contains([world.entities[idx1], world.entities[idx2]], depth=6))
+
+	vox.highlight()
 
 
 
