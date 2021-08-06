@@ -46,8 +46,8 @@ class Voxel:
 
 		self.subdivide()
 		self.node_count = self.get_node_count()
-		if self.depth == 2:
-			self.highlight()
+		# if self.depth == 2:
+		# 	self.highlight()
 		#self.fillNeighbors()
 
 	def run_on_children(self, method_name):
@@ -377,7 +377,7 @@ if __name__ == "__main__":
 		for idx2 in range(idx1+1, len(world.entities)):
 			print (world.entities[idx1], world.entities[idx2], vox.contains([world.entities[idx1], world.entities[idx2]], depth=6))
 
-	vox.highlight()
+	#vox.highlight()
 
 
 

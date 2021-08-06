@@ -828,6 +828,15 @@ class HigherThan_Centroidwise(Node):
 	def str(self):
 		return 'higher_than_centroidwise.p'
 
+class HigherThan_Basewise(Node):
+	"""Compute whether the centroid of a is higher than the centroid of b."""
+
+	def compute(self, tr, lm):
+		return sigmoid(tr.z_min - lm.z_min, 1.0, 1.0)
+
+	def str(self):
+		return 'higher_than_centroidwise.p'
+
 
 class HigherThan(Node):
 	def compute(self, tr, lm):
@@ -962,12 +971,17 @@ class HorizontalDeicticComponent(Node):
 		# print (tr.name, lm.name, axial_dist[0])
 		return asym_inv_exp(axial_dist[0], 1, 1, 0.05)
 
+	def str(self):
+		return "horizontal_deictic_component.p"
+
 
 class VerticalDeicticComponent(Node):
 	def compute(self, tr, lm):
 		axial_dist = self.network.axial_distances[(tr, lm)]
 		return math.exp(- math.fabs(axial_dist[1]))
 
+	def str(self):
+		return "vertical_deictic_component.p"
 
 class Touching(Node):
 	"""
