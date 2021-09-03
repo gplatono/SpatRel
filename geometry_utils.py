@@ -151,6 +151,7 @@ def in_triangle(d, a, b, c):
                 return False
             except np.linalg.LinAlgError:
                 return False
+
 #Given a point and a plane defined by a, b and c
 #computes the orthogonal distance from the point to that plane
 #Inputs: point,a,b,c - point coordinates as tuples or lists
@@ -1043,3 +1044,138 @@ def scaled_axial_distance(a_bbox, b_bbox):
 #     if b.get('extended') is not None:
 #         return b.get_closest_face_distance(center_a)
 #     return point_distance(center_a, center_b)
+
+
+def find_line_x_plane_intersection(p1, p2, p3, l1, l2):
+    """
+    Find a point of intersection of a given plane defined by p1, p2, p3 and a line 
+    defined by l1, l2.
+    Return the coordinates of the intersection point if it exists or None otherwise.
+    """
+    p1 = np.array(p1)
+    p2 = np.array(p2)
+    p3 = np.array(p3)
+    l1 = np.array(l1)
+    l2 = np.array(l2)
+    p1 -= l1
+    p2 -= l1
+    p3 -= l1
+    l2 -= l1
+    n = np.cross(p2-p1, p3-p1)    
+    k = np.dot(p1, n) / np.dot(l2, n) if np.dot(l2, n) != 0 else 1e10
+    if k < 1e10:
+        return l1 + k*l2
+    else:
+        return None
+
+def is_in_polygon(poly, p):
+    """
+    Check if a given point p lies inside a convex polygon poly.
+    Assumes that the point and the polygon lie in the same plane.
+    """
+    poly = np.array(poly)
+    p = np.array(p)
+    npoly = np.cross(poly[1] - poly[0], poly[2] - poly[0])
+    k = np.cross(poly[0] - poly[-1], p - poly[-1])
+    if np.dot(k, npoly) == 0:
+        return True
+    else:
+        sign = 1 if np.dot(k, npoly) > 0 else -1
+    
+    for i in range(1, len(poly)):
+        k1 = np.cross(poly[i] - poly[i-1], p - poly[i-1])
+        prod = np.dot(npoly, k1)
+        if prod == 0:
+            return True
+        elif prod * sign < 0:
+            return False
+    return True
+
+def find_poly_intersection(poly, l1, l2):
+    """
+    Check if the line defined by l1, l2 passes inside 
+    a planar conver polygon poly.
+    Return the coordinates of the point of intersection if exists,
+    None otherwise.
+    """
+    s = find_line_x_plane_intersection(poly[0], poly[1], poly[2], l1, l2)
+    if s is not None and is_in_polygon(poly, s):
+        return s
+    else:
+        return None
+
+def find_box_line_intersection(c, s, l1, l2):
+    """
+    Find points of intersection of a cubical box located at c
+    with size (edge length) s, and the line defined by l1, l2
+    """
+
+    c = np.array(c)
+    s /= 2
+    l1 = np.array(l1)
+    l2 = np.array(l2)
+    faces = np.array([[[c[0] - s, c[1] - s, c[2] - s], [c[0] - s, c[1] + s, c[2] - s], [c[0] - s, c[1] + s, c[2] + s], [c[0] - s, c[1] - s, c[2] + s]],\
+        [[c[0] + s, c[1] - s, c[2] - s], [c[0] + s, c[1] + s, c[2] - s], [c[0] + s, c[1] + s, c[2] + s], [c[0] + s, c[1] - s, c[2] + s]],\
+        [[c[0] - s, c[1] - s, c[2] - s], [c[0] + s, c[1] - s, c[2] - s], [c[0] + s, c[1] - s, c[2] + s], [c[0] - s, c[1] - s, c[2] + s]],\
+        [[c[0] - s, c[1] + s, c[2] - s], [c[0] + s, c[1] + s, c[2] - s], [c[0] + s, c[1] + s, c[2] + s], [c[0] - s, c[1] + s, c[2] + s]],\
+        [[c[0] - s, c[1] - s, c[2] - s], [c[0] + s, c[1] - s, c[2] - s], [c[0] + s, c[1] + s, c[2] - s], [c[0] - s, c[1] + s, c[2] - s]],\
+        [[c[0] - s, c[1] - s, c[2] + s], [c[0] + s, c[1] - s, c[2] + s], [c[0] + s, c[1] + s, c[2] + s], [c[0] - s, c[1] + s, c[2] + s]]])
+    intersections = []
+    for face in faces:
+        current = find_poly_intersection(face, l1, l2)
+        #print (face, current, "\n")
+        flag = False
+        if current is not None:
+            for prev in intersections:
+                if np.array_equal(current, prev):
+                    flag = True
+                    break
+            if not flag:
+                intersections.append(current)
+
+    return intersections
+
+def find_box_segment_intersection(c, s, l1, l2):
+    """
+    Find points of intersection of a cubical box located at c
+    with size (edge length) s, and the segment defined by l1, l2
+    """
+    l1 = np.array(l1)
+    l2 = np.array(l2)
+    intersections = find_box_line_intersection(c, s, l1, l2)
+    result = []
+    for p in intersections:
+        if np.linalg.norm(p - l1) + np.linalg.norm(p - l2) <= np.linalg.norm(l2 - l1):
+            result.append(p)
+
+    return result
+
+#print (find_cube_area_intersection([0, 0, 0], 2, [2, 0, 0], [0, 2, 0]))
+#Test: find_poly_intersection([[2, -1, 1], [2, 1, 1], [2, 1, -1], [2, -1, -1]], [0, 0, 0], [3, 2, 2])
+
+
+def find_box_poly_intersection(box_center, box_size, poly):    
+    if find_box_line_intersection(box_center, box_size, poly[-1], poly[0]) is not None:
+        return True
+    for i in range(1, leng(poly)):
+        if find_box_line_intersection(box_center, box_size, poly[i], poly[i-1]) is not None:
+            return True
+    return False
+
+def find_box_mesh_intersection(box_center, box_size, mesh_data):
+    """
+    Determine the intersection of a cubical box and an arbitrary mesh.
+    The mesh is given as a dict {'vertices', 'edges', 'polys'}
+    """
+    intersection_data = {'vertices': [], 'edges': [], 'polys': []}
+    offset = box_size / 2
+    for i, v in enumerate(mesh_data['vertices']):
+        if box_center[0] - offset <= v[0] and v[0] <= box_center[0] + offset and \
+                box_center[1] - offset <= v[1] and v[1] <= box_center[1] + offset and \
+                box_center[2] - offset <= v[2] and v[2] <= box_center[2] + offset:
+                    intersection_data['vertices'].append[v]
+                    intersection_data['edges'] += [edge for edge in mesh_data['edges'] if i in edge]
+                    intersection_data['polys'] += [poly for poly in mesh_data['polys'] if i in poly]
+
+
+    return intersection_data

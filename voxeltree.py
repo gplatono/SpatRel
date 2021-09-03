@@ -10,7 +10,13 @@ sys.path.insert(0, filepath)
 from geometry_utils import *
 
 class Voxel:
-	def __init__(self, scope, location=None, size=None, parent=None, depth=0, child_idx=[None, None, None]):
+	def __init__(self, scope, location=None, size=None, parent=None, root=None, depth=0, child_idx=[None, None, None]):
+		self.geometry_content = {'vertices': [], 'edges': [], 'polys': []}
+		if root is not None:
+			self.root = root
+		else:
+			self.root = self		
+
 		if location is None:
 			x_min = y_min = z_min = 1e9
 			x_max = y_max = z_max = -1e9
@@ -23,21 +29,30 @@ class Voxel:
 				z_max = max(z_max, entity.z_max)
 			location = np.array([0.5 * (x_min + x_max), 0.5 * (y_min + y_max), 0.5 * (z_min + z_max)])
 			size = max([x_max - x_min, y_max - y_min, z_max - z_min])
-
+			
+			if type(scope) == dict:
+				self.geometry_content = scope					
+			else:
+				offset = 0
+				for entity in scope:
+					self.geometry_content['vertices'] += entity.vertices
+					self.geometry_content['polys'] += [[idx + offset for idx in poly] for poly in entity.polygons]
+					offset += len(entity.vertices)
+		else:
+			self.geometry_content = scope
 		self.location = location
 		self.size = size
 		self.depth = depth
 		self.child_idx = child_idx
 		self.compute_bbox()     
 		self.intersect_list = []
+
+		#if type(scope[0]) == Entity:
 		for entity in scope:
 			if box_entity_vertex_containment(self.bbox_verts, entity) or self.bvh_tree.overlap(entity.bvh_tree) != []:
 				# if self.bvh_tree.overlap(entity.bvh_tree) != []:
 				# 	print (self.location, self.size, entity, self.bvh_tree.overlap(entity.bvh_tree))
 				self.intersect_list.append(entity)
-				
-		#print (scope)
-		#print (self.intersect_list)
 
 		self.parent = parent
 		self.children = [[[None, None], [None, None]], [[None, None], [None, None]]]
@@ -46,8 +61,8 @@ class Voxel:
 
 		self.subdivide()
 		self.node_count = self.get_node_count()
-		# if self.depth == 2:
-		# 	self.highlight()
+		if self.depth == 2:
+			self.highlight()
 		#self.fillNeighbors()
 
 	def run_on_children(self, method_name):
@@ -99,14 +114,14 @@ class Voxel:
 								(self.location[0] + quart, self.location[1] - quart, self.location[2] + quart),
 								(self.location[0] + quart, self.location[1] + quart, self.location[2] - quart),
 								(self.location[0] + quart, self.location[1] + quart, self.location[2] + quart)])            
-			self.children[0][0][0] = Voxel(self.intersect_list, child_locations[0], self.size / 2, self, self.depth-1, [0, 0, 0])
-			self.children[0][0][1] = Voxel(self.intersect_list, child_locations[1], self.size / 2, self, self.depth-1, [0, 0, 1])
-			self.children[0][1][0] = Voxel(self.intersect_list, child_locations[2], self.size / 2, self, self.depth-1, [0, 1, 0])
-			self.children[0][1][1] = Voxel(self.intersect_list, child_locations[3], self.size / 2, self, self.depth-1, [0, 1, 1])
-			self.children[1][0][0] = Voxel(self.intersect_list, child_locations[4], self.size / 2, self, self.depth-1, [1, 0, 0])
-			self.children[1][0][1] = Voxel(self.intersect_list, child_locations[5], self.size / 2, self, self.depth-1, [1, 0, 1])
-			self.children[1][1][0] = Voxel(self.intersect_list, child_locations[6], self.size / 2, self, self.depth-1, [1, 1, 0])
-			self.children[1][1][1] = Voxel(self.intersect_list, child_locations[7], self.size / 2, self, self.depth-1, [1, 1, 1])
+			self.children[0][0][0] = Voxel(self.intersect_list, child_locations[0], self.size / 2, self, self.root, self.depth-1, [0, 0, 0])
+			self.children[0][0][1] = Voxel(self.intersect_list, child_locations[1], self.size / 2, self, self.root, self.depth-1, [0, 0, 1])
+			self.children[0][1][0] = Voxel(self.intersect_list, child_locations[2], self.size / 2, self, self.root, self.depth-1, [0, 1, 0])
+			self.children[0][1][1] = Voxel(self.intersect_list, child_locations[3], self.size / 2, self, self.root, self.depth-1, [0, 1, 1])
+			self.children[1][0][0] = Voxel(self.intersect_list, child_locations[4], self.size / 2, self, self.root, self.depth-1, [1, 0, 0])
+			self.children[1][0][1] = Voxel(self.intersect_list, child_locations[5], self.size / 2, self, self.root, self.depth-1, [1, 0, 1])
+			self.children[1][1][0] = Voxel(self.intersect_list, child_locations[6], self.size / 2, self, self.root, self.depth-1, [1, 1, 0])
+			self.children[1][1][1] = Voxel(self.intersect_list, child_locations[7], self.size / 2, self, self.root, self.depth-1, [1, 1, 1])
 
 	def compute_bbox(self):
 		self.bbox_verts = np.array([(self.location[0] - self.size / 2, self.location[1] - self.size / 2, self.location[2] - self.size / 2), 
@@ -370,7 +385,7 @@ class Voxel:
 if __name__ == "__main__":
 	from world import World
 	world = World(bpy.context.scene, simulation_mode=True)
-	vox = Voxel(scope = world.entities, depth=6)
+	vox = Voxel(scope = world.entities, depth=7)
 	vox.print_self()
 
 	for idx1 in range(len(world.entities)):

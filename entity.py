@@ -182,7 +182,7 @@ class Entity(object):
 		self.parent_offset = self.compute_parent_offset()
 		self.ordering = self.induce_linear_order()
 	   
-	def set_type_structure(self, type_structure):        
+	def set_type_structure(self, type_structure):
 		self.type_structure = type_structure
 
 	def compute_type_structure(self):
@@ -506,3 +506,6 @@ class Entity(object):
 			features.append(item)
 		#features.append(self.span)
 		return features
+
+	def build_octree(self):
+		center = self.location
