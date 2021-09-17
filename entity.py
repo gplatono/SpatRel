@@ -120,7 +120,12 @@ class Entity(object):
 
 
 		#self.bvh_trees = [BVHTree.FromObject(item, bpy.context.evaluated_depsgraph_get()) for item in self.full_mesh]
-		self.bvh_tree = BVHTree.FromPolygons(self.vertices, self.polygons, epsilon=0.0)
+		#self.bvh_tree = BVHTree.FromPolygons(self.vertices, self.polygons, epsilon=0.0)
+		# if self.category == self.Category.STRUCTURE:
+		# 	print (self.name)
+		# 	from voxeltree import Voxel
+		# 	self.voxel_tree = Voxel(scope = {'vertices': self.vertices, 'edges':[], 'polygons': self.polygons}, depth = 5)
+		self.compute_adjacent()
 
 		#The coordiante span of the entity. In other words,
 		#the minimum and maximum coordinates of entity's points
@@ -181,6 +186,27 @@ class Entity(object):
 	   
 		self.parent_offset = self.compute_parent_offset()
 		self.ordering = self.induce_linear_order()
+
+	def compute_adjacent(self):
+		self.adj_data = {}
+		for j in range(len(self.vertices)):
+			neighbors = []
+			for poly in self.polygons:
+				for i in range(len(poly)):
+					if j == poly[i]:
+						if i > 0:
+							neighbors.append(poly[i-1])
+						else: 
+							neighbors.append(poly[-1])
+						if i < len(poly) - 1:
+							neighbors.append(poly[i+1])
+						else: 
+							neighbors.append(poly[0])
+						break
+			self.adj_data[j] = neighbors
+
+		#print (self.adj_data)
+
 	   
 	def set_type_structure(self, type_structure):
 		self.type_structure = type_structure
@@ -219,42 +245,7 @@ class Entity(object):
 			vertices += current_vert
 			faces += current_faces
 			offset += len(current_vert)
-		return vertices, faces
-
-	# def compute_vertex_set(self):
-	# 	"""
-	# 	Compute and return the total vertex set of the entity.
-	# 	In case of a primitive or a structure it is the union 
-	# 	of the meshes of constituent objects.
-	# 	"""
-	# 	vertices = []
-	# 	#print (self.components, self.category)
-	# 	if self.category == self.Category.PRIMITIVE:
-	# 		# 	vertices += [self.components[0].matrix_world @ v.co for v in self.components[0].data.vertices]
-	# 		# for ent in self.components:
-	# 		vertices = [self.components[0].matrix_world @ v.co for v in self.components[0].data.vertices]
-	# 		# for obj in self.components:
-	# 		# 	vertices += [obj.matrix_world @ v.co for v in obj.data.vertices]
-	# 		vertices = [np.array([v[0],v[1],v[2]]) for v in vertices]
-	# 	elif self.category == self.Category.STRUCTURE:
-	# 		vertices = [v for e in self.components for v in e.vertex_set]
-	# 	elif self.category == self.Category.REGION:
-	# 		vertices = self.components
-	# 	return vertices
-
-	# def compute_faces(self):
-	# 	"""Compute and return the list of faces of the entity."""
-	# 	faces = []
-	# 	#print ("CAT: ", self.category)
-	# 	if self.category == self.Category.PRIMITIVE:
-	# 		for face in self.components[0].data.polygons:
-	# 		 	faces.append([self.components[0].matrix_world @ self.components[0].data.vertices[i].co for i in face.vertices])
-	# 		# for ob in self.components:
-	# 		# for face in self.components[0].data.polygons:
-	# 		# 	faces.append([self.components[0].matrix_world @ self.components[0].data.vertices[i].co for i in face.vertices])
-	# 	elif self.category == self.Category.STRUCTURE:
-	# 		faces = [f for entity in self.components for f in entity.faces]        
-	# 	return faces
+		return vertices, faces	
 
 	def compute_span(self):
 		"""Calculate the coordinate span of the entity."""
@@ -509,3 +500,5 @@ class Entity(object):
 
 	def build_octree(self):
 		center = self.location
+
+

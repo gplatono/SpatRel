@@ -1073,6 +1073,7 @@ def is_in_polygon(poly, p):
     Check if a given point p lies inside a convex polygon poly.
     Assumes that the point and the polygon lie in the same plane.
     """
+    epsilon = 0.000001
     poly = np.array(poly)
     p = np.array(p)
     npoly = np.cross(poly[1] - poly[0], poly[2] - poly[0])
@@ -1094,7 +1095,7 @@ def is_in_polygon(poly, p):
 def find_poly_intersection(poly, l1, l2):
     """
     Check if the line defined by l1, l2 passes inside 
-    a planar conver polygon poly.
+    a planar convex polygon poly.
     Return the coordinates of the point of intersection if exists,
     None otherwise.
     """
@@ -1115,11 +1116,11 @@ def find_box_line_intersection(c, s, l1, l2):
     l1 = np.array(l1)
     l2 = np.array(l2)
     faces = np.array([[[c[0] - s, c[1] - s, c[2] - s], [c[0] - s, c[1] + s, c[2] - s], [c[0] - s, c[1] + s, c[2] + s], [c[0] - s, c[1] - s, c[2] + s]],\
-        [[c[0] + s, c[1] - s, c[2] - s], [c[0] + s, c[1] + s, c[2] - s], [c[0] + s, c[1] + s, c[2] + s], [c[0] + s, c[1] - s, c[2] + s]],\
-        [[c[0] - s, c[1] - s, c[2] - s], [c[0] + s, c[1] - s, c[2] - s], [c[0] + s, c[1] - s, c[2] + s], [c[0] - s, c[1] - s, c[2] + s]],\
-        [[c[0] - s, c[1] + s, c[2] - s], [c[0] + s, c[1] + s, c[2] - s], [c[0] + s, c[1] + s, c[2] + s], [c[0] - s, c[1] + s, c[2] + s]],\
-        [[c[0] - s, c[1] - s, c[2] - s], [c[0] + s, c[1] - s, c[2] - s], [c[0] + s, c[1] + s, c[2] - s], [c[0] - s, c[1] + s, c[2] - s]],\
-        [[c[0] - s, c[1] - s, c[2] + s], [c[0] + s, c[1] - s, c[2] + s], [c[0] + s, c[1] + s, c[2] + s], [c[0] - s, c[1] + s, c[2] + s]]])
+                    [[c[0] + s, c[1] - s, c[2] - s], [c[0] + s, c[1] + s, c[2] - s], [c[0] + s, c[1] + s, c[2] + s], [c[0] + s, c[1] - s, c[2] + s]],\
+                    [[c[0] - s, c[1] - s, c[2] - s], [c[0] + s, c[1] - s, c[2] - s], [c[0] + s, c[1] - s, c[2] + s], [c[0] - s, c[1] - s, c[2] + s]],\
+                    [[c[0] - s, c[1] + s, c[2] - s], [c[0] + s, c[1] + s, c[2] - s], [c[0] + s, c[1] + s, c[2] + s], [c[0] - s, c[1] + s, c[2] + s]],\
+                    [[c[0] - s, c[1] - s, c[2] - s], [c[0] + s, c[1] - s, c[2] - s], [c[0] + s, c[1] + s, c[2] - s], [c[0] - s, c[1] + s, c[2] - s]],\
+                    [[c[0] - s, c[1] - s, c[2] + s], [c[0] + s, c[1] - s, c[2] + s], [c[0] + s, c[1] + s, c[2] + s], [c[0] - s, c[1] + s, c[2] + s]]])
     intersections = []
     for face in faces:
         current = find_poly_intersection(face, l1, l2)
@@ -1140,27 +1141,97 @@ def find_box_segment_intersection(c, s, l1, l2):
     Find points of intersection of a cubical box located at c
     with size (edge length) s, and the segment defined by l1, l2
     """
-    l1 = np.array(l1)
-    l2 = np.array(l2)
-    intersections = find_box_line_intersection(c, s, l1, l2)
-    result = []
-    for p in intersections:
-        if np.linalg.norm(p - l1) + np.linalg.norm(p - l2) <= np.linalg.norm(l2 - l1):
-            result.append(p)
-
+    l1 = np.array(l1, dtype=np.single)
+    l2 = np.array(l2, dtype=np.single)
+    epsilon = 0.0001
+    intersections = find_box_line_intersection(c, s, l1, l2)    
+    result = [p for p in intersections if check_box_point_containment(c, s, p) and max(np.linalg.norm(p - l1), np.linalg.norm(p - l2)) <= np.linalg.norm(l2 - l1) + epsilon]
+    # for p in intersections:
+    #     print (check_box_point_containment(c, s, p))
+    #     print (c, p, l1, l2, max(np.linalg.norm(p - l1), np.linalg.norm(p - l2)), np.linalg.norm(l2 - l1))
+    
     return result
 
 #print (find_cube_area_intersection([0, 0, 0], 2, [2, 0, 0], [0, 2, 0]))
 #Test: find_poly_intersection([[2, -1, 1], [2, 1, 1], [2, 1, -1], [2, -1, -1]], [0, 0, 0], [3, 2, 2])
 
 
-def find_box_poly_intersection(box_center, box_size, poly):    
-    if find_box_line_intersection(box_center, box_size, poly[-1], poly[0]) is not None:
+def find_box_poly_perimeter_intersection(box_center, box_size, poly):
+    if check_box_point_containment(box_center, box_size, find_closest_point_of_segment(box_center, poly[0], poly[-1])):        
         return True
-    for i in range(1, leng(poly)):
-        if find_box_line_intersection(box_center, box_size, poly[i], poly[i-1]) is not None:
+    for i in range(1, len(poly)):
+        if check_box_point_containment(box_center, box_size, find_closest_point_of_segment(box_center, poly[i], poly[i-1])):
             return True
     return False
+
+def check_box_point_containment(box_center, box_size, point):    
+    epsilon = 0.0001
+    offset = (box_size / 2) + epsilon
+    return point[0] >= box_center[0] - offset and point[0] <= box_center[0] + offset  \
+            and point[1] >= box_center[1] - offset and point[1] <= box_center[1] + offset \
+            and point[2] >= box_center[2] - offset and point[2] <= box_center[2] + offset
+
+def check_box_poly_intersection(box_center, box_size, poly):
+    # if (box_center[0] < 0 and box_center[1] > 4 and box_center[1] < 4.5 and box_center[1] < 0):
+    #     print (box_center, box_size, poly)
+    proj = find_point_plane_projection(box_center, poly)    
+    
+    #If the projection not in the box, i.e., the plane of the poly is too far - skip    
+    if not check_box_point_containment(box_center, box_size, proj):
+        #print (box_center, box_size, poly, proj)
+        return False
+
+    if is_in_polygon(poly, proj):
+        return True
+
+    # for p in poly:
+    #     if check_box_point_containment(box_center, box_size, p):            
+    #         #print ("POINT: ", p, box_center)
+    #         return True
+    if find_box_poly_perimeter_intersection(box_center, box_size, poly):
+        return True
+    
+    return False
+
+# def check_poly_cross_box(box_center, box_size, poly):
+#     proj = find_point_plane_projection(box_center, poly)
+    
+#     #If the projection not in the box, i.e., the plane of the poly is too far - skip    
+#     if check_box_point_containment(box_center, box_size, proj) and is_in_polygon(poly, proj):
+#         return True
+#     else:
+#         return False
+
+def find_point_plane_projection(point, plane):
+    #point = np.array(point, dtype=np.single)
+    #plane = np.array(plane, dtype=np.single)    
+    disp = point - plane[0]
+    normal = get_normal(plane[0], plane[1], plane[2])
+    #norm_projection = np.dot(normal, point) * normal
+    norm_projection = np.dot(normal, disp) * normal
+    
+    intersection = disp - norm_projection + plane[0]
+    # offset = point - norm_projection
+    # n_intersect = find_line_x_plane_intersection(plane[0], plane[1], plane[2], (0, 0, 0), norm_projection)
+    # intersection = n_intersect + offset
+    return intersection
+
+def find_closest_point_of_segment(point, s1, s2):    
+    if np.dot(point - s1, s2 - s1) <= 0:
+        return s1
+    elif np.dot(point - s2, s1 - s2) <= 0:
+        return s2
+    else:
+        proj = find_point_line_projection(point, s1, s2)
+        return proj
+
+def find_point_line_projection(point, l1, l2):
+    point = np.array(point, dtype=np.single)
+    l1 = np.array(l1, dtype=np.single)
+    l2 = np.array(l2, dtype=np.single)
+    disp = point - l1
+    segment = l2 - l1
+    return l1 + segment * np.dot(disp, segment) / np.dot(segment, segment)    
 
 def find_box_mesh_intersection(box_center, box_size, mesh_data):
     """

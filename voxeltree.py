@@ -11,88 +11,139 @@ from geometry_utils import *
 
 class Voxel:
 	def __init__(self, scope, location=None, size=None, parent=None, root=None, depth=0, child_idx=[None, None, None]):
-		self.geometry_content = {'vertices': [], 'edges': [], 'polys': []}
+		self.geometry_content = {'vertices': [], 'edges': [], 'polygons': []}
 		if root is not None:
 			self.root = root
 		else:
 			self.root = self		
 
 		if location is None:
-			x_min = y_min = z_min = 1e9
-			x_max = y_max = z_max = -1e9
-			for entity in scope:
-				x_min = min(x_min, entity.x_min)
-				y_min = min(y_min, entity.y_min)
-				z_min = min(z_min, entity.z_min)
-				x_max = max(x_max, entity.x_max)
-				y_max = max(y_max, entity.y_max)
-				z_max = max(z_max, entity.z_max)
-			location = np.array([0.5 * (x_min + x_max), 0.5 * (y_min + y_max), 0.5 * (z_min + z_max)])
-			size = max([x_max - x_min, y_max - y_min, z_max - z_min])
-			
 			if type(scope) == dict:
 				self.geometry_content = scope					
 			else:
 				offset = 0
 				for entity in scope:
 					self.geometry_content['vertices'] += entity.vertices
-					self.geometry_content['polys'] += [[idx + offset for idx in poly] for poly in entity.polygons]
+					self.geometry_content['polygons'] += [[idx + offset for idx in poly] for poly in entity.polygons]
 					offset += len(entity.vertices)
+			#print (self.geometry_content, len(self.geometry_content['vertices']))		
+
+			x_min = y_min = z_min = 1e9
+			x_max = y_max = z_max = -1e9
+			for v in self.geometry_content['vertices']:
+				x_min = min(x_min, v[0])
+				y_min = min(y_min, v[1])
+				z_min = min(z_min, v[2])
+				x_max = max(x_max, v[0])
+				y_max = max(y_max, v[1])
+				z_max = max(z_max, v[2])
+			# for entity in scope:
+			# 	x_min = min(x_min, entity.x_min)
+			# 	y_min = min(y_min, entity.y_min)
+			# 	z_min = min(z_min, entity.z_min)
+			# 	x_max = max(x_max, entity.x_max)
+			# 	y_max = max(y_max, entity.y_max)
+			# 	z_max = max(z_max, entity.z_max)
+			location = np.array([0.5 * (x_min + x_max), 0.5 * (y_min + y_max), 0.5 * (z_min + z_max)])
+			size = max([x_max - x_min, y_max - y_min, z_max - z_min])
+			
 		else:
 			self.geometry_content = scope
+
+
+		if self == self.root:
+			self.poly_points = [[self.geometry_content['vertices'][idx] for idx in poly] for poly in self.geometry_content['polygons']]
+			self.poly_idx = list(range(len(self.poly_points)))
+		else:
+			self.poly_idx = self.geometry_content['polygons']
+			# self.poly_points = self.geometry_content['polygons']
+		
 		self.location = location
 		self.size = size
 		self.depth = depth
 		self.child_idx = child_idx
-		self.compute_bbox()     
-		self.intersect_list = []
-
-		#if type(scope[0]) == Entity:
-		for entity in scope:
-			if box_entity_vertex_containment(self.bbox_verts, entity) or self.bvh_tree.overlap(entity.bvh_tree) != []:
-				# if self.bvh_tree.overlap(entity.bvh_tree) != []:
-				# 	print (self.location, self.size, entity, self.bvh_tree.overlap(entity.bvh_tree))
-				self.intersect_list.append(entity)
-
+		self.material = None
+		self.leaf_visual = None
+		
 		self.parent = parent
 		self.children = [[[None, None], [None, None]], [[None, None], [None, None]]]
+		#Order: X-up, X-down, Y-up, Y-down, Z-up, Z-down
 		self.neighbors = [[None, None], [None, None], [None, None]]
 		self.neighbors_linear = [None, None, None, None, None, None]
+		self.is_leaf = True
 
 		self.subdivide()
 		self.node_count = self.get_node_count()
-		if self.depth == 2:
+		if self.is_leaf:
 			self.highlight()
-		#self.fillNeighbors()
+		if depth == self.root.depth - 1:
+			print (depth, len(self.poly_idx), self.node_count)
+		
+		self.counter = 0
+		if self.root == self:
+			self.postprocess()	
+			print ("COUNTER", self.counter)
 
-	def run_on_children(self, method_name):
+	# def find_concave(self):
+
+
+	def postprocess(self):
+		self.fillNeighbors()
+		self.compute_all_NN()
+		bpy.context.evaluated_depsgraph_get().update()
+
+	def is_peripheral(self):
+		for neighbor in self.neighbors:
+			if neighbor is None:
+				return True
+		return False
+
+	def compute_NN(self, distance):
+		# count = 0
+		# count1 = 0
+		# for neighbor1 in self.neighbors_linear:
+		# 	if neighbor1 is not None:
+		# 		count1 += 1
+		# 		for neighbor2 in neighbor1.neighbors_linear:
+		# 			if neighbor2 is not None 
+		queue = [(self, distance)]
+		visited = [self]
+		count = 0
+
+		while len(queue) > 0:			
+			vox, dist = queue.pop(0)			
+			count += 1
+			if dist > 0:
+				for neighbor in vox.neighbors_linear:
+					if neighbor is not None and neighbor not in visited:
+						queue.append((neighbor, dist-1))
+						visited.append(neighbor)		
+		
+		self.NN_count = count
+
+	def compute_all_NN(self, distance=2):
+		self.compute_NN(distance)
+		#self.root.counter += 1
+		#print (self.NN_count)
+		self.run_on_children("compute_all_NN", distance)
+
+	def run_on_children(self, method_name, *params):
 		ret_val = []
-		if self.children[0][0][0] is not None:
-			ret_val += [getattr(self.children[0][0][0], method_name)(),
-						getattr(self.children[0][0][1], method_name)(),
-						getattr(self.children[0][1][0], method_name)(),
-						getattr(self.children[0][1][1], method_name)(),
-						getattr(self.children[1][0][0], method_name)(),
-						getattr(self.children[1][0][1], method_name)(),
-						getattr(self.children[1][1][0], method_name)(),
-						getattr(self.children[1][1][1], method_name)()]
+		for i in range(2):
+			for j in range(2):
+				for k in range(2):
+					if self.children[i][j][k] is not None:
+						if len(params) == 0:
+							ret_val += [getattr(self.children[i][j][k], method_name)()]
+						else:
+							ret_val += [getattr(self.children[i][j][k], method_name)(*params)]
+					else:
+						ret_val += [None]
 
 		return ret_val
 
 	def get_node_count(self):
-		return 1 + sum(self.run_on_children("get_node_count"))
-
-		# if self.children[0][0][0] is not None:
-		#   ret_val += self.children[0][0][0].get_size()
-		#   ret_val += self.children[0][0][1].get_size()
-		#   ret_val += self.children[0][1][0].get_size()
-		#   ret_val += self.children[0][1][1].get_size()
-		#   ret_val += self.children[1][0][0].get_size()
-		#   ret_val += self.children[1][0][1].get_size()
-		#   ret_val += self.children[1][1][0].get_size()
-		#   ret_val += self.children[1][1][1].get_size()
-
-		# return ret_val
+		return 1 + sum([i for i in self.run_on_children("get_node_count") if i is not None])		
 
 	def print_self(self):
 		print ("\n", self, self.child_idx, self.location, self.size, self.parent, self.node_count)
@@ -103,9 +154,16 @@ class Voxel:
 		self.print_self()
 		self.run_on_children("printStructure")
 
+	# def find_child_intersection(self, child_location):
+	# 	intersect_list = []
+	# 	for idx in self.poly_idx:			
+	# 		if check_box_poly_intersection(child_location, self.size / 2, self.root.poly_points[idx]):
+	# 			intersect_list.append(idx)
+	# 	return intersect_list
+
 	def subdivide(self):
 		quart = self.size / 4
-		if self.depth > 0 and self.intersect_list != []:            
+		if self.depth > 0:
 			child_locations = np.array([(self.location[0] - quart, self.location[1] - quart, self.location[2] - quart), 
 								(self.location[0] - quart, self.location[1] - quart, self.location[2] + quart),
 								(self.location[0] - quart, self.location[1] + quart, self.location[2] - quart),
@@ -113,15 +171,37 @@ class Voxel:
 								(self.location[0] + quart, self.location[1] - quart, self.location[2] - quart), 
 								(self.location[0] + quart, self.location[1] - quart, self.location[2] + quart),
 								(self.location[0] + quart, self.location[1] + quart, self.location[2] - quart),
-								(self.location[0] + quart, self.location[1] + quart, self.location[2] + quart)])            
-			self.children[0][0][0] = Voxel(self.intersect_list, child_locations[0], self.size / 2, self, self.root, self.depth-1, [0, 0, 0])
-			self.children[0][0][1] = Voxel(self.intersect_list, child_locations[1], self.size / 2, self, self.root, self.depth-1, [0, 0, 1])
-			self.children[0][1][0] = Voxel(self.intersect_list, child_locations[2], self.size / 2, self, self.root, self.depth-1, [0, 1, 0])
-			self.children[0][1][1] = Voxel(self.intersect_list, child_locations[3], self.size / 2, self, self.root, self.depth-1, [0, 1, 1])
-			self.children[1][0][0] = Voxel(self.intersect_list, child_locations[4], self.size / 2, self, self.root, self.depth-1, [1, 0, 0])
-			self.children[1][0][1] = Voxel(self.intersect_list, child_locations[5], self.size / 2, self, self.root, self.depth-1, [1, 0, 1])
-			self.children[1][1][0] = Voxel(self.intersect_list, child_locations[6], self.size / 2, self, self.root, self.depth-1, [1, 1, 0])
-			self.children[1][1][1] = Voxel(self.intersect_list, child_locations[7], self.size / 2, self, self.root, self.depth-1, [1, 1, 1])
+								(self.location[0] + quart, self.location[1] + quart, self.location[2] + quart)])
+
+			geom_data = [{}, {}, {}, {}, {}, {}, {}, {}]
+			for i in range(len(geom_data)):
+				geom_data[i] = {'vertices': [], 'edges': [], 'polygons': []}
+			
+			# for v in self.geometry_content['vertices']:
+			# 	for i in range(8):
+			# 		if check_box_point_containment(child_locations[i], self.size / 2, v):
+			# 			geom_data[i]['vertices'].append(v)						
+			# 			break
+					
+			for i in range(2):
+				for j in range(2):
+					for k in range(2):
+						cidx = 4*i+2*j+k				
+						intersect_list = [idx for idx in self.poly_idx if check_box_poly_intersection(child_locations[cidx], self.size / 2, self.root.poly_points[idx])]
+						#self.find_child_intersection(child_locations[4*i+2*j+k])
+						geom_data[cidx]['polygons'] = intersect_list
+						if len(geom_data[cidx]['polygons']) > 0:							
+							#geom_data = {'vertices': [], 'edges': [], 'polygons': intersect_list}							
+							self.children[i][j][k] = Voxel(geom_data[cidx], child_locations[cidx], self.size / 2, self, self.root, self.depth-1, [i, j, k])
+							self.is_leaf = False
+			# self.children[0][0][0] = Voxel(self.intersect_list, child_locations[0], self.size / 2, self, self.root, self.depth-1, [0, 0, 0])
+			# self.children[0][0][1] = Voxel(self.intersect_list, child_locations[1], self.size / 2, self, self.root, self.depth-1, [0, 0, 1])
+			# self.children[0][1][0] = Voxel(self.intersect_list, child_locations[2], self.size / 2, self, self.root, self.depth-1, [0, 1, 0])
+			# self.children[0][1][1] = Voxel(self.intersect_list, child_locations[3], self.size / 2, self, self.root, self.depth-1, [0, 1, 1])
+			# self.children[1][0][0] = Voxel(self.intersect_list, child_locations[4], self.size / 2, self, self.root, self.depth-1, [1, 0, 0])
+			# self.children[1][0][1] = Voxel(self.intersect_list, child_locations[5], self.size / 2, self, self.root, self.depth-1, [1, 0, 1])
+			# self.children[1][1][0] = Voxel(self.intersect_list, child_locations[6], self.size / 2, self, self.root, self.depth-1, [1, 1, 0])
+			# self.children[1][1][1] = Voxel(self.intersect_list, child_locations[7], self.size / 2, self, self.root, self.depth-1, [1, 1, 1])
 
 	def compute_bbox(self):
 		self.bbox_verts = np.array([(self.location[0] - self.size / 2, self.location[1] - self.size / 2, self.location[2] - self.size / 2), 
@@ -141,7 +221,7 @@ class Voxel:
 		child_z = 0 if point[2] <= self.location[2] else 1
 		
 		if depth == 0 or self.children[child_x][child_y][child_z] is None:          
-			return self if box_point_containment(self.bbox_verts, point) else None
+			return self if check_box_point_containment(self.location, self.size, point) else None
 	
 		return self.children[child_x][child_y][child_z].findContainingVoxel(point, depth-1)
 
@@ -159,15 +239,11 @@ class Voxel:
 		if self.neighbors[2][1] is None:
 			self.ZUpAdjacent()
 
-		if self.children[0][0][0] is not None:
-			self.children[0][0][0].fillNeighbors()
-			self.children[0][0][1].fillNeighbors()
-			self.children[0][1][0].fillNeighbors()
-			self.children[0][1][1].fillNeighbors()
-			self.children[1][0][0].fillNeighbors()
-			self.children[1][0][1].fillNeighbors()
-			self.children[1][1][0].fillNeighbors()
-			self.children[1][1][1].fillNeighbors()
+		for i in range(2):
+			for j in range(2):
+				for k in range(2):
+					if self.children[i][j][k] is not None:
+						self.children[i][j][k].fillNeighbors()			
 
 	def XDownAdjacent(self):
 		if self.child_idx[0] == 1:
@@ -376,21 +452,26 @@ class Voxel:
 		bmesh.ops.create_cube(bm, size=self.size)
 		bm.to_mesh(block_mesh)
 		bm.free()
-		bpy.data.materials.new(name="vox")		
-		bpy.data.materials['vox'].diffuse_color = (1, 0, 0, 0)		
-		block.data.materials.append(bpy.data.materials['vox'])
-		block.location = self.location		
-		bpy.context.evaluated_depsgraph_get().update()		
+		if self.root.material is None:
+			bpy.data.materials.new(name="vox")
+			bpy.data.materials['vox'].diffuse_color = (1, 0, 0, 0)
+			self.root.material = bpy.data.materials['vox']
+
+		block.data.materials.append(self.root.material)
+		block.location = self.location				
 
 if __name__ == "__main__":
 	from world import World
-	world = World(bpy.context.scene, simulation_mode=True)
-	vox = Voxel(scope = world.entities, depth=7)
+	import time
+	start_time = time.time()
+	world = World(bpy.context.scene, simulation_mode=True)	
+	vox = Voxel(scope = world.entities, depth=5)
 	vox.print_self()
+	print (time.time() - start_time)
 
-	for idx1 in range(len(world.entities)):
-		for idx2 in range(idx1+1, len(world.entities)):
-			print (world.entities[idx1], world.entities[idx2], vox.contains([world.entities[idx1], world.entities[idx2]], depth=6))
+	# for idx1 in range(len(world.entities)):
+	# 	for idx2 in range(idx1+1, len(world.entities)):
+	# 		print (world.entities[idx1], world.entities[idx2], vox.contains([world.entities[idx1], world.entities[idx2]], depth=6))
 
 	#vox.highlight()
 
