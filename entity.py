@@ -120,12 +120,14 @@ class Entity(object):
 
 
 		#self.bvh_trees = [BVHTree.FromObject(item, bpy.context.evaluated_depsgraph_get()) for item in self.full_mesh]
-		#self.bvh_tree = BVHTree.FromPolygons(self.vertices, self.polygons, epsilon=0.0)
+		#print ('start bvh')
+		self.bvh_tree = BVHTree.FromPolygons(self.vertices, self.polygons, epsilon=0.5)
+		#print ('ends bvh')
 		# if self.category == self.Category.STRUCTURE:
 		# 	print (self.name)
 		# 	from voxeltree import Voxel
 		# 	self.voxel_tree = Voxel(scope = {'vertices': self.vertices, 'edges':[], 'polygons': self.polygons}, depth = 5)
-		self.compute_adjacent()
+		#self.compute_adjacent()
 
 		#The coordiante span of the entity. In other words,
 		#the minimum and maximum coordinates of entity's points
@@ -189,6 +191,7 @@ class Entity(object):
 
 	def compute_adjacent(self):
 		self.adj_data = {}
+		print ('statrt adjacent')
 		for j in range(len(self.vertices)):
 			neighbors = []
 			for poly in self.polygons:
@@ -204,7 +207,7 @@ class Entity(object):
 							neighbors.append(poly[0])
 						break
 			self.adj_data[j] = neighbors
-
+		print ('end adjacent')
 		#print (self.adj_data)
 
 	   
@@ -501,4 +504,16 @@ class Entity(object):
 	def build_octree(self):
 		center = self.location
 
+	def get_ulf(self):
+		name = '|' + self.name + '|'
+		obtype = self.type_structure[-1] if self.type_structure[-1] != self.name else \
+			self.type_structure[-2]
+		obtype += '.n'
+		return '(the.d (' + name + ' ' + obtype + '))'
 
+	def get_location_ulf(self):
+		return utils.loc_to_ulf(self.location)
+		# x = ":x " + str(self.location[0])
+		# y = ":y " + str(self.location[1])
+		# z = ":z " + str(self.location[2])
+		# return '($ loc' + x + ' ' + y + ' ' + z + ')'

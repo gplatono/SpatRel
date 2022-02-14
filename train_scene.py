@@ -7,7 +7,7 @@ sys.path.insert(0, filepath)
 #sys.path.append('/home/georgiy/.local/lib/python3.7/site-packages/')
 
 from world import World
-from spatial2 import Spatial
+from spatial import Spatial
 
 datapath = sys.argv[-2]
 train_flag = sys.argv[-1]

@@ -46,6 +46,14 @@ class Voxel:
 			# 	z_max = max(z_max, entity.z_max)
 			location = np.array([0.5 * (x_min + x_max), 0.5 * (y_min + y_max), 0.5 * (z_min + z_max)])
 			size = max([x_max - x_min, y_max - y_min, z_max - z_min])
+
+			self.materials = []
+			cnum = 25
+			for i in range(cnum):
+				cname = "col" + str(i)
+				bpy.data.materials.new(name=cname)
+				bpy.data.materials[cname].diffuse_color = (i/cnum, 0, 1-i/cnum, 0)				
+				self.materials.append(bpy.data.materials[cname])
 			
 		else:
 			self.geometry_content = scope
@@ -56,8 +64,7 @@ class Voxel:
 			self.poly_idx = list(range(len(self.poly_points)))
 		else:
 			self.poly_idx = self.geometry_content['polygons']
-			# self.poly_points = self.geometry_content['polygons']
-		
+			
 		self.location = location
 		self.size = size
 		self.depth = depth
@@ -74,8 +81,8 @@ class Voxel:
 
 		self.subdivide()
 		self.node_count = self.get_node_count()
-		if self.is_leaf:
-			self.highlight()
+		# if self.is_leaf:
+		# 	self.highlight()
 		if depth == self.root.depth - 1:
 			print (depth, len(self.poly_idx), self.node_count)
 		
@@ -84,12 +91,22 @@ class Voxel:
 			self.postprocess()	
 			print ("COUNTER", self.counter)
 
-	# def find_concave(self):
+	def highlight_all(self):
+		if self.is_leaf:
+			self.highlight()
+		else:
+			self.run_on_children("highlight_all")
 
+
+	#def is_concave(self):
+	def print_all_neighbors(self):
+		print("NODE: ", self.location, self.size, self.depth, self.neighbors_linear)
+		self.run_on_children("print_all_neighbors")
 
 	def postprocess(self):
-		self.fillNeighbors()
-		self.compute_all_NN()
+		#self.fillNeighbors()
+		#self.compute_all_NN()
+		#self.highlight_all()
 		bpy.context.evaluated_depsgraph_get().update()
 
 	def is_peripheral(self):
@@ -117,13 +134,15 @@ class Voxel:
 				for neighbor in vox.neighbors_linear:
 					if neighbor is not None and neighbor not in visited:
 						queue.append((neighbor, dist-1))
-						visited.append(neighbor)		
+						visited.append(neighbor)
 		
 		self.NN_count = count
+		# if(self.NN_count > 4):
+		# 	print (self.NN_count)
 
 	def compute_all_NN(self, distance=2):
 		self.compute_NN(distance)
-		#self.root.counter += 1
+		self.root.counter += 1
 		#print (self.NN_count)
 		self.run_on_children("compute_all_NN", distance)
 
@@ -330,6 +349,8 @@ class Voxel:
 			adjacent.neighbors_linear[4] = self
 
 	def contains(self, entities, depth=-1):
+		#!!!
+		return True
 		#print (self.location, self.size, self.intersect_list)
 		for ent in entities:
 			if ent not in self.intersect_list:
@@ -436,28 +457,24 @@ class Voxel:
 		return origin, target
 
 	def highlight(self):
-		# bpy.ops.mesh.primitive_cube_add()
-		# block = bpy.context.selected_objects[0]
-		# block.location = self.location
-		# block.size = self.size
-		# bpy.data.materials.new(name="vox")		
-		# bpy.data.materials['vox'].diffuse_color = (1, 0, 0, 0)		
-		# block.data.materials.append(bpy.data.materials['vox'])
-
 		block_mesh = bpy.data.meshes.new('Block_mesh')
 		block = bpy.data.objects.new("voxx", block_mesh)
 		bpy.context.collection.objects.link(block)
+
+		#temp = self.NN_count / 25
 
 		bm = bmesh.new()
 		bmesh.ops.create_cube(bm, size=self.size)
 		bm.to_mesh(block_mesh)
 		bm.free()
-		if self.root.material is None:
-			bpy.data.materials.new(name="vox")
-			bpy.data.materials['vox'].diffuse_color = (1, 0, 0, 0)
-			self.root.material = bpy.data.materials['vox']
+		# if self.root.material is None:
+		# 	bpy.data.materials.new(name="vox")
+		# 	bpy.data.materials['vox'].diffuse_color = (temp, 0, 1-temp, 0)
+		# 	self.root.material = bpy.data.materials['vox']
+		# bpy.data.materials.new(name="vox")
+		# bpy.data.materials['vox'].diffuse_color = (temp, 0, 1-temp, 0)
 
-		block.data.materials.append(self.root.material)
+		block.data.materials.append(self.root.materials[self.NN_count])
 		block.location = self.location				
 
 if __name__ == "__main__":
@@ -465,8 +482,9 @@ if __name__ == "__main__":
 	import time
 	start_time = time.time()
 	world = World(bpy.context.scene, simulation_mode=True)	
-	vox = Voxel(scope = world.entities, depth=5)
-	vox.print_self()
+	vox = Voxel(scope = world.entities, depth=6)
+	vox.print_all_neighbors()
+	#vox.print_self()
 	print (time.time() - start_time)
 
 	# for idx1 in range(len(world.entities)):

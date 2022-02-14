@@ -11,7 +11,6 @@ import bmesh
 from mathutils import Vector
 from mathutils import Quaternion
 from entity import Entity
-from geometry_utils import *
 import geometry_utils
 
 #import spatial
@@ -63,7 +62,6 @@ class World(object):
 		bpy.ops.view3d.process_input()
 
 		self.moved_blocks = []
-		
 		for obj in self.scene.objects:
 			if obj.get('main') is not None and obj.get('enabled') is None:
 				self.entities.append(Entity(obj))
@@ -398,35 +396,34 @@ class World(object):
 				self.make_checkpoint()
 
 	def make_checkpoint(self):
-		#self.checkpoint = self.history[-1]
 		self.checkpoint = len(self.history)-1
 
-	def move_to_ulf(self, name, loc1, loc2):
-		def loc_to_str(loc):
-			return ' '.join([str(coord) for coord in loc])
+	# def move_to_ulf(self, name, loc1, loc2):
+	# 	def loc_to_str(loc):
+	# 		return ' '.join([str(coord) for coord in loc])
 		
-		return '(|' + name + '| ((past move.v) (from.p-arg ($ loc ' + loc_to_str(loc1) + ')) (to.p-arg ($ loc ' +\
-							loc_to_str(loc2) + '))))'
+	# 	return '(|' + name + '| ((past move.v) (from.p-arg ($ loc ' + loc_to_str(loc1) + ')) (to.p-arg ($ loc ' +\
+	# 						loc_to_str(loc2) + '))))'
 
-	def record_history(self):
-		self.history.append(self.State(self.entities))
-		if len(self.history) > 1:
-			moves = self.history[-1].state_diff(self.history[-2])
-			for move in moves:
-				self.log_event('BLOCK MOVE', self.move_to_ulf(move[0], move[1], move[2]))
-			print (self.history[-1].state_diff(self.history[-2]))
+	# def record_history(self):
+	# 	self.history.append(self.State(self.entities))
+	# 	if len(self.history) > 1:
+	# 		moves = self.history[-1].state_diff(self.history[-2])
+	# 		for move in moves:
+	# 			self.log_event('BLOCK MOVE', self.move_to_ulf(move[0], move[1], move[2]))
+	# 		print (self.history[-1].state_diff(self.history[-2]))
 
-	def get_last_move(self):
-		return moves[-1]
+	# def get_last_move(self):
+	# 	return moves[-1]
 
-	def get_moves_after_checkpoint(self):
-		result = []
-		for i in range(self.checkpoint+1, len(self.history)):
-			result += self.history[i].state_diff(self.history[i-1])
-		#return self.history[-1].state_diff(self.checkpoint)
-		return result
+	# def get_moves_after_checkpoint(self):
+	# 	result = []
+	# 	for i in range(self.checkpoint+1, len(self.history)):
+	# 		result += self.history[i].state_diff(self.history[i-1])
+	# 	#return self.history[-1].state_diff(self.checkpoint)
+	# 	return result
 
-	# def get_last_moved(self):
+		# def get_last_moved(self):
 	# 	if self.history == []:
 	# 		return None
 	# 	elif len(self.history) == 1:
@@ -438,6 +435,37 @@ class World(object):
 	# 					np.linalg.norm(self.history[-2].locations[key] - self.history[-1].locations[key]) > 0.1:					
 	# 				ret_val.append([key, self.history[-1].locations[key]])
 	# 		return ret_val
+
+	def move_to_ulf(self, move):
+		name = move[0]
+		loc1 = move[1]
+		loc2 = move[2]		
+		return '(' + self.find_entity_by_name(name).get_ulf() + \
+		' ((past move.v) (from.p-arg ' + utils.loc_to_ulf(loc1) + \
+		') (to.p-arg ' + utils.loc_to_ulf(loc2) + ')))'
+
+	def record_history(self):
+		self.history.append(self.State(self.entities))
+		if len(self.history) > 1:
+			moves = self.history[-1].state_diff(self.history[-2])
+			if self.verbose:
+				print (moves)
+			for move in moves:
+				self.log_event('BLOCK MOVE', self.move_to_ulf(move))			
+
+	def get_last_move(self):
+		return moves[-1]
+
+	def get_moves_after_checkpoint(self):
+		result = []
+		for i in range(self.checkpoint+1, len(self.history)):
+			result += self.history[i].state_diff(self.history[i-1])
+		#return self.history[-1].state_diff(self.checkpoint)
+		return result
+
+	def get_move_ulfs_after_checkpoint(self):
+		move_ulfs = [self.move_to_ulf(move) for move in self.get_moves_after_checkpoint()]
+		return move_ulfs
 
 	def find_entity_by_name(self, name):
 		"""

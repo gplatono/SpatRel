@@ -64,8 +64,6 @@ def get_normal(a, b, c):
         return np.array([0, 0, 0])
     else:
         return u_x_v / u_x_v_len
-    #return cross_product((a[0] - b[0], a[1] - b[1], a[2] - b[2]),
-#                         (c[0] - b[0], c[1] - b[1], c[2] - b[2]))
 
 #Given point a, b, c, d. return the projection of vector a to d on the plane of a,b c.
 def plane_projection(d, a, b, c):
@@ -187,7 +185,8 @@ def get_distance_from_line(x1, x2, x3):
 #Inputs: a, b - point coordinates as tuples or lists
 #Return value: real number
 def point_distance(a, b):
-    return np.linalg.norm(np.array(a) - np.array(b))
+    return math.sqrt((a[0] - b[0])*(a[0] - b[0]) + (a[1] - b[1])*(a[1] - b[1]) + (a[2] - b[2])*(a[2] - b[2]))
+    #return np.linalg.norm(np.array(a) - np.array(b))
 
 
 #Computes the projection of the bounding box of a set
@@ -1022,15 +1021,27 @@ def v_offset(a, b):
     return gaussian(2 * (center_a[2] - center_b[2] - 0.5 * (dim_a[2] + dim_b[2])) / \
                     (1e-6 + dim_a[2] + dim_b[2]), 0, 1 / math.sqrt(2 * math.pi))
 
+def signed_axial_distance(a_bbox, b_bbox):
+    """
+    Returns a tuple of differences of x and y coordinates 
+    of the centers of two projection bounding boxs (of a and b).
+    Example: if bb centers are (x1, y1), (x2, y2), the function returns (x1 - x2, y1 - y2)
+    """
 
-def scaled_axial_distance(a_bbox, b_bbox):
-    a_span = (a_bbox[1] - a_bbox[0], a_bbox[3] - a_bbox[2])
-    b_span = (b_bbox[1] - b_bbox[0], b_bbox[3] - b_bbox[2])
     a_center = ((a_bbox[0] + a_bbox[1]) / 2, (a_bbox[2] + a_bbox[3]) / 2)
     b_center = ((b_bbox[0] + b_bbox[1]) / 2, (b_bbox[2] + b_bbox[3]) / 2)
-    axis_dist = (a_center[0] - b_center[0], a_center[1] - b_center[1])
-    # print ("SPANS:", a_span, b_span, a_center, b_center)
-    return (axis_dist[0] / (max(a_span[0], b_span[0]) + 0.001), axis_dist[1] / (max(a_span[1], b_span[1]) + 0.001))
+    axial_dist = (a_center[0] - b_center[0], a_center[1] - b_center[1])
+    return axial_dist
+
+def scaled_axial_distance(a_bbox, b_bbox):
+    """
+    Returns the scaled distance between the centers of two bounding boxes (of a and b)
+    """
+
+    a_span = (a_bbox[1] - a_bbox[0], a_bbox[3] - a_bbox[2])
+    b_span = (b_bbox[1] - b_bbox[0], b_bbox[3] - b_bbox[2])
+    axial_dist = signed_axial_distance(a_bbox, b_bbox)    
+    return (axial_dist[0] / (max(a_span[0], b_span[0]) + 0.001), axial_dist[1] / (max(a_span[1], b_span[1]) + 0.001))
 
 # def dist_obj(a, b):
 #     if not hasattr(a, "bbox") or not hasattr(b, "bbox"):
@@ -1072,7 +1083,7 @@ def is_in_polygon(poly, p):
     """
     Check if a given point p lies inside a convex polygon poly.
     Assumes that the point and the polygon lie in the same plane.
-    """
+    """    
     epsilon = 0.000001
     poly = np.array(poly)
     p = np.array(p)
@@ -1124,7 +1135,6 @@ def find_box_line_intersection(c, s, l1, l2):
     intersections = []
     for face in faces:
         current = find_poly_intersection(face, l1, l2)
-        #print (face, current, "\n")
         flag = False
         if current is not None:
             for prev in intersections:
@@ -1216,7 +1226,10 @@ def find_point_plane_projection(point, plane):
     # intersection = n_intersect + offset
     return intersection
 
-def find_closest_point_of_segment(point, s1, s2):    
+def find_closest_point_of_segment(point, s1, s2):
+    point = np.array(point)
+    s1 = np.array(s1)
+    s2 = np.array(s2)   
     if np.dot(point - s1, s2 - s1) <= 0:
         return s1
     elif np.dot(point - s2, s1 - s2) <= 0:
@@ -1224,6 +1237,33 @@ def find_closest_point_of_segment(point, s1, s2):
     else:
         proj = find_point_line_projection(point, s1, s2)
         return proj
+
+def find_closest_point_of_polygon(point, poly):
+    if is_in_polygon(poly, point):
+        return point
+
+    min_dist = 1e9
+    min_point = None
+    for p in poly:
+        dist = point_distance(p, point)
+        if dist < min_dist:
+            min_dist = dist
+            min_point = p
+
+    p = find_closest_point_of_segment(point, poly[-1], poly[0])
+    dist = point_distance(p, point)
+    if dist < min_dist:
+        min_dist = dist
+        min_point = p
+
+    for i in range(1, len(poly)):
+        p = find_closest_point_of_segment(point, poly[i-1], poly[i])
+        dist = point_distance(p, point)
+        if dist < min_dist:
+            min_dist = dist
+            min_point = p
+
+    return p
 
 def find_point_line_projection(point, l1, l2):
     point = np.array(point, dtype=np.single)
