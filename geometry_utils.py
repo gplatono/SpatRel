@@ -1038,10 +1038,10 @@ def scaled_axial_distance(a_bbox, b_bbox):
     Returns the scaled distance between the centers of two bounding boxes (of a and b)
     """
 
-    a_span = (a_bbox[1] - a_bbox[0], a_bbox[3] - a_bbox[2])
-    b_span = (b_bbox[1] - b_bbox[0], b_bbox[3] - b_bbox[2])
+    a_dim = (a_bbox[1] - a_bbox[0], a_bbox[3] - a_bbox[2])
+    b_dim = (b_bbox[1] - b_bbox[0], b_bbox[3] - b_bbox[2])
     axial_dist = signed_axial_distance(a_bbox, b_bbox)    
-    return (axial_dist[0] / (max(a_span[0], b_span[0]) + 0.001), axial_dist[1] / (max(a_span[1], b_span[1]) + 0.001))
+    return (axial_dist[0] / (max(a_dim[0], b_dim[0]) + 0.001), axial_dist[1] / (max(a_dim[1], b_dim[1]) + 0.001))
 
 # def dist_obj(a, b):
 #     if not hasattr(a, "bbox") or not hasattr(b, "bbox"):
